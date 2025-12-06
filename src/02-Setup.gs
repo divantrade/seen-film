@@ -173,6 +173,7 @@ function createSettingsSheet(ss) {
 
 /**
  * إنشاء شيت المشاريع
+ * يحتوي على أعمدة checkboxes لكل مرحلة
  * @param {Spreadsheet} ss الجدول
  */
 function createProjectsSheet(ss) {
@@ -185,21 +186,25 @@ function createProjectsSheet(ss) {
 
   sheet.clear();
 
-  // رؤوس الأعمدة
-  const headers = [
-    'المعرف',
-    'اسم المشروع',
+  // رؤوس الأعمدة الأساسية
+  const basicHeaders = [
     'الكود',
+    'اسم الفيلم',
     'النوع',
-    'الحالة',
     'تاريخ البداية',
-    'تاريخ النهاية',
-    'المنتج',
-    'المخرج',
-    'ملاحظات',
-    'تاريخ الإنشاء',
-    'آخر تحديث'
+    'التسليم المتوقع',
+    'الحالة',
+    'ملاحظات'
   ];
+
+  // أعمدة المراحل (checkboxes)
+  const phaseHeaders = Object.values(STAGES).map(s => s.icon + ' ' + s.name);
+
+  // أعمدة النظام
+  const systemHeaders = ['تاريخ الإنشاء', 'آخر تحديث'];
+
+  // دمج جميع الرؤوس
+  const headers = [...basicHeaders, ...phaseHeaders, ...systemHeaders];
 
   // تعيين الرؤوس
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
@@ -211,19 +216,30 @@ function createProjectsSheet(ss) {
   // تجميد الصف الأول
   sheet.setFrozenRows(1);
 
-  // تعيين عرض الأعمدة
-  sheet.setColumnWidth(1, 80);   // المعرف
-  sheet.setColumnWidth(2, 200);  // اسم المشروع
-  sheet.setColumnWidth(3, 100);  // الكود
-  sheet.setColumnWidth(4, 120);  // النوع
-  sheet.setColumnWidth(5, 100);  // الحالة
-  sheet.setColumnWidth(6, 120);  // تاريخ البداية
-  sheet.setColumnWidth(7, 120);  // تاريخ النهاية
-  sheet.setColumnWidth(8, 120);  // المنتج
-  sheet.setColumnWidth(9, 120);  // المخرج
-  sheet.setColumnWidth(10, 200); // ملاحظات
-  sheet.setColumnWidth(11, 150); // تاريخ الإنشاء
-  sheet.setColumnWidth(12, 150); // آخر تحديث
+  // تعيين عرض الأعمدة الأساسية
+  sheet.setColumnWidth(1, 80);   // الكود
+  sheet.setColumnWidth(2, 180);  // اسم الفيلم
+  sheet.setColumnWidth(3, 100);  // النوع
+  sheet.setColumnWidth(4, 110);  // تاريخ البداية
+  sheet.setColumnWidth(5, 110);  // التسليم المتوقع
+  sheet.setColumnWidth(6, 80);   // الحالة
+  sheet.setColumnWidth(7, 150);  // ملاحظات
+
+  // تعيين عرض أعمدة المراحل (أضيق)
+  for (let i = 8; i < 8 + phaseHeaders.length; i++) {
+    sheet.setColumnWidth(i, 50);
+  }
+
+  // تعيين عرض أعمدة النظام
+  sheet.setColumnWidth(8 + phaseHeaders.length, 130);
+  sheet.setColumnWidth(9 + phaseHeaders.length, 130);
+
+  // إضافة checkboxes لأعمدة المراحل (الصفوف 2-100)
+  const checkboxRange = sheet.getRange(2, 8, 99, phaseHeaders.length);
+  checkboxRange.insertCheckboxes();
+
+  // تلوين أعمدة المراحل
+  sheet.getRange(1, 8, 1, phaseHeaders.length).setBackground('#E3F2FD');
 
   // تعيين تنسيق الاتجاه من اليمين لليسار
   sheet.setRightToLeft(true);
@@ -231,6 +247,7 @@ function createProjectsSheet(ss) {
 
 /**
  * إنشاء شيت الفريق
+ * يحتوي على عمود المراحل المسؤول عنها
  * @param {Spreadsheet} ss الجدول
  */
 function createTeamSheet(ss) {
@@ -244,11 +261,12 @@ function createTeamSheet(ss) {
   sheet.clear();
 
   const headers = [
-    'المعرف',
+    'الكود',
     'الاسم',
     'الدور',
     'البريد الإلكتروني',
     'رقم الهاتف',
+    'المراحل المسؤول عنها',
     'الحالة',
     'تاريخ الانضمام',
     'ملاحظات'
@@ -264,18 +282,20 @@ function createTeamSheet(ss) {
   sheet.setRightToLeft(true);
 
   // تعيين عرض الأعمدة
-  sheet.setColumnWidth(1, 80);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 120);
-  sheet.setColumnWidth(4, 200);
-  sheet.setColumnWidth(5, 130);
-  sheet.setColumnWidth(6, 100);
-  sheet.setColumnWidth(7, 120);
-  sheet.setColumnWidth(8, 200);
+  sheet.setColumnWidth(1, 70);   // الكود
+  sheet.setColumnWidth(2, 140);  // الاسم
+  sheet.setColumnWidth(3, 100);  // الدور
+  sheet.setColumnWidth(4, 180);  // البريد
+  sheet.setColumnWidth(5, 120);  // الهاتف
+  sheet.setColumnWidth(6, 200);  // المراحل
+  sheet.setColumnWidth(7, 80);   // الحالة
+  sheet.setColumnWidth(8, 110);  // تاريخ الانضمام
+  sheet.setColumnWidth(9, 180);  // ملاحظات
 }
 
 /**
  * إنشاء شيت المصورين
+ * يحتوي على عمود المعدات
  * @param {Spreadsheet} ss الجدول
  */
 function createPhotographersSheet(ss) {
@@ -289,13 +309,14 @@ function createPhotographersSheet(ss) {
   sheet.clear();
 
   const headers = [
-    'المعرف',
+    'الكود',
     'الاسم',
     'التخصص',
-    'رقم الهاتف',
     'البريد الإلكتروني',
-    'السعر اليومي',
+    'رقم الهاتف',
+    'المعدات',
     'الحالة',
+    'السعر اليومي',
     'ملاحظات'
   ];
 
@@ -308,18 +329,20 @@ function createPhotographersSheet(ss) {
   sheet.setFrozenRows(1);
   sheet.setRightToLeft(true);
 
-  sheet.setColumnWidth(1, 80);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 120);
-  sheet.setColumnWidth(4, 130);
-  sheet.setColumnWidth(5, 200);
-  sheet.setColumnWidth(6, 100);
-  sheet.setColumnWidth(7, 100);
-  sheet.setColumnWidth(8, 200);
+  sheet.setColumnWidth(1, 70);   // الكود
+  sheet.setColumnWidth(2, 140);  // الاسم
+  sheet.setColumnWidth(3, 100);  // التخصص
+  sheet.setColumnWidth(4, 180);  // البريد
+  sheet.setColumnWidth(5, 120);  // الهاتف
+  sheet.setColumnWidth(6, 180);  // المعدات
+  sheet.setColumnWidth(7, 80);   // الحالة
+  sheet.setColumnWidth(8, 90);   // السعر
+  sheet.setColumnWidth(9, 180);  // ملاحظات
 }
 
 /**
  * إنشاء شيت الضيوف
+ * يحتوي على أعمدة متابعة التواصل والتصوير
  * @param {Spreadsheet} ss الجدول
  */
 function createGuestsSheet(ss) {
@@ -333,16 +356,22 @@ function createGuestsSheet(ss) {
   sheet.clear();
 
   const headers = [
-    'المعرف',
+    'الكود',
     'الاسم',
-    'الصفة',
-    'الجهة',
-    'رقم الهاتف',
-    'البريد الإلكتروني',
     'المشروع',
-    'تاريخ المقابلة',
-    'الحالة',
-    'ملاحظات'
+    'نوع المشاركة',
+    'حالة التواصل',
+    'حالة الأسئلة',
+    'البلد',
+    'مكان التصوير',
+    'تاريخ التصوير',
+    'حالة التصوير',
+    'يحتاج دوبلاج',
+    'البريد الإلكتروني',
+    'رقم الهاتف',
+    'ملاحظات',
+    'تاريخ الإنشاء',
+    'آخر تحديث'
   ];
 
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
@@ -354,20 +383,27 @@ function createGuestsSheet(ss) {
   sheet.setFrozenRows(1);
   sheet.setRightToLeft(true);
 
-  sheet.setColumnWidth(1, 80);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 120);
-  sheet.setColumnWidth(4, 150);
-  sheet.setColumnWidth(5, 130);
-  sheet.setColumnWidth(6, 200);
-  sheet.setColumnWidth(7, 150);
-  sheet.setColumnWidth(8, 120);
-  sheet.setColumnWidth(9, 100);
-  sheet.setColumnWidth(10, 200);
+  sheet.setColumnWidth(1, 70);   // الكود
+  sheet.setColumnWidth(2, 140);  // الاسم
+  sheet.setColumnWidth(3, 140);  // المشروع
+  sheet.setColumnWidth(4, 100);  // نوع المشاركة
+  sheet.setColumnWidth(5, 100);  // حالة التواصل
+  sheet.setColumnWidth(6, 90);   // حالة الأسئلة
+  sheet.setColumnWidth(7, 80);   // البلد
+  sheet.setColumnWidth(8, 120);  // مكان التصوير
+  sheet.setColumnWidth(9, 100);  // تاريخ التصوير
+  sheet.setColumnWidth(10, 90);  // حالة التصوير
+  sheet.setColumnWidth(11, 80);  // يحتاج دوبلاج
+  sheet.setColumnWidth(12, 180); // البريد
+  sheet.setColumnWidth(13, 120); // الهاتف
+  sheet.setColumnWidth(14, 150); // ملاحظات
+  sheet.setColumnWidth(15, 110); // تاريخ الإنشاء
+  sheet.setColumnWidth(16, 110); // آخر تحديث
 }
 
 /**
  * إنشاء شيت الحركة (الإدخال الرئيسي)
+ * يحتوي على أعمدة ديناميكية للمشروع والمرحلة
  * @param {Spreadsheet} ss الجدول
  */
 function createMovementSheet(ss) {
@@ -385,12 +421,12 @@ function createMovementSheet(ss) {
     'التاريخ',
     'المشروع',
     'المرحلة',
-    'المهمة',
+    'النوع الفرعي',
+    'العنصر',
+    'الإجراء',
     'المسؤول',
     'الحالة',
-    'تاريخ البداية',
-    'تاريخ النهاية',
-    'المدة (دقيقة)',
+    'تاريخ الاستحقاق',
     'ملاحظات',
     'أنشئ بواسطة',
     'تاريخ الإنشاء'
@@ -405,19 +441,19 @@ function createMovementSheet(ss) {
   sheet.setFrozenRows(1);
   sheet.setRightToLeft(true);
 
-  sheet.setColumnWidth(1, 80);
-  sheet.setColumnWidth(2, 100);
-  sheet.setColumnWidth(3, 150);
-  sheet.setColumnWidth(4, 150);
-  sheet.setColumnWidth(5, 200);
-  sheet.setColumnWidth(6, 120);
-  sheet.setColumnWidth(7, 100);
-  sheet.setColumnWidth(8, 120);
-  sheet.setColumnWidth(9, 120);
-  sheet.setColumnWidth(10, 100);
-  sheet.setColumnWidth(11, 200);
-  sheet.setColumnWidth(12, 120);
-  sheet.setColumnWidth(13, 150);
+  sheet.setColumnWidth(1, 70);   // المعرف
+  sheet.setColumnWidth(2, 90);   // التاريخ
+  sheet.setColumnWidth(3, 140);  // المشروع
+  sheet.setColumnWidth(4, 140);  // المرحلة
+  sheet.setColumnWidth(5, 90);   // النوع الفرعي
+  sheet.setColumnWidth(6, 150);  // العنصر
+  sheet.setColumnWidth(7, 120);  // الإجراء
+  sheet.setColumnWidth(8, 110);  // المسؤول
+  sheet.setColumnWidth(9, 90);   // الحالة
+  sheet.setColumnWidth(10, 100); // تاريخ الاستحقاق
+  sheet.setColumnWidth(11, 180); // ملاحظات
+  sheet.setColumnWidth(12, 110); // أنشئ بواسطة
+  sheet.setColumnWidth(13, 130); // تاريخ الإنشاء
 
   // تلوين تبادلي للصفوف
   sheet.getRange('A:M').applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY);
@@ -425,6 +461,7 @@ function createMovementSheet(ss) {
 
 /**
  * إنشاء شيت التعليق الصوتي
+ * يتضمن أعمدة: الكود، المشروع، النوع، رقم المقطع، النص، المؤدي، اللغة، الاستديو، الحالة، المدة، رابط الملف، ملاحظات
  * @param {Spreadsheet} ss الجدول
  */
 function createVoiceOverSheet(ss) {
@@ -438,16 +475,20 @@ function createVoiceOverSheet(ss) {
   sheet.clear();
 
   const headers = [
-    'المعرف',
+    'الكود',
     'المشروع',
-    'الحلقة',
     'النوع',
-    'حالة النص',
-    'حالة التسجيل',
-    'المعلق',
+    'رقم المقطع',
+    'النص',
+    'المؤدي',
+    'اللغة',
+    'الاستديو',
+    'الحالة',
     'المدة (دقيقة)',
-    'تاريخ التسجيل',
-    'ملاحظات'
+    'رابط الملف',
+    'ملاحظات',
+    'تاريخ الإنشاء',
+    'آخر تحديث'
   ];
 
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
@@ -459,20 +500,29 @@ function createVoiceOverSheet(ss) {
   sheet.setFrozenRows(1);
   sheet.setRightToLeft(true);
 
-  sheet.setColumnWidth(1, 80);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 100);
-  sheet.setColumnWidth(4, 100);
-  sheet.setColumnWidth(5, 100);
-  sheet.setColumnWidth(6, 100);
-  sheet.setColumnWidth(7, 120);
-  sheet.setColumnWidth(8, 100);
-  sheet.setColumnWidth(9, 120);
-  sheet.setColumnWidth(10, 200);
+  // تعيين عرض الأعمدة
+  sheet.setColumnWidth(1, 80);   // الكود
+  sheet.setColumnWidth(2, 140);  // المشروع
+  sheet.setColumnWidth(3, 100);  // النوع
+  sheet.setColumnWidth(4, 80);   // رقم المقطع
+  sheet.setColumnWidth(5, 250);  // النص
+  sheet.setColumnWidth(6, 120);  // المؤدي
+  sheet.setColumnWidth(7, 80);   // اللغة
+  sheet.setColumnWidth(8, 120);  // الاستديو
+  sheet.setColumnWidth(9, 100);  // الحالة
+  sheet.setColumnWidth(10, 90);  // المدة
+  sheet.setColumnWidth(11, 200); // رابط الملف
+  sheet.setColumnWidth(12, 180); // ملاحظات
+  sheet.setColumnWidth(13, 120); // تاريخ الإنشاء
+  sheet.setColumnWidth(14, 120); // آخر تحديث
+
+  // تلوين تبادلي للصفوف
+  sheet.getRange('A:N').applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY);
 }
 
 /**
  * إنشاء شيت الرسوم المتحركة
+ * يتضمن أعمدة: الكود، المشروع، رقم المشهد، الوصف، النوع، المدة، رابط السكريبت، الاستديو، المحرك، الحالة، رابط الملف
  * @param {Spreadsheet} ss الجدول
  */
 function createAnimationSheet(ss) {
@@ -486,17 +536,20 @@ function createAnimationSheet(ss) {
   sheet.clear();
 
   const headers = [
-    'المعرف',
+    'الكود',
     'المشروع',
-    'الحلقة',
-    'المشهد',
+    'رقم المشهد',
+    'الوصف',
     'النوع',
+    'المدة (ثانية)',
+    'رابط السكريبت',
+    'الاستديو',
     'المحرك',
     'الحالة',
-    'تاريخ البداية',
-    'تاريخ النهاية',
-    'المدة (ثانية)',
-    'ملاحظات'
+    'رابط الملف',
+    'ملاحظات',
+    'تاريخ الإنشاء',
+    'آخر تحديث'
   ];
 
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
@@ -508,21 +561,29 @@ function createAnimationSheet(ss) {
   sheet.setFrozenRows(1);
   sheet.setRightToLeft(true);
 
-  sheet.setColumnWidth(1, 80);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 100);
-  sheet.setColumnWidth(4, 100);
-  sheet.setColumnWidth(5, 130);
-  sheet.setColumnWidth(6, 120);
-  sheet.setColumnWidth(7, 100);
-  sheet.setColumnWidth(8, 120);
-  sheet.setColumnWidth(9, 120);
-  sheet.setColumnWidth(10, 100);
-  sheet.setColumnWidth(11, 200);
+  // تعيين عرض الأعمدة
+  sheet.setColumnWidth(1, 80);   // الكود
+  sheet.setColumnWidth(2, 140);  // المشروع
+  sheet.setColumnWidth(3, 80);   // رقم المشهد
+  sheet.setColumnWidth(4, 200);  // الوصف
+  sheet.setColumnWidth(5, 130);  // النوع
+  sheet.setColumnWidth(6, 90);   // المدة
+  sheet.setColumnWidth(7, 200);  // رابط السكريبت
+  sheet.setColumnWidth(8, 120);  // الاستديو
+  sheet.setColumnWidth(9, 120);  // المحرك
+  sheet.setColumnWidth(10, 100); // الحالة
+  sheet.setColumnWidth(11, 200); // رابط الملف
+  sheet.setColumnWidth(12, 180); // ملاحظات
+  sheet.setColumnWidth(13, 120); // تاريخ الإنشاء
+  sheet.setColumnWidth(14, 120); // آخر تحديث
+
+  // تلوين تبادلي للصفوف
+  sheet.getRange('A:N').applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY);
 }
 
 /**
  * إنشاء شيت الأرشيف
+ * يتضمن أعمدة: الكود، المشروع، نوع الأرشيف، العنوان، الوصف، المصدر، تاريخ الحصول، حالة الترخيص، انتهاء الترخيص، تكلفة الترخيص، رابط الملف، مستخدم في
  * @param {Spreadsheet} ss الجدول
  */
 function createArchiveSheet(ss) {
@@ -536,17 +597,26 @@ function createArchiveSheet(ss) {
   sheet.clear();
 
   const headers = [
-    'المعرف',
+    'الكود',
     'المشروع',
-    'النوع',
+    'نوع الأرشيف',
+    'العنوان',
     'الوصف',
     'المصدر',
-    'المدة (ثانية)',
-    'الحالة',
-    'الباحث',
-    'تاريخ الطلب',
-    'تاريخ الاستلام',
-    'ملاحظات'
+    'تاريخ المادة الأصلي',
+    'تاريخ الحصول',
+    'حالة الترخيص',
+    'انتهاء الترخيص',
+    'تكلفة الترخيص',
+    'رابط الملف',
+    'صورة مصغرة',
+    'مستخدم في',
+    'المدة',
+    'الدقة',
+    'ملاحظات',
+    'أضافه',
+    'تاريخ الإضافة',
+    'آخر تحديث'
   ];
 
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
@@ -558,17 +628,30 @@ function createArchiveSheet(ss) {
   sheet.setFrozenRows(1);
   sheet.setRightToLeft(true);
 
-  sheet.setColumnWidth(1, 80);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 100);
-  sheet.setColumnWidth(4, 200);
-  sheet.setColumnWidth(5, 150);
-  sheet.setColumnWidth(6, 100);
-  sheet.setColumnWidth(7, 100);
-  sheet.setColumnWidth(8, 120);
-  sheet.setColumnWidth(9, 120);
-  sheet.setColumnWidth(10, 120);
-  sheet.setColumnWidth(11, 200);
+  // تعيين عرض الأعمدة
+  sheet.setColumnWidth(1, 80);   // الكود
+  sheet.setColumnWidth(2, 140);  // المشروع
+  sheet.setColumnWidth(3, 100);  // نوع الأرشيف
+  sheet.setColumnWidth(4, 160);  // العنوان
+  sheet.setColumnWidth(5, 200);  // الوصف
+  sheet.setColumnWidth(6, 120);  // المصدر
+  sheet.setColumnWidth(7, 110);  // تاريخ المادة الأصلي
+  sheet.setColumnWidth(8, 100);  // تاريخ الحصول
+  sheet.setColumnWidth(9, 100);  // حالة الترخيص
+  sheet.setColumnWidth(10, 110); // انتهاء الترخيص
+  sheet.setColumnWidth(11, 100); // تكلفة الترخيص
+  sheet.setColumnWidth(12, 200); // رابط الملف
+  sheet.setColumnWidth(13, 150); // صورة مصغرة
+  sheet.setColumnWidth(14, 150); // مستخدم في
+  sheet.setColumnWidth(15, 80);  // المدة
+  sheet.setColumnWidth(16, 80);  // الدقة
+  sheet.setColumnWidth(17, 180); // ملاحظات
+  sheet.setColumnWidth(18, 100); // أضافه
+  sheet.setColumnWidth(19, 110); // تاريخ الإضافة
+  sheet.setColumnWidth(20, 110); // آخر تحديث
+
+  // تلوين تبادلي للصفوف
+  sheet.getRange('A:T').applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY);
 }
 
 /**
