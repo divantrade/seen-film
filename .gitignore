@@ -1,0 +1,23 @@
+# Clasp credentials (لا ترفع بيانات الاعتماد أبداً)
+.clasprc.json
+
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables (إذا وجدت)
+.env
+.env.local
