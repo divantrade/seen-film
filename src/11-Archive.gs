@@ -41,19 +41,6 @@ const ARCHIVE_COLS = {
 };
 
 /**
- * أنواع الأرشيف
- */
-const ARCHIVE_TYPES = {
-  VIDEO: 'فيديو',
-  PHOTO: 'صور',
-  DOCUMENT: 'وثائق',
-  AUDIO: 'صوت',
-  GRAPHIC: 'رسومات',
-  MAP: 'خرائط',
-  OTHER: 'أخرى'
-};
-
-/**
  * حالات الترخيص
  */
 const LICENSE_STATUS = {
