@@ -40,6 +40,11 @@ function onEdit(e) {
 
   const sheet = e.range.getSheet();
   const sheetName = sheet.getName();
+
+  // الشيتات المسموح بها فقط: الحركة والضيوف
+  const allowedSheets = [SHEETS.MOVEMENT, SHEETS.GUESTS];
+  if (!allowedSheets.includes(sheetName)) return;
+
   const row = e.range.getRow();
   const col = e.range.getColumn();
   const value = e.value;
@@ -54,15 +59,6 @@ function onEdit(e) {
       break;
     case SHEETS.GUESTS:
       handleGuestsEdit(sheet, row, col, value);
-      break;
-    case SHEETS.VOICEOVER:
-      handleVoiceOverEdit(sheet, row, col, value);
-      break;
-    case SHEETS.ANIMATION:
-      handleAnimationEdit(sheet, row, col, value);
-      break;
-    case SHEETS.ARCHIVE:
-      handleArchiveEdit(sheet, row, col, value);
       break;
   }
 
@@ -238,9 +234,6 @@ function autoColorStatus(sheet, row, col, value) {
   switch (sheetName) {
     case SHEETS.MOVEMENT:
       statusCol = DROPDOWN_COLUMNS.MOVEMENT.STATUS;
-      break;
-    case SHEETS.PROJECTS:
-      statusCol = 6; // عمود الحالة في المشاريع
       break;
     case SHEETS.GUESTS:
       statusCol = 5; // عمود حالة التواصل
