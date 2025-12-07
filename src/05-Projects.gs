@@ -233,16 +233,35 @@ function addProject(projectData) {
       endDate = new Date(projectData.endDate);
     }
 
-    // تجهيز صف البيانات
-    const rowData = [
+    // إيجاد أول صف فاضي بعد الـ header
+    const lastRow = sheet.getLastRow();
+    let targetRow = 2; // البداية من الصف 2 (بعد الهيدر)
+
+    if (lastRow >= 2) {
+      // البحث عن أول صف فاضي
+      const firstColData = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (let i = 0; i < firstColData.length; i++) {
+        if (!firstColData[i][0] || firstColData[i][0] === '') {
+          targetRow = i + 2;
+          break;
+        }
+        targetRow = i + 3; // الصف التالي بعد آخر صف ممتلئ
+      }
+    }
+
+    // تجهيز صف البيانات (بدون المراحل - سنضيفها كـ checkboxes)
+    const basicData = [
       code,
       projectData.name,
       projectData.type || PROJECT_TYPES[0],
       startDate,
       endDate,
       projectData.status || PROJECT_STATUS.ACTIVE,
-      projectData.notes || '',
-      // المراحل
+      projectData.notes || ''
+    ];
+
+    // قيم المراحل
+    const phaseValues = [
       projectData.phases && projectData.phases.paper === true,
       projectData.phases && projectData.phases.fixer === true,
       projectData.phases && projectData.phases.shootField === true,
@@ -254,19 +273,29 @@ function addProject(projectData) {
       projectData.phases && projectData.phases.montage === true,
       projectData.phases && projectData.phases.archive === true,
       projectData.phases && projectData.phases.review === true,
-      projectData.phases && projectData.phases.delivery === true,
-      // تواريخ النظام
-      new Date(),
-      new Date()
+      projectData.phases && projectData.phases.delivery === true
     ];
 
-    // إضافة الصف
-    sheet.appendRow(rowData);
+    // تواريخ النظام
+    const systemDates = [new Date(), new Date()];
+
+    // دمج كل البيانات
+    const rowData = [...basicData, ...phaseValues, ...systemDates];
+
+    // إضافة البيانات في الصف المحدد
+    sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
+
+    // تطبيق checkbox validation على أعمدة المراحل (H إلى S = أعمدة 8 إلى 19)
+    const phaseRange = sheet.getRange(targetRow, 8, 1, 12); // 12 مرحلة
+    const checkboxRule = SpreadsheetApp.newDataValidation()
+      .requireCheckbox()
+      .build();
+    phaseRange.setDataValidation(checkboxRule);
 
     // التأكد من حفظ البيانات فوراً
     SpreadsheetApp.flush();
 
-    console.log('تم إضافة المشروع بنجاح: ' + code);
+    console.log('تم إضافة المشروع بنجاح: ' + code + ' في الصف: ' + targetRow);
     return true;
 
   } catch (error) {
