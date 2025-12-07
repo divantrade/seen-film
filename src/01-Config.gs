@@ -65,14 +65,16 @@ const STAGES = {
     name: 'الورق/البحث',
     nameEn: 'Paper/Research',
     icon: '📄',
-    order: 1
+    order: 1,
+    subtypes: ['فكرة', 'معالجة', 'سيناريو', 'بحث']
   },
   FIXER: {
     id: 'FIXER',
     name: 'الفيكسر',
     nameEn: 'Fixer',
     icon: '🔧',
-    order: 2
+    order: 2,
+    subtypes: ['تواصل', 'تأكيد', 'متابعة', 'رفض']
   },
   SHOOT_FIELD: {
     id: 'SHOOT_FIELD',
@@ -86,14 +88,16 @@ const STAGES = {
     name: 'تصوير المقابلات',
     nameEn: 'Interview Shooting',
     icon: '🎤',
-    order: 4
+    order: 4,
+    subtypes: ['أسئلة', 'تنسيق موعد', 'تصوير', 'مونتاج أولي']
   },
   SHOOT_DRAMA: {
     id: 'SHOOT_DRAMA',
     name: 'تصوير الدراما',
     nameEn: 'Drama Shooting',
     icon: '🎭',
-    order: 5
+    order: 5,
+    subtypes: ['اسكربت', 'كاستنج', 'لوكيشن', 'تصوير']
   },
   VO: {
     id: 'VO',
@@ -101,14 +105,15 @@ const STAGES = {
     nameEn: 'Voice Over',
     icon: '🎙️',
     order: 6,
-    subtypes: ['راوي', 'اقتباس', 'دوبلاج']
+    subtypes: ['كتابة النص', 'مراجعة النص', 'تسجيل', 'مراجعة التسجيل']
   },
   ANIMATION: {
     id: 'ANIMATION',
     name: 'الرسوم المتحركة',
     nameEn: 'Animation',
     icon: '🎨',
-    order: 7
+    order: 7,
+    subtypes: ['اسكربت', 'ستوري بورد', 'تنفيذ', 'مراجعة']
   },
   INFOGRAPH: {
     id: 'INFOGRAPH',
