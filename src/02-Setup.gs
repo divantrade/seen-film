@@ -82,11 +82,11 @@ function createSettingsSheet(ss) {
 
   // عنوان المراحل
   sheet.getRange('A1').setValue('المراحل').setFontWeight('bold').setFontSize(14);
-  sheet.getRange('A1:D1').merge().setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
+  sheet.getRange('A1:E1').merge().setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
 
   // رؤوس أعمدة المراحل
-  const stageHeaders = ['المعرف', 'الاسم', 'الأيقونة', 'الترتيب'];
-  sheet.getRange('A2:D2').setValues([stageHeaders])
+  const stageHeaders = ['المعرف', 'الاسم', 'الأيقونة', 'الترتيب', 'الأنواع الفرعية'];
+  sheet.getRange('A2:E2').setValues([stageHeaders])
     .setFontWeight('bold')
     .setBackground(COLORS.BACKGROUND_LIGHT);
 
@@ -95,9 +95,10 @@ function createSettingsSheet(ss) {
     stage.id,
     stage.name,
     stage.icon,
-    stage.order
+    stage.order,
+    stage.subtypes ? stage.subtypes.join('، ') : '-'
   ]);
-  sheet.getRange(3, 1, stageData.length, 4).setValues(stageData);
+  sheet.getRange(3, 1, stageData.length, 5).setValues(stageData);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // قسم الحالات
@@ -163,6 +164,7 @@ function createSettingsSheet(ss) {
   sheet.setColumnWidth(2, 150);
   sheet.setColumnWidth(3, 100);
   sheet.setColumnWidth(4, 100);
+  sheet.setColumnWidth(5, 250); // الأنواع الفرعية
 
   // تسمية النطاقات للقوائم المنسدلة
   ss.setNamedRange('StagesList', sheet.getRange(3, 2, stageData.length, 1));
