@@ -199,15 +199,17 @@ function getActiveProjectCodes() {
  */
 function addProject(projectData) {
   try {
-    const sheet = getSheet(SHEETS.PROJECTS);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEETS.PROJECTS);
+
     if (!sheet) {
-      showError('شيت المشاريع غير موجود');
+      console.error('شيت المشاريع غير موجود: ' + SHEETS.PROJECTS);
       return false;
     }
 
     // التحقق من البيانات المطلوبة
-    if (!projectData.name) {
-      showError('اسم المشروع مطلوب');
+    if (!projectData || !projectData.name) {
+      console.error('اسم المشروع مطلوب');
       return false;
     }
 
@@ -216,8 +218,19 @@ function addProject(projectData) {
 
     // التحقق من عدم تكرار الكود
     if (getProjectByCode(code)) {
-      showError('كود المشروع موجود مسبقاً');
+      console.error('كود المشروع موجود مسبقاً: ' + code);
       return false;
+    }
+
+    // تحويل التواريخ من strings إلى Date objects
+    let startDate = new Date();
+    if (projectData.startDate && projectData.startDate !== '') {
+      startDate = new Date(projectData.startDate);
+    }
+
+    let endDate = '';
+    if (projectData.endDate && projectData.endDate !== '') {
+      endDate = new Date(projectData.endDate);
     }
 
     // تجهيز صف البيانات
@@ -225,34 +238,39 @@ function addProject(projectData) {
       code,
       projectData.name,
       projectData.type || PROJECT_TYPES[0],
-      projectData.startDate || new Date(),
-      projectData.endDate || '',
+      startDate,
+      endDate,
       projectData.status || PROJECT_STATUS.ACTIVE,
       projectData.notes || '',
-      // المراحل (افتراضياً كلها مفعلة)
-      projectData.phases?.paper !== false,
-      projectData.phases?.fixer !== false,
-      projectData.phases?.shootField !== false,
-      projectData.phases?.shootInt !== false,
-      projectData.phases?.shootDrama !== false,
-      projectData.phases?.vo !== false,
-      projectData.phases?.animation !== false,
-      projectData.phases?.infograph !== false,
-      projectData.phases?.montage !== false,
-      projectData.phases?.archive !== false,
-      projectData.phases?.review !== false,
-      projectData.phases?.delivery !== false,
+      // المراحل
+      projectData.phases && projectData.phases.paper === true,
+      projectData.phases && projectData.phases.fixer === true,
+      projectData.phases && projectData.phases.shootField === true,
+      projectData.phases && projectData.phases.shootInt === true,
+      projectData.phases && projectData.phases.shootDrama === true,
+      projectData.phases && projectData.phases.vo === true,
+      projectData.phases && projectData.phases.animation === true,
+      projectData.phases && projectData.phases.infograph === true,
+      projectData.phases && projectData.phases.montage === true,
+      projectData.phases && projectData.phases.archive === true,
+      projectData.phases && projectData.phases.review === true,
+      projectData.phases && projectData.phases.delivery === true,
       // تواريخ النظام
       new Date(),
       new Date()
     ];
 
+    // إضافة الصف
     sheet.appendRow(rowData);
 
+    // التأكد من حفظ البيانات فوراً
+    SpreadsheetApp.flush();
+
+    console.log('تم إضافة المشروع بنجاح: ' + code);
     return true;
+
   } catch (error) {
-    console.error('Error adding project:', error);
-    showError('حدث خطأ أثناء إضافة المشروع');
+    console.error('Error adding project:', error.toString());
     return false;
   }
 }
