@@ -487,18 +487,33 @@ function getProjectsStats() {
  * فتح نموذج إضافة مشروع جديد
  */
 function showAddProjectDialog() {
+  // تحضير خيارات الأنواع
+  const typeOptions = PROJECT_TYPES.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+
+  // تحضير checkboxes المراحل
+  const phaseCheckboxes = Object.values(STAGES).map(s =>
+    '<div class="phase-item">' +
+    '<input type="checkbox" id="phase_' + s.id + '" checked>' +
+    '<label for="phase_' + s.id + '">' + s.icon + ' ' + s.name + '</label>' +
+    '</div>'
+  ).join('');
+
+  // تاريخ اليوم
+  const today = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd');
+
   const html = HtmlService.createHtmlOutput(`
     <style>
       body { font-family: Arial, sans-serif; direction: rtl; padding: 20px; }
       .form-group { margin-bottom: 15px; }
       label { display: block; margin-bottom: 5px; font-weight: bold; }
-      input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-      .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+      input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+      .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }
       .btn-primary { background: #1565c0; color: white; }
       .btn-secondary { background: #757575; color: white; }
       .phases-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
       .phase-item { display: flex; align-items: center; }
       .phase-item input { width: auto; margin-left: 5px; }
+      .buttons { margin-top: 20px; text-align: left; }
     </style>
 
     <h3>إضافة مشروع جديد</h3>
@@ -511,13 +526,13 @@ function showAddProjectDialog() {
     <div class="form-group">
       <label>النوع</label>
       <select id="projectType">
-        ${PROJECT_TYPES.map(t => '<option value="' + t + '">' + t + '</option>').join('')}
+        ${typeOptions}
       </select>
     </div>
 
     <div class="form-group">
       <label>تاريخ البداية</label>
-      <input type="date" id="startDate" value="${new Date().toISOString().split('T')[0]}">
+      <input type="date" id="startDate" value="${today}">
     </div>
 
     <div class="form-group">
@@ -528,12 +543,7 @@ function showAddProjectDialog() {
     <div class="form-group">
       <label>المراحل المطلوبة</label>
       <div class="phases-grid">
-        ${Object.values(STAGES).map(s => `
-          <div class="phase-item">
-            <input type="checkbox" id="phase_${s.id}" checked>
-            <label for="phase_${s.id}">${s.icon} ${s.name}</label>
-          </div>
-        `).join('')}
+        ${phaseCheckboxes}
       </div>
     </div>
 
@@ -542,37 +552,57 @@ function showAddProjectDialog() {
       <textarea id="notes" rows="3"></textarea>
     </div>
 
-    <button class="btn btn-primary" onclick="submitForm()">حفظ</button>
-    <button class="btn btn-secondary" onclick="google.script.host.close()">إلغاء</button>
+    <div class="buttons">
+      <button class="btn btn-secondary" onclick="google.script.host.close()">إلغاء</button>
+      <button class="btn btn-primary" onclick="submitForm()">حفظ</button>
+    </div>
 
     <script>
       function submitForm() {
-        const data = {
-          name: document.getElementById('projectName').value,
+        var projectName = document.getElementById('projectName').value;
+        if (!projectName || projectName.trim() === '') {
+          alert('يرجى إدخال اسم المشروع');
+          return;
+        }
+
+        var data = {
+          name: projectName,
           type: document.getElementById('projectType').value,
           startDate: document.getElementById('startDate').value,
           endDate: document.getElementById('endDate').value,
           notes: document.getElementById('notes').value,
-          phases: {}
+          phases: {
+            paper: document.getElementById('phase_PAPER').checked,
+            fixer: document.getElementById('phase_FIXER').checked,
+            shootField: document.getElementById('phase_SHOOT_FIELD').checked,
+            shootInt: document.getElementById('phase_SHOOT_INT').checked,
+            shootDrama: document.getElementById('phase_SHOOT_DRAMA').checked,
+            vo: document.getElementById('phase_VO').checked,
+            animation: document.getElementById('phase_ANIMATION').checked,
+            infograph: document.getElementById('phase_INFOGRAPH').checked,
+            montage: document.getElementById('phase_MONTAGE').checked,
+            archive: document.getElementById('phase_ARCHIVE').checked,
+            review: document.getElementById('phase_REVIEW').checked,
+            delivery: document.getElementById('phase_DELIVERY').checked
+          }
         };
 
-        // جمع المراحل المختارة
-        ${Object.values(STAGES).map(s => `
-          data.phases['${s.id.toLowerCase().replace(/_/g, '')}'] = document.getElementById('phase_${s.id}').checked;
-        `).join('')}
-
         google.script.run
-          .withSuccessHandler(() => {
-            alert('تم إضافة المشروع بنجاح');
-            google.script.host.close();
+          .withSuccessHandler(function(result) {
+            if (result) {
+              alert('تم إضافة المشروع بنجاح');
+              google.script.host.close();
+            } else {
+              alert('حدث خطأ أثناء إضافة المشروع');
+            }
           })
-          .withFailureHandler((err) => {
+          .withFailureHandler(function(err) {
             alert('حدث خطأ: ' + err.message);
           })
           .addProject(data);
       }
     </script>
-  `).setWidth(500).setHeight(600);
+  `).setWidth(500).setHeight(650);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'إضافة مشروع جديد');
 }
