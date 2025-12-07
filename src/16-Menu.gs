@@ -287,8 +287,7 @@ function createArchiveSheetMenu() {
 
 /** إضافة مشروع جديد */
 function addNewProject() {
-  showInfo('سيتم تنفيذ هذه الوظيفة في ملف 05-Projects.gs');
-  goToProjectsSheet();
+  showAddProjectDialog();
 }
 
 /** إضافة عضو فريق جديد */
@@ -331,15 +330,8 @@ function addNewArchiveRequest() {
 // دوال التقارير (Placeholders - سيتم تنفيذها في ملفات أخرى)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** ملخص المشاريع */
-function showProjectsSummary() {
-  showInfo('سيتم تنفيذ هذه الوظيفة في ملف 13-Reports.gs');
-}
-
-/** البحث في المشاريع */
-function searchProjects() {
-  showInfo('سيتم تنفيذ هذه الوظيفة في ملف 05-Projects.gs');
-}
+// ملاحظة: showProjectsSummary موجودة في 05-Projects.gs
+// ملاحظة: searchProjects موجودة في 05-Projects.gs
 
 /** تقرير أداء الفريق */
 function showTeamPerformance() {
@@ -402,15 +394,8 @@ function exportDashboardAsPDF() {
 // دوال الأدوات (Placeholders - سيتم تنفيذها في ملفات أخرى)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** تحديث القوائم المنسدلة */
-function refreshAllDropdowns() {
-  showInfo('سيتم تنفيذ هذه الوظيفة في ملف 04-Dropdowns.gs');
-}
-
-/** تحديث ألوان الحالات */
-function refreshStatusColors() {
-  showInfo('سيتم تنفيذ هذه الوظيفة في ملف 04-Dropdowns.gs');
-}
+// ملاحظة: refreshAllDropdowns موجودة في 04-Dropdowns.gs
+// ملاحظة: refreshStatusColors موجودة في 04-Dropdowns.gs
 
 /** التحقق من البيانات */
 function validateAllData() {
