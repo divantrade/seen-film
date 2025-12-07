@@ -240,8 +240,10 @@ function createProjectsSheet(ss) {
   const checkboxRange = sheet.getRange(2, 8, 99, phaseHeaders.length);
   checkboxRange.insertCheckboxes();
 
-  // تلوين أعمدة المراحل
-  sheet.getRange(1, 8, 1, phaseHeaders.length).setBackground('#E3F2FD');
+  // تلوين أعمدة المراحل مع نص مقروء
+  sheet.getRange(1, 8, 1, phaseHeaders.length)
+    .setBackground('#E3F2FD')
+    .setFontColor('#1565C0'); // نص أزرق داكن على خلفية فاتحة
 
   // تعيين تنسيق الاتجاه من اليمين لليسار
   sheet.setRightToLeft(true);
