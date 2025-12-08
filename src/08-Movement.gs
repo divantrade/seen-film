@@ -66,16 +66,18 @@ function getAllMovements() {
 
 /**
  * الحصول على حركات مشروع معين
- * @param {string} projectCode كود المشروع أو اسمه
+ * @param {string} projectCodeOrName كود المشروع أو اسمه
  * @returns {Array} مصفوفة الحركات
  */
-function getMovementByProject(projectCode) {
-  if (!projectCode) return [];
+function getMovementByProject(projectCodeOrName) {
+  if (!projectCodeOrName) return [];
 
   const allMovements = getAllMovements();
   return allMovements.filter(movement =>
-    movement.project === projectCode ||
-    movement.project.includes(projectCode)
+    movement.projectCode === projectCodeOrName ||
+    movement.projectName === projectCodeOrName ||
+    (movement.projectCode && movement.projectCode.includes(projectCodeOrName)) ||
+    (movement.projectName && movement.projectName.includes(projectCodeOrName))
   );
 }
 
@@ -397,7 +399,10 @@ function getMovementStats(filters) {
 
   // تطبيق الفلاتر
   if (filters.project) {
-    movements = movements.filter(m => m.project.includes(filters.project));
+    movements = movements.filter(m =>
+      (m.projectCode && m.projectCode.includes(filters.project)) ||
+      (m.projectName && m.projectName.includes(filters.project))
+    );
   }
   if (filters.person) {
     movements = movements.filter(m => m.assignedTo.includes(filters.person));
@@ -431,8 +436,8 @@ function getMovementStats(filters) {
     const stage = movement.stage || 'غير محدد';
     stats.byStage[stage] = (stats.byStage[stage] || 0) + 1;
 
-    // حسب المشروع
-    const project = movement.project || 'غير محدد';
+    // حسب المشروع (استخدام اسم المشروع للعرض)
+    const project = movement.projectName || movement.projectCode || 'غير محدد';
     stats.byProject[project] = (stats.byProject[project] || 0) + 1;
 
     // حسب الشخص
@@ -486,7 +491,7 @@ function getDailySummary(date) {
     const status = m.status || 'غير محدد';
     summary.byStatus[status] = (summary.byStatus[status] || 0) + 1;
 
-    const project = m.project || 'غير محدد';
+    const project = m.projectName || m.projectCode || 'غير محدد';
     summary.byProject[project] = (summary.byProject[project] || 0) + 1;
   });
 
@@ -530,7 +535,7 @@ function getWeeklySummary() {
     const status = m.status || 'غير محدد';
     summary.byStatus[status] = (summary.byStatus[status] || 0) + 1;
 
-    const project = m.project || 'غير محدد';
+    const project = m.projectName || m.projectCode || 'غير محدد';
     summary.byProject[project] = (summary.byProject[project] || 0) + 1;
 
     const person = m.assignedTo || 'غير محدد';
@@ -742,7 +747,8 @@ function showDelayedMovements() {
 
   const list = delayed.map(m => {
     const daysLate = daysRemaining(m.dueDate) * -1;
-    return `• ${m.project} - ${m.stage}\n  ${m.element || m.action}\n  المسؤول: ${m.assignedTo || 'غير محدد'} | متأخر ${daysLate} يوم`;
+    const projectDisplay = m.projectName || m.projectCode || 'غير محدد';
+    return `• ${projectDisplay} - ${m.stage}\n  ${m.element || m.action}\n  المسؤول: ${m.assignedTo || 'غير محدد'} | متأخر ${daysLate} يوم`;
   }).join('\n\n');
 
   const message = `

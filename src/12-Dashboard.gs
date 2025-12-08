@@ -21,7 +21,7 @@ const DASHBOARD_CELLS = {
   PROJECT_CODE_INPUT: 'B2',     // خلية إدخال كود المشروع
   PROJECT_NAME: 'D2',           // اسم المشروع
   PROJECT_STATUS: 'F2',         // حالة المشروع
-  PROJECT_CLIENT: 'B4',         // العميل
+  PROJECT_CLIENT: 'B4',         // العميل (اسم القناة)
   PROJECT_START: 'D4',          // تاريخ البداية
   PROJECT_DEADLINE: 'F4',       // الموعد النهائي
 
@@ -37,6 +37,116 @@ const DASHBOARD_CELLS = {
   ALERTS_START_ROW: 20,
   ALERTS_START_COL: 2
 };
+
+// ====================================================
+// ثوابت التعليق الصوتي والرسوم المتحركة والأرشيف
+// (للاستخدام المستقبلي عند تفعيل هذه الشيتات)
+// ====================================================
+
+/**
+ * حالات الترخيص للأرشيف
+ */
+const LICENSE_STATUS = {
+  PENDING: 'في الانتظار',
+  LICENSED: 'مرخص',
+  NOT_NEEDED: 'لا يحتاج',
+  REJECTED: 'مرفوض'
+};
+
+// ====================================================
+// دوال التعليق الصوتي (Stub - للتفعيل المستقبلي)
+// ====================================================
+
+/**
+ * الحصول على التعليقات الصوتية لمشروع معين
+ * @param {string} projectCode - كود المشروع
+ * @returns {Array} مصفوفة التعليقات الصوتية (فارغة حالياً)
+ */
+function getVoiceOverByProject(projectCode) {
+  // TODO: تفعيل هذه الدالة عند إنشاء شيت التعليق الصوتي
+  // const sheet = getSheet(SHEETS.VOICEOVER);
+  // if (!sheet) return [];
+  return [];
+}
+
+/**
+ * الحصول على إجمالي مدة التعليق الصوتي لمشروع
+ * @param {string} projectCode - كود المشروع
+ * @returns {number} المدة بالدقائق (0 حالياً)
+ */
+function getTotalVoiceOverDuration(projectCode) {
+  // TODO: تفعيل هذه الدالة عند إنشاء شيت التعليق الصوتي
+  return 0;
+}
+
+/**
+ * الحصول على التعليقات الصوتية المعلقة
+ * @returns {Array} مصفوفة التعليقات المعلقة (فارغة حالياً)
+ */
+function getPendingVoiceOver() {
+  // TODO: تفعيل هذه الدالة عند إنشاء شيت التعليق الصوتي
+  return [];
+}
+
+// ====================================================
+// دوال الرسوم المتحركة (Stub - للتفعيل المستقبلي)
+// ====================================================
+
+/**
+ * الحصول على الرسوم المتحركة لمشروع معين
+ * @param {string} projectCode - كود المشروع
+ * @returns {Array} مصفوفة الرسوم المتحركة (فارغة حالياً)
+ */
+function getAnimationByProject(projectCode) {
+  // TODO: تفعيل هذه الدالة عند إنشاء شيت الرسوم المتحركة
+  // const sheet = getSheet(SHEETS.ANIMATION);
+  // if (!sheet) return [];
+  return [];
+}
+
+/**
+ * الحصول على إجمالي مدة الرسوم المتحركة لمشروع
+ * @param {string} projectCode - كود المشروع
+ * @returns {number} المدة بالدقائق (0 حالياً)
+ */
+function getTotalAnimationDuration(projectCode) {
+  // TODO: تفعيل هذه الدالة عند إنشاء شيت الرسوم المتحركة
+  return 0;
+}
+
+/**
+ * الحصول على الرسوم المتحركة المعلقة
+ * @returns {Array} مصفوفة الرسوم المعلقة (فارغة حالياً)
+ */
+function getPendingAnimation() {
+  // TODO: تفعيل هذه الدالة عند إنشاء شيت الرسوم المتحركة
+  return [];
+}
+
+// ====================================================
+// دوال الأرشيف (Stub - للتفعيل المستقبلي)
+// ====================================================
+
+/**
+ * الحصول على مواد الأرشيف لمشروع معين
+ * @param {string} projectCode - كود المشروع
+ * @returns {Array} مصفوفة مواد الأرشيف (فارغة حالياً)
+ */
+function getArchiveByProject(projectCode) {
+  // TODO: تفعيل هذه الدالة عند إنشاء شيت الأرشيف
+  // const sheet = getSheet(SHEETS.ARCHIVE);
+  // if (!sheet) return [];
+  return [];
+}
+
+/**
+ * الحصول على مواد الأرشيف التي تنتظر الترخيص
+ * @returns {Array} مصفوفة المواد المعلقة (فارغة حالياً)
+ */
+function getPendingLicenses() {
+  // TODO: تفعيل هذه الدالة عند إنشاء شيت الأرشيف
+  return [];
+}
 
 // ====================================================
 // دوال تحديث الداشبورد
@@ -81,17 +191,17 @@ function refreshDashboard() {
 /**
  * تحديث معلومات المشروع الأساسية
  * @param {Sheet} sheet - ورقة الداشبورد
- * @param {Object} project - بيانات المشروع
+ * @param {Object} project - بيانات المشروع (كائن من getAllProjects)
  */
 function updateProjectInfo(sheet, project) {
-  sheet.getRange(DASHBOARD_CELLS.PROJECT_NAME).setValue(project[PROJECT_COLS.NAME] || '');
-  sheet.getRange(DASHBOARD_CELLS.PROJECT_STATUS).setValue(project[PROJECT_COLS.STATUS] || '');
-  sheet.getRange(DASHBOARD_CELLS.PROJECT_CLIENT).setValue(project[PROJECT_COLS.CLIENT] || '');
-  sheet.getRange(DASHBOARD_CELLS.PROJECT_START).setValue(project[PROJECT_COLS.START_DATE] || '');
-  sheet.getRange(DASHBOARD_CELLS.PROJECT_DEADLINE).setValue(project[PROJECT_COLS.DEADLINE] || '');
+  sheet.getRange(DASHBOARD_CELLS.PROJECT_NAME).setValue(project.name || '');
+  sheet.getRange(DASHBOARD_CELLS.PROJECT_STATUS).setValue(project.status || '');
+  sheet.getRange(DASHBOARD_CELLS.PROJECT_CLIENT).setValue(project.channel || '');
+  sheet.getRange(DASHBOARD_CELLS.PROJECT_START).setValue(project.startDate || '');
+  sheet.getRange(DASHBOARD_CELLS.PROJECT_DEADLINE).setValue(project.endDate || '');
 
   // تلوين حالة المشروع
-  const statusColor = getStatusColor(project[PROJECT_COLS.STATUS]);
+  const statusColor = getStatusColor(project.status);
   if (statusColor) {
     sheet.getRange(DASHBOARD_CELLS.PROJECT_STATUS).setBackground(statusColor);
   }
@@ -105,14 +215,18 @@ function updateProjectInfo(sheet, project) {
  */
 function calculatePhaseProgress(projectCode, stageName) {
   const movements = getMovementByProject(projectCode);
-  const stageMovements = movements.filter(m => m[MOVEMENT_COLS.STAGE] === stageName);
+  // تصفية الحركات حسب المرحلة (مع مراعاة وجود الأيقونة)
+  const stageMovements = movements.filter(m =>
+    m.stage === stageName || m.stage.includes(stageName)
+  );
 
   if (stageMovements.length === 0) {
     return { percentage: 0, total: 0, completed: 0 };
   }
 
+  // التحقق من الحالة المكتملة (تم أو ✅)
   const completed = stageMovements.filter(m =>
-    m[MOVEMENT_COLS.STATUS] === STATUS.COMPLETED
+    m.status.includes('تم') || m.status.includes('✅')
   ).length;
 
   return {
@@ -132,8 +246,10 @@ function updatePhaseProgress(sheet, project, projectCode) {
   const startRow = DASHBOARD_CELLS.PHASES_START_ROW;
   const startCol = DASHBOARD_CELLS.PHASES_START_COL;
 
-  // الحصول على المراحل المفعلة للمشروع
+  // الحصول على المراحل المفعلة للمشروع (مصفوفة من كائنات STAGES)
   const activePhases = getProjectPhases(projectCode);
+  // استخراج أسماء المراحل المفعلة
+  const activePhaseNames = activePhases.map(p => p.name);
 
   // مسح البيانات القديمة
   sheet.getRange(startRow, startCol, 12, 3).clearContent();
@@ -142,7 +258,7 @@ function updatePhaseProgress(sheet, project, projectCode) {
 
   // عرض كل مرحلة مفعلة
   Object.entries(STAGES).forEach(([key, stage]) => {
-    if (activePhases.includes(stage.name)) {
+    if (activePhaseNames.includes(stage.name)) {
       const progress = calculatePhaseProgress(projectCode, stage.name);
 
       // اسم المرحلة مع الأيقونة
@@ -181,41 +297,46 @@ function updateDashboardStats(sheet, projectCode) {
   const startRow = DASHBOARD_CELLS.STATS_START_ROW;
   const startCol = DASHBOARD_CELLS.STATS_START_COL;
 
-  // إحصائيات الضيوف
+  // إحصائيات الضيوف (استخدام الخصائص المباشرة من كائنات الضيوف)
   const guests = getGuestsByProject(projectCode);
   const guestStats = {
     total: guests.length,
-    confirmed: guests.filter(g => g[GUEST_COLS.SHOOT_STATUS] === SHOOT_STATUS.SCHEDULED ||
-                                  g[GUEST_COLS.SHOOT_STATUS] === SHOOT_STATUS.COMPLETED).length,
-    pending: guests.filter(g => g[GUEST_COLS.CONTACT_STATUS] === CONTACT_STATUS.PENDING).length
+    confirmed: guests.filter(g =>
+      g.shootStatus === SHOOT_STATUS.SCHEDULED ||
+      g.shootStatus === SHOOT_STATUS.DONE
+    ).length,
+    pending: guests.filter(g =>
+      g.contactStatus === CONTACT_STATUS.NOT_STARTED ||
+      g.contactStatus === CONTACT_STATUS.IN_PROGRESS
+    ).length
   };
 
-  // إحصائيات التعليق الصوتي
+  // إحصائيات التعليق الصوتي (stub - غير مفعل حالياً)
   const voiceOvers = getVoiceOverByProject(projectCode);
   const voStats = {
     total: voiceOvers.length,
-    completed: voiceOvers.filter(v => v[VO_COLS.STATUS] === 'مكتمل').length,
+    completed: voiceOvers.filter(v => v.status === 'مكتمل' || v.status === 'تم').length,
     totalDuration: getTotalVoiceOverDuration(projectCode)
   };
 
-  // إحصائيات الرسوم المتحركة
+  // إحصائيات الرسوم المتحركة (stub - غير مفعل حالياً)
   const animations = getAnimationByProject(projectCode);
   const animStats = {
     total: animations.length,
-    completed: animations.filter(a => a[ANIM_COLS.STATUS] === 'مكتمل').length,
+    completed: animations.filter(a => a.status === 'مكتمل' || a.status === 'تم').length,
     totalDuration: getTotalAnimationDuration(projectCode)
   };
 
-  // إحصائيات الأرشيف
+  // إحصائيات الأرشيف (stub - غير مفعل حالياً)
   const archive = getArchiveByProject(projectCode);
   const archiveStats = {
     total: archive.length,
-    licensed: archive.filter(a => a[ARCHIVE_COLS.LICENSE_STATUS] === LICENSE_STATUS.LICENSED).length,
-    pending: archive.filter(a => a[ARCHIVE_COLS.LICENSE_STATUS] === LICENSE_STATUS.PENDING).length
+    licensed: archive.filter(a => a.licenseStatus === LICENSE_STATUS.LICENSED).length,
+    pending: archive.filter(a => a.licenseStatus === LICENSE_STATUS.PENDING).length
   };
 
   // مسح البيانات القديمة
-  sheet.getRange(startRow, startCol, 10, 2).clearContent();
+  sheet.getRange(startRow, startCol, 22, 2).clearContent();
 
   // عرض الإحصائيات
   const stats = [
@@ -223,7 +344,7 @@ function updateDashboardStats(sheet, projectCode) {
     ['', ''],
     ['👥 الضيوف', ''],
     ['   إجمالي', guestStats.total],
-    ['   مؤكد', guestStats.confirmed],
+    ['   مؤكد/مجدول', guestStats.confirmed],
     ['   في الانتظار', guestStats.pending],
     ['', ''],
     ['🎙️ التعليق الصوتي', ''],
@@ -271,41 +392,48 @@ function getProjectAlerts(projectCode) {
   const alerts = [];
   const today = new Date();
 
-  // 1. المهام المتأخرة
-  const delayedMovements = getDelayedMovements().filter(m => m[MOVEMENT_COLS.PROJECT] === projectCode);
+  // 1. المهام المتأخرة (تصفية بكود أو اسم المشروع)
+  const delayedMovements = getDelayedMovements().filter(m =>
+    m.projectCode === projectCode || m.projectName === projectCode || m.projectName.includes(projectCode)
+  );
   if (delayedMovements.length > 0) {
     alerts.push({
       type: 'error',
       icon: '🔴',
       message: `${delayedMovements.length} مهمة متأخرة`,
-      details: delayedMovements.slice(0, 3).map(m => m[MOVEMENT_COLS.TASK]).join(', ')
+      details: delayedMovements.slice(0, 3).map(m => m.element || m.action).join(', ')
     });
   }
 
   // 2. ضيوف بحاجة للمتابعة
-  const followupGuests = getGuestsNeedingFollowup(projectCode);
+  const allFollowupGuests = getGuestsNeedingFollowup();
+  const followupGuests = allFollowupGuests.filter(g =>
+    g.project === projectCode || g.project.includes(projectCode)
+  );
   if (followupGuests.length > 0) {
     alerts.push({
       type: 'warning',
       icon: '🟡',
       message: `${followupGuests.length} ضيف بحاجة للمتابعة`,
-      details: followupGuests.slice(0, 3).map(g => g[GUEST_COLS.NAME]).join(', ')
+      details: followupGuests.slice(0, 3).map(g => g.name).join(', ')
     });
   }
 
   // 3. تصوير قادم خلال أسبوع
-  const upcomingShoots = getUpcomingShoots(7).filter(g => g[GUEST_COLS.PROJECT] === projectCode);
+  const upcomingShoots = getUpcomingShoots(7).filter(g =>
+    g.project === projectCode || g.project.includes(projectCode)
+  );
   if (upcomingShoots.length > 0) {
     alerts.push({
       type: 'info',
       icon: '🔵',
       message: `${upcomingShoots.length} تصوير قادم خلال أسبوع`,
-      details: upcomingShoots.slice(0, 3).map(g => `${g[GUEST_COLS.NAME]} - ${formatDate(g[GUEST_COLS.SHOOT_DATE])}`).join(', ')
+      details: upcomingShoots.slice(0, 3).map(g => `${g.name} - ${formatDate(g.shootDate)}`).join(', ')
     });
   }
 
-  // 4. تعليق صوتي معلق
-  const pendingVO = getPendingVoiceOver().filter(v => v[VO_COLS.PROJECT] === projectCode);
+  // 4. تعليق صوتي معلق (stub - غير مفعل حالياً)
+  const pendingVO = getPendingVoiceOver().filter(v => v.project === projectCode);
   if (pendingVO.length > 0) {
     alerts.push({
       type: 'warning',
@@ -315,8 +443,8 @@ function getProjectAlerts(projectCode) {
     });
   }
 
-  // 5. رسوم متحركة معلقة
-  const pendingAnim = getPendingAnimation().filter(a => a[ANIM_COLS.PROJECT] === projectCode);
+  // 5. رسوم متحركة معلقة (stub - غير مفعل حالياً)
+  const pendingAnim = getPendingAnimation().filter(a => a.project === projectCode);
   if (pendingAnim.length > 0) {
     alerts.push({
       type: 'warning',
@@ -326,8 +454,8 @@ function getProjectAlerts(projectCode) {
     });
   }
 
-  // 6. تراخيص في الانتظار
-  const pendingLicenses = getPendingLicenses().filter(a => a[ARCHIVE_COLS.PROJECT] === projectCode);
+  // 6. تراخيص في الانتظار (stub - غير مفعل حالياً)
+  const pendingLicenses = getPendingLicenses().filter(a => a.project === projectCode);
   if (pendingLicenses.length > 0) {
     alerts.push({
       type: 'warning',
@@ -339,8 +467,8 @@ function getProjectAlerts(projectCode) {
 
   // 7. الموعد النهائي قريب
   const project = getProjectByCode(projectCode);
-  if (project && project[PROJECT_COLS.DEADLINE]) {
-    const deadline = new Date(project[PROJECT_COLS.DEADLINE]);
+  if (project && project.endDate) {
+    const deadline = new Date(project.endDate);
     const daysLeft = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
 
     if (daysLeft < 0) {
@@ -473,17 +601,20 @@ function getAllProjectsSummary() {
   const projects = getActiveProjects();
 
   return projects.map(project => {
-    const code = project[PROJECT_COLS.CODE];
+    const code = project.code;
     const movements = getMovementByProject(code);
     const totalTasks = movements.length;
-    const completedTasks = movements.filter(m => m[MOVEMENT_COLS.STATUS] === STATUS.COMPLETED).length;
+    // التحقق من الحالة المكتملة (تم أو ✅)
+    const completedTasks = movements.filter(m =>
+      m.status.includes('تم') || m.status.includes('✅')
+    ).length;
 
     return {
       code: code,
-      name: project[PROJECT_COLS.NAME],
-      status: project[PROJECT_COLS.STATUS],
-      client: project[PROJECT_COLS.CLIENT],
-      deadline: project[PROJECT_COLS.DEADLINE],
+      name: project.name,
+      status: project.status,
+      client: project.channel,
+      deadline: project.endDate,
       progress: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
       totalTasks: totalTasks,
       completedTasks: completedTasks,
@@ -551,23 +682,7 @@ function updateAllProjectsDashboard() {
 // دوال مساعدة
 // ====================================================
 
-/**
- * تنسيق التاريخ للعرض
- * @param {Date} date - التاريخ
- * @returns {string} التاريخ المنسق
- */
-function formatDate(date) {
-  if (!date) return '';
-
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
-
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
-
-  return `${day}/${month}/${year}`;
-}
+// ملاحظة: دالة formatDate موجودة في 03-Helpers.gs
 
 /**
  * تحديث الداشبورد عند تغيير كود المشروع
@@ -616,7 +731,7 @@ function setupDashboard() {
 
   // إعداد القائمة المنسدلة لكود المشروع
   const projects = getActiveProjects();
-  const projectCodes = projects.map(p => p[PROJECT_COLS.CODE]);
+  const projectCodes = projects.map(p => p.code);
 
   if (projectCodes.length > 0) {
     const rule = SpreadsheetApp.newDataValidation()
