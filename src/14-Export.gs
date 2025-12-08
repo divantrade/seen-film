@@ -274,8 +274,8 @@ function getExportDialogHtml(type) {
 function getActiveProjectsForExport() {
   const projects = getActiveProjects();
   return projects.map(p => ({
-    code: p[PROJECT_COLS.CODE],
-    name: p[PROJECT_COLS.NAME]
+    code: p.code || '',
+    name: p.name || ''
   }));
 }
 
@@ -286,8 +286,8 @@ function getActiveProjectsForExport() {
 function getPhotographersList() {
   const photographers = getPhotographers();
   return photographers.map(p => ({
-    value: p[PHOTOGRAPHER_COLS.CODE],
-    label: p[PHOTOGRAPHER_COLS.NAME]
+    value: p.code || '',
+    label: p.name || ''
   }));
 }
 
@@ -298,7 +298,7 @@ function getPhotographersList() {
 function getVoiceStudiosList() {
   // جلب الاستوديوهات من بيانات التعليق الصوتي
   const voiceOvers = getAllVoiceOver();
-  const studios = [...new Set(voiceOvers.map(v => v[VO_COLS.STUDIO]).filter(s => s))];
+  const studios = [...new Set(voiceOvers.map(v => v.studio || '').filter(s => s))];
   return studios.map(s => ({ value: s, label: s }));
 }
 
@@ -308,7 +308,7 @@ function getVoiceStudiosList() {
  */
 function getAnimationStudiosList() {
   const animations = getAllAnimation();
-  const studios = [...new Set(animations.map(a => a[ANIM_COLS.STUDIO]).filter(s => s))];
+  const studios = [...new Set(animations.map(a => a.studio || '').filter(s => s))];
   return studios.map(s => ({ value: s, label: s }));
 }
 
@@ -320,15 +320,15 @@ function getEditorsList() {
   const team = getTeamMembers();
   // نفترض أن المونتيرين لديهم دور "مونتير" أو يتعاملون مع مرحلة المونتاج
   const editors = team.filter(t => {
-    const role = (t[TEAM_COLS.ROLE] || '').toLowerCase();
-    const stages = (t[TEAM_COLS.STAGES] || '').toLowerCase();
+    const role = (t.role || '').toLowerCase();
+    const stages = (t.stages || '').toLowerCase();
     return role.includes('مونتير') || role.includes('مونتاج') ||
            stages.includes('مونتاج') || stages.includes('montage');
   });
 
   return editors.map(e => ({
-    value: e[TEAM_COLS.CODE],
-    label: e[TEAM_COLS.NAME]
+    value: e.code || '',
+    label: e.name || ''
   }));
 }
 
@@ -340,16 +340,24 @@ function getAllVoiceOver() {
   const sheet = getSheet(SHEETS.VOICEOVER);
   if (!sheet || sheet.getLastRow() < 2) return [];
 
-  const headers = Object.values(VO_COLS);
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+  const lastCol = sheet.getLastColumn();
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
 
-  return data.map(row => {
-    const item = {};
-    headers.forEach((header, index) => {
-      item[header] = row[index];
-    });
-    return item;
-  }).filter(item => item[VO_COLS.CODE]);
+  // تحويل البيانات إلى كائنات مع خصائص موحدة
+  return data.map(row => ({
+    code: row[0],
+    projectCode: row[1],
+    type: row[2],
+    segmentNum: row[3],
+    text: row[4],
+    performer: row[5],
+    language: row[6],
+    studio: row[7],
+    status: row[8],
+    duration: row[9],
+    fileLink: row[10],
+    notes: row[11]
+  })).filter(item => item.code);
 }
 
 /**
@@ -360,16 +368,24 @@ function getAllAnimation() {
   const sheet = getSheet(SHEETS.ANIMATION);
   if (!sheet || sheet.getLastRow() < 2) return [];
 
-  const headers = Object.values(ANIM_COLS);
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+  const lastCol = sheet.getLastColumn();
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
 
-  return data.map(row => {
-    const item = {};
-    headers.forEach((header, index) => {
-      item[header] = row[index];
-    });
-    return item;
-  }).filter(item => item[ANIM_COLS.CODE]);
+  // تحويل البيانات إلى كائنات مع خصائص موحدة
+  return data.map(row => ({
+    code: row[0],
+    projectCode: row[1],
+    sceneNum: row[2],
+    description: row[3],
+    type: row[4],
+    duration: row[5],
+    scriptLink: row[6],
+    animator: row[7],
+    studio: row[8],
+    status: row[9],
+    fileLink: row[10],
+    notes: row[11]
+  })).filter(item => item.code);
 }
 
 // ====================================================
@@ -426,30 +442,30 @@ function processExport(type, person, projectCode, customSheetName) {
 function exportForPhotographer(photographerCode, projectCode, customName) {
   // جلب بيانات المصور
   const photographers = getPhotographers();
-  const photographer = photographers.find(p => p[PHOTOGRAPHER_COLS.CODE] === photographerCode);
-  const photographerName = photographer ? photographer[PHOTOGRAPHER_COLS.NAME] : photographerCode;
+  const photographer = photographers.find(p => p.code === photographerCode);
+  const photographerName = photographer ? photographer.name : photographerCode;
 
   // جلب بيانات المشروع
   const project = getProjectByCode(projectCode);
-  const projectName = project ? project[PROJECT_COLS.NAME] : projectCode;
+  const projectName = project ? project.name : projectCode;
 
   // جلب الضيوف المجدولين للتصوير
   const guests = getGuestsByProject(projectCode);
-  const scheduledGuests = guests.filter(g =>
-    g[GUEST_COLS.SHOOT_STATUS] === SHOOT_STATUS.SCHEDULED ||
-    g[GUEST_COLS.SHOOT_STATUS] === SHOOT_STATUS.PENDING
-  );
+  const scheduledGuests = guests.filter(g => {
+    const status = g.shootStatus || '';
+    return status.includes('مجدول') || status.includes('انتظار');
+  });
 
   // إعداد البيانات
   const headers = ['اسم الضيف', 'البلد', 'مكان التصوير', 'تاريخ التصوير', 'حالة التصوير', 'نوع المشاركة', 'ملاحظات'];
   const data = scheduledGuests.map(g => [
-    g[GUEST_COLS.NAME],
-    g[GUEST_COLS.COUNTRY],
-    g[GUEST_COLS.SHOOT_LOCATION],
-    g[GUEST_COLS.SHOOT_DATE] ? formatDate(g[GUEST_COLS.SHOOT_DATE]) : '',
-    g[GUEST_COLS.SHOOT_STATUS],
-    g[GUEST_COLS.TYPE],
-    g[GUEST_COLS.NOTES]
+    g.name || '',
+    g.country || '',
+    g.shootLocation || '',
+    g.shootDate ? formatDate(g.shootDate) : '',
+    g.shootStatus || '',
+    g.type || '',
+    g.notes || ''
   ]);
 
   // إنشاء اسم الشيت
@@ -475,24 +491,24 @@ function exportForPhotographer(photographerCode, projectCode, customName) {
  */
 function exportForVoiceStudio(studioName, projectCode, customName) {
   const project = getProjectByCode(projectCode);
-  const projectName = project ? project[PROJECT_COLS.NAME] : projectCode;
+  const projectName = project ? project.name : projectCode;
 
   // جلب مقاطع التعليق الصوتي للمشروع والاستوديو
   const voiceOvers = getVoiceOverByProject(projectCode);
-  const studioVO = voiceOvers.filter(v => v[VO_COLS.STUDIO] === studioName);
+  const studioVO = voiceOvers.filter(v => v.studio === studioName);
 
   // إعداد البيانات
   const headers = ['الكود', 'النوع', 'رقم المقطع', 'النص', 'المؤدي', 'اللغة', 'الحالة', 'المدة (دقيقة)', 'ملاحظات'];
   const data = studioVO.map(v => [
-    v[VO_COLS.CODE],
-    v[VO_COLS.TYPE],
-    v[VO_COLS.SEGMENT_NUM],
-    v[VO_COLS.TEXT],
-    v[VO_COLS.PERFORMER],
-    v[VO_COLS.LANGUAGE],
-    v[VO_COLS.STATUS],
-    v[VO_COLS.DURATION],
-    v[VO_COLS.NOTES]
+    v.code || '',
+    v.type || '',
+    v.segmentNum || '',
+    v.text || '',
+    v.performer || '',
+    v.language || '',
+    v.status || '',
+    v.duration || '',
+    v.notes || ''
   ]);
 
   const sheetName = customName || `تعليق صوتي - ${studioName} - ${projectName}`;
@@ -514,24 +530,24 @@ function exportForVoiceStudio(studioName, projectCode, customName) {
  */
 function exportForAnimationStudio(studioName, projectCode, customName) {
   const project = getProjectByCode(projectCode);
-  const projectName = project ? project[PROJECT_COLS.NAME] : projectCode;
+  const projectName = project ? project.name : projectCode;
 
   // جلب مشاهد الرسوم المتحركة للمشروع والاستوديو
   const animations = getAnimationByProject(projectCode);
-  const studioAnim = animations.filter(a => a[ANIM_COLS.STUDIO] === studioName);
+  const studioAnim = animations.filter(a => a.studio === studioName);
 
   // إعداد البيانات
   const headers = ['الكود', 'رقم المشهد', 'الوصف', 'النوع', 'المدة (ثانية)', 'رابط السكريبت', 'المحرك', 'الحالة', 'ملاحظات'];
   const data = studioAnim.map(a => [
-    a[ANIM_COLS.CODE],
-    a[ANIM_COLS.SCENE_NUM],
-    a[ANIM_COLS.DESCRIPTION],
-    a[ANIM_COLS.TYPE],
-    a[ANIM_COLS.DURATION],
-    a[ANIM_COLS.SCRIPT_LINK],
-    a[ANIM_COLS.ANIMATOR],
-    a[ANIM_COLS.STATUS],
-    a[ANIM_COLS.NOTES]
+    a.code || '',
+    a.sceneNum || '',
+    a.description || '',
+    a.type || '',
+    a.duration || '',
+    a.scriptLink || '',
+    a.animator || '',
+    a.status || '',
+    a.notes || ''
   ]);
 
   const sheetName = customName || `رسوم متحركة - ${studioName} - ${projectName}`;
@@ -553,30 +569,39 @@ function exportForAnimationStudio(studioName, projectCode, customName) {
  */
 function exportForEditor(editorCode, projectCode, customName) {
   const team = getTeamMembers();
-  const editor = team.find(t => t[TEAM_COLS.CODE] === editorCode);
-  const editorName = editor ? editor[TEAM_COLS.NAME] : editorCode;
+  const editor = team.find(t => t.code === editorCode);
+  const editorName = editor ? editor.name : editorCode;
 
   const project = getProjectByCode(projectCode);
-  const projectName = project ? project[PROJECT_COLS.NAME] : projectCode;
+  const projectName = project ? project.name : projectCode;
 
   // جلب مهام المونتاج من شيت الحركة
   const movements = getMovementByProject(projectCode);
   const editingTasks = movements.filter(m => {
-    const stage = m[MOVEMENT_COLS.STAGE] || '';
+    const stage = m.stage || '';
     return stage.includes('مونتاج') || stage.includes('EDITING');
   });
 
   // جلب التعليقات الصوتية المكتملة
   const voiceOvers = getVoiceOverByProject(projectCode);
-  const completedVO = voiceOvers.filter(v => v[VO_COLS.STATUS] === 'مكتمل');
+  const completedVO = voiceOvers.filter(v => {
+    const status = v.status || '';
+    return status.includes('مكتمل') || status.includes('✅');
+  });
 
   // جلب الرسوم المتحركة المكتملة
   const animations = getAnimationByProject(projectCode);
-  const completedAnim = animations.filter(a => a[ANIM_COLS.STATUS] === 'مكتمل');
+  const completedAnim = animations.filter(a => {
+    const status = a.status || '';
+    return status.includes('مكتمل') || status.includes('✅');
+  });
 
   // جلب الأرشيف المرخص
   const archive = getArchiveByProject(projectCode);
-  const licensedArchive = archive.filter(a => a[ARCHIVE_COLS.LICENSE_STATUS] === LICENSE_STATUS.LICENSED);
+  const licensedArchive = archive.filter(a => {
+    const status = a.licenseStatus || '';
+    return status.includes('مرخص') || status.includes('✅');
+  });
 
   // إنشاء شيت متعدد الأقسام
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -606,7 +631,7 @@ function exportForEditor(editorCode, projectCode, customName) {
     const taskHeaders = ['المهمة', 'الحالة', 'الموعد النهائي', 'ملاحظات'];
     exportSheet.getRange(currentRow, 1, 1, taskHeaders.length).setValues([taskHeaders]).setFontWeight('bold');
     currentRow++;
-    const taskData = editingTasks.map(t => [t[MOVEMENT_COLS.TASK], t[MOVEMENT_COLS.STATUS], formatDate(t[MOVEMENT_COLS.DEADLINE]), t[MOVEMENT_COLS.NOTES]]);
+    const taskData = editingTasks.map(t => [t.element || t.action || '', t.status || '', formatDate(t.dueDate), t.notes || '']);
     exportSheet.getRange(currentRow, 1, taskData.length, 4).setValues(taskData);
     currentRow += taskData.length + 1;
   } else {
@@ -621,7 +646,7 @@ function exportForEditor(editorCode, projectCode, customName) {
     const voHeaders = ['الكود', 'النوع', 'المؤدي', 'المدة', 'رابط الملف'];
     exportSheet.getRange(currentRow, 1, 1, voHeaders.length).setValues([voHeaders]).setFontWeight('bold');
     currentRow++;
-    const voData = completedVO.map(v => [v[VO_COLS.CODE], v[VO_COLS.TYPE], v[VO_COLS.PERFORMER], v[VO_COLS.DURATION], v[VO_COLS.FILE_LINK]]);
+    const voData = completedVO.map(v => [v.code || '', v.type || '', v.performer || '', v.duration || '', v.fileLink || '']);
     exportSheet.getRange(currentRow, 1, voData.length, 5).setValues(voData);
     currentRow += voData.length + 1;
   } else {
@@ -636,7 +661,7 @@ function exportForEditor(editorCode, projectCode, customName) {
     const animHeaders = ['الكود', 'المشهد', 'النوع', 'المدة', 'رابط الملف'];
     exportSheet.getRange(currentRow, 1, 1, animHeaders.length).setValues([animHeaders]).setFontWeight('bold');
     currentRow++;
-    const animData = completedAnim.map(a => [a[ANIM_COLS.CODE], a[ANIM_COLS.SCENE_NUM], a[ANIM_COLS.TYPE], a[ANIM_COLS.DURATION], a[ANIM_COLS.FILE_LINK]]);
+    const animData = completedAnim.map(a => [a.code || '', a.sceneNum || '', a.type || '', a.duration || '', a.fileLink || '']);
     exportSheet.getRange(currentRow, 1, animData.length, 5).setValues(animData);
     currentRow += animData.length + 1;
   } else {
@@ -651,7 +676,7 @@ function exportForEditor(editorCode, projectCode, customName) {
     const archiveHeaders = ['الكود', 'العنوان', 'النوع', 'المدة', 'رابط الملف'];
     exportSheet.getRange(currentRow, 1, 1, archiveHeaders.length).setValues([archiveHeaders]).setFontWeight('bold');
     currentRow++;
-    const archiveData = licensedArchive.map(a => [a[ARCHIVE_COLS.CODE], a[ARCHIVE_COLS.TITLE], a[ARCHIVE_COLS.TYPE], a[ARCHIVE_COLS.DURATION], a[ARCHIVE_COLS.FILE_LINK]]);
+    const archiveData = licensedArchive.map(a => [a.code || '', a.title || '', a.type || '', a.duration || '', a.fileLink || '']);
     exportSheet.getRange(currentRow, 1, archiveData.length, 5).setValues(archiveData);
   } else {
     exportSheet.getRange(currentRow, 1).setValue('لا توجد مواد أرشيفية مرخصة');
