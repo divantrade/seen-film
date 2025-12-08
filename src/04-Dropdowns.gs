@@ -31,62 +31,101 @@ const DROPDOWN_COLUMNS = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // دوال قراءة البيانات من شيت الإعدادات (باستخدام Named Ranges)
 // ═══════════════════════════════════════════════════════════════════════════════
-// ملاحظة مهمة عن الفرق بين الحالات:
-// - StatusList (في شيت الإعدادات): حالات المهام (لم يبدأ، جاري، تم، متأخر...)
-// - PROJECT_STATUS (ثابت في الكود): حالات المشاريع (نشط، متوقف، منتهي، ملغي)
-//
-// Named Ranges المُعرّفة في شيت الإعدادات:
-// - ProjectTypesList: قائمة أنواع المشاريع (وثائقي قصير، وثائقي طويل...)
-// - StatusList: قائمة حالات المهام (للحركة والمهام)
-// - StagesList: قائمة المراحل
-// - TeamRolesList: قائمة أدوار الفريق
+// شيت الإعدادات (هيكل أفقي - كل عمود قائمة مستقلة):
+// العمود A: أنواع الأفلام    → ProjectTypesList
+// العمود B: حالات المشاريع   → ProjectStatusList
+// العمود C: حالات المهام     → TaskStatusList (أو StatusList للتوافق)
+// العمود D: أدوار الفريق     → TeamRolesList
+// العمود E: المراحل          → PhasesList (للـ checkboxes)
 
 /**
- * الحصول على نطاق أنواع المشاريع من شيت الإعدادات
- * يستخدم Named Range: ProjectTypesList
+ * الحصول على نطاق من شيت الإعدادات
+ * @param {string} rangeName اسم النطاق
  * @returns {Range|null} نطاق الخلايا أو null
  */
-function getProjectTypesRange() {
+function getSettingsRange(rangeName) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const namedRange = ss.getRangeByName('ProjectTypesList');
-    return namedRange || null;
+    return ss.getRangeByName(rangeName) || null;
   } catch (e) {
-    console.log('Named Range ProjectTypesList not found');
+    console.log('Named Range ' + rangeName + ' not found');
     return null;
   }
 }
 
 /**
- * الحصول على نطاق حالات المهام من شيت الإعدادات
- * يستخدم Named Range: StatusList
- * ملاحظة: هذا لحالات المهام وليس حالات المشاريع!
- * @returns {Range|null} نطاق الخلايا أو null
+ * الحصول على قيم من Named Range كمصفوفة (تصفية القيم الفارغة)
+ * @param {string} rangeName اسم النطاق
+ * @param {Array} fallback القيم الافتراضية
+ * @returns {Array} مصفوفة القيم
  */
-function getTaskStatusesRange() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const namedRange = ss.getRangeByName('StatusList');
-    return namedRange || null;
-  } catch (e) {
-    console.log('Named Range StatusList not found');
-    return null;
-  }
-}
-
-/**
- * الحصول على أنواع المشاريع كمصفوفة
- * يقرأ من Named Range أو يستخدم القيم الافتراضية
- * @returns {Array} مصفوفة أنواع المشاريع
- */
-function getProjectTypesFromSettings() {
-  const range = getProjectTypesRange();
+function getSettingsValues(rangeName, fallback) {
+  const range = getSettingsRange(rangeName);
   if (range) {
     const values = range.getValues().flat().filter(v => v && v !== '');
     if (values.length > 0) return values;
   }
-  // fallback للقيم الافتراضية
-  return PROJECT_TYPES;
+  return fallback || [];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// دوال الحصول على النطاقات
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** نطاق أنواع الأفلام */
+function getProjectTypesRange() {
+  return getSettingsRange('ProjectTypesList');
+}
+
+/** نطاق حالات المشاريع */
+function getProjectStatusRange() {
+  return getSettingsRange('ProjectStatusList');
+}
+
+/** نطاق حالات المهام */
+function getTaskStatusesRange() {
+  return getSettingsRange('TaskStatusList') || getSettingsRange('StatusList');
+}
+
+/** نطاق أدوار الفريق */
+function getTeamRolesRange() {
+  return getSettingsRange('TeamRolesList');
+}
+
+/** نطاق المراحل (للـ checkboxes) */
+function getPhasesRange() {
+  return getSettingsRange('PhasesList');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// دوال الحصول على القيم كمصفوفات
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** أنواع الأفلام */
+function getProjectTypesFromSettings() {
+  return getSettingsValues('ProjectTypesList', PROJECT_TYPES);
+}
+
+/** حالات المشاريع */
+function getProjectStatusesFromSettings() {
+  return getSettingsValues('ProjectStatusList', Object.values(PROJECT_STATUS));
+}
+
+/** حالات المهام */
+function getTaskStatusesFromSettings() {
+  const values = getSettingsValues('TaskStatusList', null);
+  if (values.length > 0) return values;
+  return getSettingsValues('StatusList', Object.values(STATUS).map(s => s.name));
+}
+
+/** أدوار الفريق */
+function getTeamRolesFromSettings() {
+  return getSettingsValues('TeamRolesList', TEAM_ROLES);
+}
+
+/** المراحل (للـ checkboxes) */
+function getPhasesFromSettings() {
+  return getSettingsValues('PhasesList', Object.values(STAGES).map(s => s.icon + ' ' + s.name));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -465,17 +504,29 @@ function setupProjectsDropdowns() {
     sheet.getRange(2, typeCol, lastRow - 1, 1).setDataValidation(typeRule);
   }
 
-  // 3. إضافة قائمة حالات المشاريع (عمود 6)
-  // ملاحظة: نستخدم PROJECT_STATUS وليس StatusList لأن:
-  // - PROJECT_STATUS = حالات المشاريع (نشط، متوقف، منتهي، ملغي)
-  // - StatusList = حالات المهام (لم يبدأ، جاري، تم، متأخر...)
+  // 3. إضافة قائمة حالات المشاريع (عمود 6) - من شيت الإعدادات
+  // ملاحظة: نستخدم ProjectStatusList وليس StatusList/TaskStatusList لأن:
+  // - ProjectStatusList = حالات المشاريع (نشط، متوقف، منتهي، ملغي)
+  // - StatusList/TaskStatusList = حالات المهام (لم يبدأ، جاري، تم، متأخر...)
   const statusCol = cols[PROJECT_HEADERS.STATUS];
   if (statusCol && statusCol <= 9) {
-    const statusValues = Object.values(PROJECT_STATUS);
-    const statusRule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(statusValues, true)
-      .setAllowInvalid(false)
-      .build();
+    const statusRange = getProjectStatusRange();
+    let statusRule;
+
+    if (statusRange) {
+      // ربط ديناميكي بشيت الإعدادات
+      statusRule = SpreadsheetApp.newDataValidation()
+        .requireValueInRange(statusRange, true)
+        .setAllowInvalid(false)
+        .build();
+    } else {
+      // استخدام القيم من شيت الإعدادات أو الافتراضية
+      const statusValues = getProjectStatusesFromSettings();
+      statusRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(statusValues, true)
+        .setAllowInvalid(false)
+        .build();
+    }
     sheet.getRange(2, statusCol, lastRow - 1, 1).setDataValidation(statusRule);
   }
 
@@ -497,6 +548,9 @@ function setupProjectsDropdowns() {
 /**
  * إعداد القوائم المنسدلة في شيت الفريق
  * الأعمدة: الكود(1), الاسم(2), الدور(3), البريد(4), الهاتف(5), المراحل(6), الحالة(7), تاريخ الانضمام(8), ملاحظات(9)
+ * القوائم الديناميكية من شيت الإعدادات:
+ * - الأدوار: من TeamRolesList
+ * - المراحل: من PhasesList (للاختيار المتعدد)
  */
 function setupTeamDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -509,14 +563,48 @@ function setupTeamDropdowns() {
 
   const lastRow = Math.max(sheet.getLastRow(), 50);
 
-  // قائمة الأدوار - عمود 3
-  const roleRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(TEAM_ROLES, true)
-    .setAllowInvalid(false)
-    .build();
+  // قائمة الأدوار - عمود 3 - من شيت الإعدادات
+  const rolesRange = getTeamRolesRange();
+  let roleRule;
+
+  if (rolesRange) {
+    // ربط ديناميكي بشيت الإعدادات
+    roleRule = SpreadsheetApp.newDataValidation()
+      .requireValueInRange(rolesRange, true)
+      .setAllowInvalid(false)
+      .build();
+  } else {
+    // استخدام القيم من شيت الإعدادات أو الافتراضية
+    const roles = getTeamRolesFromSettings();
+    roleRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(roles, true)
+      .setAllowInvalid(false)
+      .build();
+  }
   sheet.getRange(2, 3, lastRow - 1, 1).setDataValidation(roleRule);
 
-  // قائمة الحالة (نشط/غير نشط) - عمود 7 (وليس 6)
+  // قائمة المراحل المسؤول عنها - عمود 6 - من شيت الإعدادات
+  // ملاحظة: هذا العمود يقبل اختيار مرحلة واحدة من القائمة
+  // للاختيار المتعدد يمكن الفصل بفواصل يدوياً
+  const phasesRange = getPhasesRange();
+  if (phasesRange) {
+    const phasesRule = SpreadsheetApp.newDataValidation()
+      .requireValueInRange(phasesRange, true)
+      .setAllowInvalid(true) // السماح بالقيم المخصصة للاختيار المتعدد
+      .build();
+    sheet.getRange(2, 6, lastRow - 1, 1).setDataValidation(phasesRule);
+  } else {
+    const phases = getPhasesFromSettings();
+    if (phases.length > 0) {
+      const phasesRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(phases, true)
+        .setAllowInvalid(true)
+        .build();
+      sheet.getRange(2, 6, lastRow - 1, 1).setDataValidation(phasesRule);
+    }
+  }
+
+  // قائمة الحالة (نشط/غير نشط) - عمود 7
   const statusRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['نشط', 'غير نشط'], true)
     .setAllowInvalid(false)
@@ -703,6 +791,187 @@ function colorStatusColumn(sheet, statusCol) {
       }
     }
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// مزامنة أعمدة المراحل (Checkboxes) ديناميكياً
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * مزامنة أعمدة المراحل في شيت المشاريع مع PhasesList في شيت الإعدادات
+ * هذه الدالة:
+ * 1. تقرأ المراحل الحالية في شيت المشاريع (من الهيدر)
+ * 2. تقرأ PhasesList من شيت الإعدادات
+ * 3. تضيف أي مراحل جديدة كأعمدة checkboxes
+ *
+ * ملاحظة: لا تحذف الأعمدة الموجودة، فقط تضيف الجديدة
+ */
+function syncPhaseColumns() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.PROJECTS);
+
+  if (!sheet) {
+    showError('شيت المشاريع غير موجود');
+    return;
+  }
+
+  // قراءة المراحل من شيت الإعدادات
+  const settingsPhases = getPhasesFromSettings();
+  if (!settingsPhases || settingsPhases.length === 0) {
+    showToast('لا توجد مراحل في شيت الإعدادات', 'تنبيه');
+    return;
+  }
+
+  // قراءة الهيدر الحالي
+  const lastCol = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+  // تحديد أعمدة المراحل الحالية (من العمود 10 فصاعداً)
+  const existingPhases = [];
+  const phaseStartCol = PHASE_START_COL; // 10
+
+  for (let i = phaseStartCol - 1; i < headers.length; i++) {
+    const header = headers[i];
+    // تجاهل أعمدة النظام (تاريخ الإنشاء، تاريخ التحديث)
+    if (header && !header.includes('تاريخ')) {
+      existingPhases.push(header);
+    }
+  }
+
+  // تحديد المراحل الجديدة التي يجب إضافتها
+  const newPhases = settingsPhases.filter(phase => !existingPhases.includes(phase));
+
+  if (newPhases.length === 0) {
+    showToast('جميع المراحل موجودة بالفعل', 'معلومة');
+    return;
+  }
+
+  // تحديد موضع الإدراج (قبل أعمدة النظام)
+  // البحث عن عمود "تاريخ الإنشاء" أو آخر عمود مرحلة
+  let insertCol = lastCol + 1;
+  for (let i = headers.length - 1; i >= phaseStartCol - 1; i--) {
+    if (headers[i] && headers[i].includes('تاريخ')) {
+      insertCol = i + 1; // +1 للتحويل من index إلى column number
+    } else {
+      break;
+    }
+  }
+
+  // إدراج الأعمدة الجديدة
+  const lastRow = Math.max(sheet.getLastRow(), 50);
+
+  newPhases.forEach((phase, index) => {
+    const col = insertCol + index;
+
+    // إدراج عمود جديد
+    sheet.insertColumnAfter(col - 1);
+
+    // إضافة اسم المرحلة في الهيدر
+    const headerCell = sheet.getRange(1, col);
+    headerCell.setValue(phase)
+      .setFontWeight('bold')
+      .setBackground('#E3F2FD')
+      .setFontColor('#1565C0')
+      .setHorizontalAlignment('center');
+
+    // تعيين عرض العمود
+    sheet.setColumnWidth(col, 50);
+
+    // إضافة checkboxes
+    const checkboxRange = sheet.getRange(2, col, lastRow - 1, 1);
+    checkboxRange.insertCheckboxes();
+  });
+
+  // تطبيق التنسيق الشرطي
+  applyCheckboxFormatting();
+
+  showSuccess(`تم إضافة ${newPhases.length} مرحلة جديدة: ${newPhases.join('، ')}`);
+}
+
+/**
+ * إعادة بناء أعمدة المراحل من الصفر بناءً على PhasesList
+ * تحذير: هذه الدالة ستحذف جميع بيانات المراحل الحالية!
+ */
+function rebuildPhaseColumns() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    'تحذير!',
+    'سيتم حذف جميع أعمدة المراحل الحالية وإعادة إنشائها.\nهذا سيفقد جميع بيانات checkboxes الحالية.\nهل أنت متأكد؟',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (response !== ui.Button.YES) {
+    return;
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.PROJECTS);
+
+  if (!sheet) {
+    showError('شيت المشاريع غير موجود');
+    return;
+  }
+
+  // قراءة المراحل من شيت الإعدادات
+  const phases = getPhasesFromSettings();
+  if (!phases || phases.length === 0) {
+    showError('لا توجد مراحل في شيت الإعدادات');
+    return;
+  }
+
+  // قراءة الهيدر الحالي
+  const lastCol = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+  // تحديد أعمدة النظام في النهاية
+  const systemCols = [];
+  for (let i = headers.length - 1; i >= 0; i--) {
+    if (headers[i] && headers[i].includes('تاريخ')) {
+      systemCols.unshift(i + 1); // column number
+    } else {
+      break;
+    }
+  }
+
+  // حذف أعمدة المراحل القديمة (من 10 إلى ما قبل أعمدة النظام)
+  const phaseStartCol = PHASE_START_COL;
+  const phaseEndCol = systemCols.length > 0 ? systemCols[0] - 1 : lastCol;
+
+  if (phaseEndCol >= phaseStartCol) {
+    const colsToDelete = phaseEndCol - phaseStartCol + 1;
+    for (let i = 0; i < colsToDelete; i++) {
+      sheet.deleteColumn(phaseStartCol);
+    }
+  }
+
+  // إدراج أعمدة المراحل الجديدة
+  const lastRow = Math.max(sheet.getLastRow(), 50);
+
+  phases.forEach((phase, index) => {
+    const col = phaseStartCol + index;
+
+    // إدراج عمود
+    sheet.insertColumnBefore(col);
+
+    // إضافة اسم المرحلة في الهيدر
+    sheet.getRange(1, col)
+      .setValue(phase)
+      .setFontWeight('bold')
+      .setBackground('#E3F2FD')
+      .setFontColor('#1565C0')
+      .setHorizontalAlignment('center');
+
+    // تعيين عرض العمود
+    sheet.setColumnWidth(col, 50);
+
+    // إضافة checkboxes
+    sheet.getRange(2, col, lastRow - 1, 1).insertCheckboxes();
+  });
+
+  // تطبيق التنسيق الشرطي
+  applyCheckboxFormatting();
+
+  showSuccess(`تم إعادة بناء ${phases.length} عمود للمراحل`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
