@@ -176,6 +176,7 @@ function createSettingsSheet(ss) {
 /**
  * إنشاء شيت المشاريع
  * يحتوي على أعمدة checkboxes لكل مرحلة
+ * ملاحظة: النظام يعتمد على أسماء الأعمدة وليس أرقامها
  * @param {Spreadsheet} ss الجدول
  */
 function createProjectsSheet(ss) {
@@ -188,16 +189,15 @@ function createProjectsSheet(ss) {
 
   sheet.clear();
 
-  // رؤوس الأعمدة الأساسية
+  // رؤوس الأعمدة الأساسية (بدون الكود - اسم الفيلم هو المعرف)
   const basicHeaders = [
-    'الكود',
     'اسم الفيلم',
-    'القناة',
-    'اسم البرنامج',
-    'النوع',
+    'نوع الفيلم',
     'تاريخ البداية',
-    'التسليم المتوقع',
+    'تاريخ التسليم المتوقع',
     'الحالة',
+    'اسم القناة',
+    'اسم البرنامج',
     'ملاحظات'
   ];
 
@@ -205,7 +205,7 @@ function createProjectsSheet(ss) {
   const phaseHeaders = Object.values(STAGES).map(s => s.icon + ' ' + s.name);
 
   // أعمدة النظام
-  const systemHeaders = ['تاريخ الإنشاء', 'آخر تحديث'];
+  const systemHeaders = ['تاريخ الإنشاء', 'تاريخ التحديث'];
 
   // دمج جميع الرؤوس
   const headers = [...basicHeaders, ...phaseHeaders, ...systemHeaders];
@@ -221,18 +221,17 @@ function createProjectsSheet(ss) {
   sheet.setFrozenRows(1);
 
   // تعيين عرض الأعمدة الأساسية
-  sheet.setColumnWidth(1, 80);   // الكود
-  sheet.setColumnWidth(2, 180);  // اسم الفيلم
-  sheet.setColumnWidth(3, 120);  // القناة
-  sheet.setColumnWidth(4, 150);  // اسم البرنامج
-  sheet.setColumnWidth(5, 100);  // النوع
-  sheet.setColumnWidth(6, 110);  // تاريخ البداية
-  sheet.setColumnWidth(7, 110);  // التسليم المتوقع
-  sheet.setColumnWidth(8, 80);   // الحالة
-  sheet.setColumnWidth(9, 150);  // ملاحظات
+  sheet.setColumnWidth(1, 180);  // اسم الفيلم
+  sheet.setColumnWidth(2, 100);  // نوع الفيلم
+  sheet.setColumnWidth(3, 110);  // تاريخ البداية
+  sheet.setColumnWidth(4, 130);  // تاريخ التسليم المتوقع
+  sheet.setColumnWidth(5, 80);   // الحالة
+  sheet.setColumnWidth(6, 120);  // اسم القناة
+  sheet.setColumnWidth(7, 150);  // اسم البرنامج
+  sheet.setColumnWidth(8, 150);  // ملاحظات
 
-  // عمود بداية المراحل (بعد 9 أعمدة أساسية)
-  const phaseStartCol = 10;
+  // عمود بداية المراحل (بعد 8 أعمدة أساسية)
+  const phaseStartCol = basicHeaders.length + 1; // = 9
 
   // تعيين عرض أعمدة المراحل (أضيق)
   for (let i = phaseStartCol; i < phaseStartCol + phaseHeaders.length; i++) {
@@ -240,8 +239,9 @@ function createProjectsSheet(ss) {
   }
 
   // تعيين عرض أعمدة النظام
-  sheet.setColumnWidth(phaseStartCol + phaseHeaders.length, 130);
-  sheet.setColumnWidth(phaseStartCol + phaseHeaders.length + 1, 130);
+  const systemStartCol = phaseStartCol + phaseHeaders.length;
+  sheet.setColumnWidth(systemStartCol, 130);     // تاريخ الإنشاء
+  sheet.setColumnWidth(systemStartCol + 1, 130); // تاريخ التحديث
 
   // إضافة checkboxes لأعمدة المراحل (الصفوف 2-100)
   const checkboxRange = sheet.getRange(2, phaseStartCol, 99, phaseHeaders.length);
@@ -904,6 +904,7 @@ function resetSheet(sheetName) {
 /**
  * تطبيق تنسيق الـ checkboxes الخضراء على شيت المشاريع الحالي
  * يمكن تشغيل هذه الدالة لتحديث التنسيق على شيت موجود
+ * يستخدم getPhaseColumnsRange() لتحديد الأعمدة ديناميكياً
  */
 function applyCheckboxFormatting() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -914,8 +915,16 @@ function applyCheckboxFormatting() {
     return;
   }
 
-  // نطاق أعمدة المراحل (12 عمود من J إلى U - الأعمدة 10 إلى 21)
-  const checkboxRange = sheet.getRange(2, 10, 99, 12);
+  // تحديد نطاق أعمدة المراحل ديناميكياً
+  const phaseRange = getPhaseColumnsRange(sheet);
+
+  if (phaseRange.startCol === -1) {
+    SpreadsheetApp.getUi().alert('لم يتم العثور على أعمدة المراحل');
+    return;
+  }
+
+  // نطاق أعمدة المراحل (ديناميكي)
+  const checkboxRange = sheet.getRange(2, phaseRange.startCol, 99, phaseRange.count);
 
   // مسح التنسيق الشرطي الحالي
   sheet.clearConditionalFormatRules();
