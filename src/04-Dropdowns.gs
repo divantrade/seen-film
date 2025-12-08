@@ -353,6 +353,7 @@ function setupMovementDropdowns() {
  * يستخدم البحث الديناميكي عن الأعمدة بالاسم
  * ملاحظة: هذه الدالة تضيف dropdown فقط لعمودي النوع والحالة
  * ولا تضيف أي validation للأعمدة الأخرى (التواريخ، القناة، البرنامج، الملاحظات)
+ * الـ checkboxes تُضاف فقط من عمود 10 (PHASE_START_COL) وما بعده
  */
 function setupProjectsDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -369,28 +370,15 @@ function setupProjectsDropdowns() {
   const cols = getProjectColumnIndices(sheet);
   const phaseRange = getPhaseColumnsRange(sheet);
 
-  // 1. مسح جميع الـ data validations من الأعمدة الأساسية (غير المراحل)
-  // لتجنب أي validations خاطئة على أعمدة التواريخ وغيرها
-  const basicCols = [
-    cols[PROJECT_HEADERS.CODE],
-    cols[PROJECT_HEADERS.NAME],
-    cols[PROJECT_HEADERS.START_DATE],
-    cols[PROJECT_HEADERS.END_DATE],
-    cols[PROJECT_HEADERS.CHANNEL],
-    cols[PROJECT_HEADERS.PROGRAM],
-    cols[PROJECT_HEADERS.NOTES],
-    cols[PROJECT_HEADERS.CREATED_AT],
-    cols[PROJECT_HEADERS.UPDATED_AT]
-  ].filter(c => c); // فلترة الأعمدة الموجودة فقط
+  // 1. مسح جميع الـ data validations من الأعمدة 1-9 (الأعمدة الأساسية)
+  // هذا يضمن عدم وجود أي checkboxes أو validations خاطئة
+  for (let col = 1; col <= 9; col++) {
+    sheet.getRange(2, col, lastRow - 1, 1).clearDataValidations();
+  }
 
-  // مسح validations من الأعمدة التي لا يجب أن يكون بها dropdown
-  basicCols.forEach(colNum => {
-    sheet.getRange(2, colNum, lastRow - 1, 1).clearDataValidations();
-  });
-
-  // 2. إضافة قائمة أنواع المشاريع
+  // 2. إضافة قائمة أنواع المشاريع (عمود 3)
   const typeCol = cols[PROJECT_HEADERS.TYPE];
-  if (typeCol) {
+  if (typeCol && typeCol <= 9) {
     const typeRule = SpreadsheetApp.newDataValidation()
       .requireValueInList(PROJECT_TYPES, true)
       .setAllowInvalid(false)
@@ -398,9 +386,9 @@ function setupProjectsDropdowns() {
     sheet.getRange(2, typeCol, lastRow - 1, 1).setDataValidation(typeRule);
   }
 
-  // 3. إضافة قائمة حالات المشاريع (القيم الصحيحة)
+  // 3. إضافة قائمة حالات المشاريع (عمود 6)
   const statusCol = cols[PROJECT_HEADERS.STATUS];
-  if (statusCol) {
+  if (statusCol && statusCol <= 9) {
     const statusValues = ['نشط', 'متوقف', 'منتهي', 'ملغي'];
     const statusRule = SpreadsheetApp.newDataValidation()
       .requireValueInList(statusValues, true)
@@ -409,10 +397,16 @@ function setupProjectsDropdowns() {
     sheet.getRange(2, statusCol, lastRow - 1, 1).setDataValidation(statusRule);
   }
 
-  // 4. التأكد من أن أعمدة المراحل بها checkboxes فقط (وليس dropdown)
-  if (phaseRange.startCol > 0) {
-    const checkboxCells = sheet.getRange(2, phaseRange.startCol, lastRow - 1, phaseRange.count);
-    checkboxCells.insertCheckboxes();
+  // 4. إضافة checkboxes فقط لأعمدة المراحل (من عمود 10 فصاعداً)
+  // نستخدم PHASE_START_COL (10) كحد أدنى لضمان عدم إضافة checkboxes للأعمدة 1-9
+  const actualStartCol = Math.max(phaseRange.startCol, PHASE_START_COL);
+  if (actualStartCol >= PHASE_START_COL && phaseRange.count > 0) {
+    // حساب عدد الأعمدة الفعلي
+    const actualCount = phaseRange.endCol - actualStartCol + 1;
+    if (actualCount > 0) {
+      const checkboxCells = sheet.getRange(2, actualStartCol, lastRow - 1, actualCount);
+      checkboxCells.insertCheckboxes();
+    }
   }
 
   showToast('تم إعداد القوائم المنسدلة لشيت المشاريع', 'نجاح');
