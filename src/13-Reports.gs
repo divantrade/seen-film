@@ -215,35 +215,6 @@ function getOverdueTasks() {
 }
 
 /**
- * الحصول على جميع الحركات
- * @returns {Array} مصفوفة بجميع الحركات
- */
-function getAllMovements() {
-  const sheet = getSheet(SHEETS.MOVEMENT);
-  if (!sheet || sheet.getLastRow() < 2) return [];
-
-  const lastCol = sheet.getLastColumn();
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
-
-  // تحويل البيانات إلى كائنات مع خصائص موحدة
-  return data.map(row => {
-    return {
-      number: row[0],
-      projectCode: row[1],
-      projectName: row[2],
-      stage: row[3],
-      element: row[4],
-      action: row[5],
-      assignedTo: row[6],
-      dueDate: row[7],
-      actualDate: row[8],
-      status: row[9],
-      notes: row[10]
-    };
-  }).filter(item => item.number);
-}
-
-/**
  * عرض تقرير المهام المتأخرة
  */
 function showOverdueReport() {
