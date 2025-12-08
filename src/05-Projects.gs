@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const PROJECT_HEADERS = {
+  CODE: 'الكود',
   NAME: 'اسم الفيلم',
   TYPE: 'نوع الفيلم',
   START_DATE: 'تاريخ البداية',
@@ -130,6 +131,7 @@ function getAllProjects() {
     });
 
     return {
+      code: cols[PROJECT_HEADERS.CODE] ? row[cols[PROJECT_HEADERS.CODE] - 1] : '',
       name: row[cols[PROJECT_HEADERS.NAME] - 1],
       type: row[cols[PROJECT_HEADERS.TYPE] - 1],
       startDate: row[cols[PROJECT_HEADERS.START_DATE] - 1],
@@ -155,14 +157,15 @@ function getActiveProjects() {
 }
 
 /**
- * الحصول على مشروع بالكود (للتوافقية مع الكود القديم)
- * @deprecated استخدم getProjectByName بدلاً منها
- * @param {string} code كود المشروع أو اسمه
+ * الحصول على مشروع بالكود
+ * @param {string} code كود المشروع
  * @returns {Object|null} كائن المشروع أو null
  */
 function getProjectByCode(code) {
-  // للتوافقية: نبحث بالاسم إذا لم نجد بالكود
-  return getProjectByName(code);
+  if (!code) return null;
+
+  const allProjects = getAllProjects();
+  return allProjects.find(project => project.code === code) || null;
 }
 
 /**
@@ -234,13 +237,12 @@ function getActiveProjectNames() {
 }
 
 /**
- * الحصول على أكواد المشاريع النشطة (للتوافقية مع الكود القديم)
- * @deprecated استخدم getActiveProjectNames بدلاً منها
- * @returns {Array} مصفوفة أسماء المشاريع
+ * الحصول على أكواد المشاريع النشطة
+ * @returns {Array} مصفوفة أكواد المشاريع
  */
 function getActiveProjectCodes() {
-  // للتوافقية: نعيد الأسماء بدلاً من الأكواد
-  return getActiveProjectNames();
+  const activeProjects = getActiveProjects();
+  return activeProjects.map(project => project.code);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -269,10 +271,13 @@ function addProject(projectData) {
       return false;
     }
 
-    // التحقق من عدم تكرار اسم المشروع (الاسم هو المعرف الآن)
-    if (getProjectByName(projectData.name)) {
-      console.error('اسم المشروع موجود مسبقاً: ' + projectData.name);
-      SpreadsheetApp.getActiveSpreadsheet().toast('اسم المشروع موجود مسبقاً', 'خطأ', 3);
+    // إنشاء كود المشروع تلقائياً
+    const code = projectData.code || generateProjectCode();
+
+    // التحقق من عدم تكرار الكود
+    if (getProjectByCode(code)) {
+      console.error('كود المشروع موجود مسبقاً: ' + code);
+      SpreadsheetApp.getActiveSpreadsheet().toast('كود المشروع موجود مسبقاً', 'خطأ', 3);
       return false;
     }
 
@@ -314,6 +319,7 @@ function addProject(projectData) {
     const rowData = new Array(lastCol).fill('');
 
     // ملء البيانات الأساسية بناءً على أسماء الأعمدة
+    if (cols[PROJECT_HEADERS.CODE]) rowData[cols[PROJECT_HEADERS.CODE] - 1] = code;
     if (cols[PROJECT_HEADERS.NAME]) rowData[cols[PROJECT_HEADERS.NAME] - 1] = projectData.name;
     if (cols[PROJECT_HEADERS.TYPE]) rowData[cols[PROJECT_HEADERS.TYPE] - 1] = projectData.type || PROJECT_TYPES[0];
     if (cols[PROJECT_HEADERS.START_DATE]) rowData[cols[PROJECT_HEADERS.START_DATE] - 1] = startDate;
@@ -486,6 +492,38 @@ function changeProjectStatus(projectName, newStatus) {
   return updateProject(projectName, { status: newStatus });
 }
 
+/**
+ * إنشاء كود مشروع جديد تلقائياً
+ * @returns {string} كود المشروع (مثال: P25001)
+ */
+function generateProjectCode() {
+  const year = new Date().getFullYear().toString().substr(-2);
+  const sheet = getSheet(SHEETS.PROJECTS);
+
+  if (!sheet) return `P${year}001`;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return `P${year}001`;
+
+  // الحصول على عمود الكود ديناميكياً
+  const cols = getProjectColumnIndices(sheet);
+  const codeCol = cols[PROJECT_HEADERS.CODE];
+  if (!codeCol) return `P${year}001`;
+
+  // البحث عن آخر كود في نفس السنة
+  const codes = sheet.getRange(2, codeCol, lastRow - 1, 1).getValues()
+    .map(row => row[0])
+    .filter(code => code && code.toString().startsWith(`P${year}`));
+
+  if (codes.length === 0) return `P${year}001`;
+
+  // استخراج أعلى رقم
+  const numbers = codes.map(code => parseInt(code.toString().replace(`P${year}`, ''), 10));
+  const maxNum = Math.max(...numbers);
+
+  return `P${year}${(maxNum + 1).toString().padStart(3, '0')}`;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // دوال البحث والتصفية
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -503,6 +541,7 @@ function searchProjects(query) {
 
   return allProjects.filter(project =>
     project.name.toLowerCase().includes(searchTerm) ||
+    (project.code && project.code.toLowerCase().includes(searchTerm)) ||
     (project.channel && project.channel.toLowerCase().includes(searchTerm)) ||
     (project.program && project.program.toLowerCase().includes(searchTerm)) ||
     (project.notes && project.notes.toLowerCase().includes(searchTerm))

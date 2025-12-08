@@ -189,8 +189,9 @@ function createProjectsSheet(ss) {
 
   sheet.clear();
 
-  // رؤوس الأعمدة الأساسية (بدون الكود - اسم الفيلم هو المعرف)
+  // رؤوس الأعمدة الأساسية
   const basicHeaders = [
+    'الكود',
     'اسم الفيلم',
     'نوع الفيلم',
     'تاريخ البداية',
@@ -221,17 +222,18 @@ function createProjectsSheet(ss) {
   sheet.setFrozenRows(1);
 
   // تعيين عرض الأعمدة الأساسية
-  sheet.setColumnWidth(1, 180);  // اسم الفيلم
-  sheet.setColumnWidth(2, 100);  // نوع الفيلم
-  sheet.setColumnWidth(3, 110);  // تاريخ البداية
-  sheet.setColumnWidth(4, 130);  // تاريخ التسليم المتوقع
-  sheet.setColumnWidth(5, 80);   // الحالة
-  sheet.setColumnWidth(6, 120);  // اسم القناة
-  sheet.setColumnWidth(7, 150);  // اسم البرنامج
-  sheet.setColumnWidth(8, 150);  // ملاحظات
+  sheet.setColumnWidth(1, 80);   // الكود
+  sheet.setColumnWidth(2, 180);  // اسم الفيلم
+  sheet.setColumnWidth(3, 100);  // نوع الفيلم
+  sheet.setColumnWidth(4, 110);  // تاريخ البداية
+  sheet.setColumnWidth(5, 130);  // تاريخ التسليم المتوقع
+  sheet.setColumnWidth(6, 80);   // الحالة
+  sheet.setColumnWidth(7, 120);  // اسم القناة
+  sheet.setColumnWidth(8, 150);  // اسم البرنامج
+  sheet.setColumnWidth(9, 150);  // ملاحظات
 
-  // عمود بداية المراحل (بعد 8 أعمدة أساسية)
-  const phaseStartCol = basicHeaders.length + 1; // = 9
+  // عمود بداية المراحل (بعد 9 أعمدة أساسية)
+  const phaseStartCol = basicHeaders.length + 1; // = 10
 
   // تعيين عرض أعمدة المراحل (أضيق)
   for (let i = phaseStartCol; i < phaseStartCol + phaseHeaders.length; i++) {
