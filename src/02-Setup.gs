@@ -85,7 +85,7 @@ function createSettingsSheet(ss) {
   sheet.getRange('A1:E1').merge().setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
 
   // رؤوس أعمدة المراحل
-  const stageHeaders = ['المعرف', 'الاسم', 'الأيقونة', 'الترتيب', 'الأنواع الفرعية'];
+  const stageHeaders = ['#', 'الاسم', 'الأيقونة', 'الترتيب', 'الأنواع الفرعية'];
   sheet.getRange('A2:E2').setValues([stageHeaders])
     .setFontWeight('bold')
     .setBackground(COLORS.BACKGROUND_LIGHT);
@@ -112,7 +112,7 @@ function createSettingsSheet(ss) {
     .setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
 
   // رؤوس أعمدة الحالات
-  const statusHeaders = ['المعرف', 'الاسم', 'الأيقونة', 'اللون'];
+  const statusHeaders = ['#', 'الاسم', 'الأيقونة', 'اللون'];
   sheet.getRange(statusStartRow + 1, 1, 1, 4).setValues([statusHeaders])
     .setFontWeight('bold')
     .setBackground(COLORS.BACKGROUND_LIGHT);
@@ -814,7 +814,7 @@ function createExportLogSheet(ss) {
   sheet.clear();
 
   const headers = [
-    'المعرف',
+    '#',
     'تاريخ التصدير',
     'نوع التقرير',
     'الفترة',

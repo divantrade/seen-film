@@ -91,13 +91,13 @@ function addDays(date, days) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// دوال إنشاء المعرفات
+// دوال إنشاء الأكواد
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * إنشاء معرف فريد جديد
- * @param {string} prefix بادئة المعرف (اختياري)
- * @returns {string} المعرف الفريد
+ * إنشاء كود فريد جديد
+ * @param {string} prefix بادئة الكود (اختياري)
+ * @returns {string} الكود الفريد
  */
 function generateId(prefix) {
   prefix = prefix || '';
@@ -107,10 +107,10 @@ function generateId(prefix) {
 }
 
 /**
- * إنشاء معرف تسلسلي للشيت
+ * إنشاء كود تسلسلي للشيت
  * @param {string} sheetName اسم الشيت
- * @param {string} prefix بادئة المعرف
- * @returns {string} المعرف التسلسلي
+ * @param {string} prefix بادئة الكود
+ * @returns {string} الكود التسلسلي
  */
 function generateSequentialId(sheetName, prefix) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();

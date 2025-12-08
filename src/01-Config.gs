@@ -478,8 +478,8 @@ function getStatusColor(statusName) {
 }
 
 /**
- * الحصول على المرحلة بالمعرف
- * @param {string} stageId معرف المرحلة
+ * الحصول على المرحلة بالـ ID
+ * @param {string} stageId ID المرحلة
  * @returns {Object} كائن المرحلة
  */
 function getStageById(stageId) {
@@ -487,8 +487,8 @@ function getStageById(stageId) {
 }
 
 /**
- * الحصول على الحالة بالمعرف
- * @param {string} statusId معرف الحالة
+ * الحصول على الحالة بالـ ID
+ * @param {string} statusId ID الحالة
  * @returns {Object} كائن الحالة
  */
 function getStatusById(statusId) {
