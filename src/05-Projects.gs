@@ -53,6 +53,8 @@ function getProjectColumnIndices(sheet) {
 
 /**
  * الحصول على نطاق أعمدة المراحل (checkboxes)
+ * ملاحظة: أعمدة المراحل تبدأ من العمود 10 (PHASE_START_COL)
+ * لتجنب التطابق الخاطئ مع أعمدة مثل "تاريخ التسليم المتوقع"
  * @param {Sheet} sheet الشيت
  * @returns {Object} { startCol, endCol, count, headers }
  */
@@ -63,19 +65,29 @@ function getPhaseColumnsRange(sheet) {
   let endCol = -1;
 
   // البحث عن أعمدة المراحل (تحتوي على أيقونات)
+  // مهم: نبدأ البحث من العمود 10 (PHASE_START_COL) فقط
+  // لتجنب التطابق مع أعمدة مثل "تاريخ التسليم المتوقع" التي تحتوي كلمة "التسليم"
   headers.forEach((header, index) => {
+    const colNum = index + 1;
+
+    // تجاهل الأعمدة قبل PHASE_START_COL (الأعمدة 1-9)
+    if (colNum < PHASE_START_COL) return;
+
+    // تجاهل أعمدة النظام (التواريخ)
+    if (header && header.includes('تاريخ')) return;
+
     const stageMatch = Object.values(STAGES).find(s => header.includes(s.icon) || header.includes(s.name));
     if (stageMatch) {
-      if (startCol === -1) startCol = index + 1;
-      endCol = index + 1;
-      phaseHeaders.push({ header, col: index + 1, stage: stageMatch });
+      if (startCol === -1) startCol = colNum;
+      endCol = colNum;
+      phaseHeaders.push({ header, col: colNum, stage: stageMatch });
     }
   });
 
   return {
     startCol,
     endCol,
-    count: endCol - startCol + 1,
+    count: endCol > 0 && startCol > 0 ? endCol - startCol + 1 : 0,
     headers: phaseHeaders
   };
 }
