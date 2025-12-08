@@ -6,38 +6,26 @@
  *
  * هذا الملف يحتوي على جميع الدوال المتعلقة بإدارة المشاريع
  * بما في ذلك الإضافة، التعديل، الحذف، والاستعلام
+ *
+ * ملاحظة مهمة: النظام يعتمد على أسماء الأعمدة وليس أرقامها
+ * مما يسمح بإضافة أعمدة جديدة دون التأثير على الكود
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ثوابت أعمدة شيت المشاريع (محدثة)
+// أسماء أعمدة شيت المشاريع (الأساسية)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const PROJECT_COLS = {
-  CODE: 1,           // كود المشروع
-  NAME: 2,           // اسم الفيلم
-  CHANNEL: 3,        // القناة
-  PROGRAM: 4,        // اسم البرنامج
-  TYPE: 5,           // النوع
-  START_DATE: 6,     // تاريخ البداية
-  END_DATE: 7,       // التسليم المتوقع
-  STATUS: 8,         // الحالة (نشط/متوقف/منتهي)
-  NOTES: 9,          // ملاحظات
-  // أعمدة المراحل (checkboxes) - تبدأ من العمود 10
-  PHASE_PAPER: 10,
-  PHASE_FIXER: 11,
-  PHASE_SHOOT_FIELD: 12,
-  PHASE_SHOOT_INT: 13,
-  PHASE_SHOOT_DRAMA: 14,
-  PHASE_VO: 15,
-  PHASE_ANIMATION: 16,
-  PHASE_INFOGRAPH: 17,
-  PHASE_MONTAGE: 18,
-  PHASE_ARCHIVE: 19,
-  PHASE_REVIEW: 20,
-  PHASE_DELIVERY: 21,
-  // أعمدة النظام
-  CREATED_AT: 22,
-  UPDATED_AT: 23
+const PROJECT_HEADERS = {
+  NAME: 'اسم الفيلم',
+  TYPE: 'نوع الفيلم',
+  START_DATE: 'تاريخ البداية',
+  END_DATE: 'تاريخ التسليم المتوقع',
+  STATUS: 'الحالة',
+  CHANNEL: 'اسم القناة',
+  PROGRAM: 'اسم البرنامج',
+  NOTES: 'ملاحظات',
+  CREATED_AT: 'تاريخ الإنشاء',
+  UPDATED_AT: 'تاريخ التحديث'
 };
 
 // حالات المشروع
@@ -47,6 +35,67 @@ const PROJECT_STATUS = {
   COMPLETED: 'منتهي',
   CANCELLED: 'ملغي'
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// دوال البحث عن الأعمدة بالاسم
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * الحصول على فهرس العمود بناءً على اسم الهيدر
+ * @param {Sheet} sheet الشيت
+ * @param {string} headerName اسم الهيدر
+ * @returns {number} رقم العمود (1-indexed) أو -1 إذا لم يوجد
+ */
+function getColumnByHeader(sheet, headerName) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const index = headers.indexOf(headerName);
+  return index >= 0 ? index + 1 : -1;
+}
+
+/**
+ * الحصول على جميع فهارس الأعمدة
+ * @param {Sheet} sheet الشيت
+ * @returns {Object} كائن يحتوي على أسماء الأعمدة وفهارسها
+ */
+function getProjectColumnIndices(sheet) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const indices = {};
+
+  headers.forEach((header, index) => {
+    indices[header] = index + 1;
+  });
+
+  return indices;
+}
+
+/**
+ * الحصول على نطاق أعمدة المراحل (checkboxes)
+ * @param {Sheet} sheet الشيت
+ * @returns {Object} { startCol, endCol, count, headers }
+ */
+function getPhaseColumnsRange(sheet) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const phaseHeaders = [];
+  let startCol = -1;
+  let endCol = -1;
+
+  // البحث عن أعمدة المراحل (تحتوي على أيقونات)
+  headers.forEach((header, index) => {
+    const stageMatch = Object.values(STAGES).find(s => header.includes(s.icon) || header.includes(s.name));
+    if (stageMatch) {
+      if (startCol === -1) startCol = index + 1;
+      endCol = index + 1;
+      phaseHeaders.push({ header, col: index + 1, stage: stageMatch });
+    }
+  });
+
+  return {
+    startCol,
+    endCol,
+    count: endCol - startCol + 1,
+    headers: phaseHeaders
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // دوال الاستعلام عن المشاريع
@@ -63,35 +112,37 @@ function getAllProjects() {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return [];
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 23).getValues();
+  // الحصول على فهارس الأعمدة بناءً على الأسماء
+  const cols = getProjectColumnIndices(sheet);
+  const phaseRange = getPhaseColumnsRange(sheet);
 
-  return data.map(row => ({
-    code: row[PROJECT_COLS.CODE - 1],
-    name: row[PROJECT_COLS.NAME - 1],
-    channel: row[PROJECT_COLS.CHANNEL - 1],
-    program: row[PROJECT_COLS.PROGRAM - 1],
-    type: row[PROJECT_COLS.TYPE - 1],
-    startDate: row[PROJECT_COLS.START_DATE - 1],
-    endDate: row[PROJECT_COLS.END_DATE - 1],
-    status: row[PROJECT_COLS.STATUS - 1],
-    notes: row[PROJECT_COLS.NOTES - 1],
-    phases: {
-      paper: row[PROJECT_COLS.PHASE_PAPER - 1],
-      fixer: row[PROJECT_COLS.PHASE_FIXER - 1],
-      shootField: row[PROJECT_COLS.PHASE_SHOOT_FIELD - 1],
-      shootInt: row[PROJECT_COLS.PHASE_SHOOT_INT - 1],
-      shootDrama: row[PROJECT_COLS.PHASE_SHOOT_DRAMA - 1],
-      vo: row[PROJECT_COLS.PHASE_VO - 1],
-      animation: row[PROJECT_COLS.PHASE_ANIMATION - 1],
-      infograph: row[PROJECT_COLS.PHASE_INFOGRAPH - 1],
-      montage: row[PROJECT_COLS.PHASE_MONTAGE - 1],
-      archive: row[PROJECT_COLS.PHASE_ARCHIVE - 1],
-      review: row[PROJECT_COLS.PHASE_REVIEW - 1],
-      delivery: row[PROJECT_COLS.PHASE_DELIVERY - 1]
-    },
-    createdAt: row[PROJECT_COLS.CREATED_AT - 1],
-    updatedAt: row[PROJECT_COLS.UPDATED_AT - 1]
-  })).filter(project => project.code); // تصفية الصفوف الفارغة
+  const lastCol = sheet.getLastColumn();
+  const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+  return data.map(row => {
+    // جمع قيم المراحل ديناميكياً
+    const phases = {};
+    phaseRange.headers.forEach(ph => {
+      const stageKey = ph.stage.id.toLowerCase().replace('_', '');
+      // تحويل SHOOT_FIELD إلى shootField
+      const camelKey = ph.stage.id.toLowerCase().replace(/_([a-z])/g, (m, p1) => p1.toUpperCase());
+      phases[camelKey] = row[ph.col - 1];
+    });
+
+    return {
+      name: row[cols[PROJECT_HEADERS.NAME] - 1],
+      type: row[cols[PROJECT_HEADERS.TYPE] - 1],
+      startDate: row[cols[PROJECT_HEADERS.START_DATE] - 1],
+      endDate: row[cols[PROJECT_HEADERS.END_DATE] - 1],
+      status: row[cols[PROJECT_HEADERS.STATUS] - 1],
+      channel: row[cols[PROJECT_HEADERS.CHANNEL] - 1],
+      program: row[cols[PROJECT_HEADERS.PROGRAM] - 1],
+      notes: row[cols[PROJECT_HEADERS.NOTES] - 1],
+      phases: phases,
+      createdAt: row[cols[PROJECT_HEADERS.CREATED_AT] - 1],
+      updatedAt: row[cols[PROJECT_HEADERS.UPDATED_AT] - 1]
+    };
+  }).filter(project => project.name); // تصفية الصفوف الفارغة
 }
 
 /**
@@ -104,15 +155,14 @@ function getActiveProjects() {
 }
 
 /**
- * الحصول على مشروع بالكود
- * @param {string} code كود المشروع
+ * الحصول على مشروع بالكود (للتوافقية مع الكود القديم)
+ * @deprecated استخدم getProjectByName بدلاً منها
+ * @param {string} code كود المشروع أو اسمه
  * @returns {Object|null} كائن المشروع أو null
  */
 function getProjectByCode(code) {
-  if (!code) return null;
-
-  const allProjects = getAllProjects();
-  return allProjects.find(project => project.code === code) || null;
+  // للتوافقية: نبحث بالاسم إذا لم نجد بالكود
+  return getProjectByName(code);
 }
 
 /**
@@ -184,12 +234,13 @@ function getActiveProjectNames() {
 }
 
 /**
- * الحصول على أكواد المشاريع النشطة
- * @returns {Array} مصفوفة أكواد المشاريع
+ * الحصول على أكواد المشاريع النشطة (للتوافقية مع الكود القديم)
+ * @deprecated استخدم getActiveProjectNames بدلاً منها
+ * @returns {Array} مصفوفة أسماء المشاريع
  */
 function getActiveProjectCodes() {
-  const activeProjects = getActiveProjects();
-  return activeProjects.map(project => project.code);
+  // للتوافقية: نعيد الأسماء بدلاً من الأكواد
+  return getActiveProjectNames();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -198,6 +249,7 @@ function getActiveProjectCodes() {
 
 /**
  * إضافة مشروع جديد
+ * يستخدم أسماء الأعمدة وليس أرقامها
  * @param {Object} projectData بيانات المشروع
  * @returns {boolean} نجاح العملية
  */
@@ -217,14 +269,16 @@ function addProject(projectData) {
       return false;
     }
 
-    // إنشاء كود المشروع تلقائياً
-    const code = projectData.code || generateProjectCode();
-
-    // التحقق من عدم تكرار الكود
-    if (getProjectByCode(code)) {
-      console.error('كود المشروع موجود مسبقاً: ' + code);
+    // التحقق من عدم تكرار اسم المشروع (الاسم هو المعرف الآن)
+    if (getProjectByName(projectData.name)) {
+      console.error('اسم المشروع موجود مسبقاً: ' + projectData.name);
+      SpreadsheetApp.getActiveSpreadsheet().toast('اسم المشروع موجود مسبقاً', 'خطأ', 3);
       return false;
     }
+
+    // الحصول على فهارس الأعمدة بناءً على الأسماء
+    const cols = getProjectColumnIndices(sheet);
+    const phaseRange = getPhaseColumnsRange(sheet);
 
     // تحويل التواريخ من strings إلى Date objects
     let startDate = new Date();
@@ -253,51 +307,63 @@ function addProject(projectData) {
       }
     }
 
-    // تجهيز صف البيانات (بدون المراحل - سنضيفها كـ checkboxes)
-    const basicData = [
-      code,
-      projectData.name,
-      projectData.channel || '',
-      projectData.program || '',
-      projectData.type || PROJECT_TYPES[0],
-      startDate,
-      endDate,
-      projectData.status || PROJECT_STATUS.ACTIVE,
-      projectData.notes || ''
-    ];
+    // الحصول على عدد الأعمدة الكلي
+    const lastCol = sheet.getLastColumn();
 
-    // قيم المراحل - تحويل صريح للقيم البوليانية
+    // إنشاء صف فارغ بحجم الأعمدة
+    const rowData = new Array(lastCol).fill('');
+
+    // ملء البيانات الأساسية بناءً على أسماء الأعمدة
+    if (cols[PROJECT_HEADERS.NAME]) rowData[cols[PROJECT_HEADERS.NAME] - 1] = projectData.name;
+    if (cols[PROJECT_HEADERS.TYPE]) rowData[cols[PROJECT_HEADERS.TYPE] - 1] = projectData.type || PROJECT_TYPES[0];
+    if (cols[PROJECT_HEADERS.START_DATE]) rowData[cols[PROJECT_HEADERS.START_DATE] - 1] = startDate;
+    if (cols[PROJECT_HEADERS.END_DATE]) rowData[cols[PROJECT_HEADERS.END_DATE] - 1] = endDate;
+    if (cols[PROJECT_HEADERS.STATUS]) rowData[cols[PROJECT_HEADERS.STATUS] - 1] = projectData.status || PROJECT_STATUS.ACTIVE;
+    if (cols[PROJECT_HEADERS.CHANNEL]) rowData[cols[PROJECT_HEADERS.CHANNEL] - 1] = projectData.channel || '';
+    if (cols[PROJECT_HEADERS.PROGRAM]) rowData[cols[PROJECT_HEADERS.PROGRAM] - 1] = projectData.program || '';
+    if (cols[PROJECT_HEADERS.NOTES]) rowData[cols[PROJECT_HEADERS.NOTES] - 1] = projectData.notes || '';
+    if (cols[PROJECT_HEADERS.CREATED_AT]) rowData[cols[PROJECT_HEADERS.CREATED_AT] - 1] = new Date();
+    if (cols[PROJECT_HEADERS.UPDATED_AT]) rowData[cols[PROJECT_HEADERS.UPDATED_AT] - 1] = new Date();
+
+    // ملء قيم المراحل ديناميكياً
     const phases = projectData.phases || {};
-    const phaseValues = [
-      Boolean(phases.paper),
-      Boolean(phases.fixer),
-      Boolean(phases.shootField),
-      Boolean(phases.shootInt),
-      Boolean(phases.shootDrama),
-      Boolean(phases.vo),
-      Boolean(phases.animation),
-      Boolean(phases.infograph),
-      Boolean(phases.montage),
-      Boolean(phases.archive),
-      Boolean(phases.review),
-      Boolean(phases.delivery)
-    ];
+    const phaseMapping = {
+      paper: 'PAPER',
+      fixer: 'FIXER',
+      shootField: 'SHOOT_FIELD',
+      shootInt: 'SHOOT_INT',
+      shootDrama: 'SHOOT_DRAMA',
+      vo: 'VO',
+      animation: 'ANIMATION',
+      infograph: 'INFOGRAPH',
+      montage: 'MONTAGE',
+      archive: 'ARCHIVE',
+      review: 'REVIEW',
+      delivery: 'DELIVERY'
+    };
 
-    // تواريخ النظام
-    const systemDates = [new Date(), new Date()];
-
-    // دمج كل البيانات
-    const rowData = [...basicData, ...phaseValues, ...systemDates];
+    // ملء أعمدة المراحل
+    phaseRange.headers.forEach(ph => {
+      // إيجاد مفتاح المرحلة المناسب
+      const phaseKey = Object.keys(phaseMapping).find(key =>
+        phaseMapping[key] === ph.stage.id
+      );
+      if (phaseKey) {
+        rowData[ph.col - 1] = Boolean(phases[phaseKey]);
+      }
+    });
 
     // إضافة البيانات في الصف المحدد
     sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
 
-    // تطبيق checkbox validation على أعمدة المراحل (J إلى U = أعمدة 10 إلى 21)
-    const phaseRange = sheet.getRange(targetRow, 10, 1, 12); // 12 مرحلة تبدأ من العمود 10
-    const checkboxRule = SpreadsheetApp.newDataValidation()
-      .requireCheckbox()
-      .build();
-    phaseRange.setDataValidation(checkboxRule);
+    // تطبيق checkbox validation على أعمدة المراحل ديناميكياً
+    if (phaseRange.startCol > 0) {
+      const checkboxCells = sheet.getRange(targetRow, phaseRange.startCol, 1, phaseRange.count);
+      const checkboxRule = SpreadsheetApp.newDataValidation()
+        .requireCheckbox()
+        .build();
+      checkboxCells.setDataValidation(checkboxRule);
+    }
 
     // التأكد من حفظ البيانات فوراً
     SpreadsheetApp.flush();
@@ -305,7 +371,7 @@ function addProject(projectData) {
     // إظهار رسالة نجاح
     SpreadsheetApp.getActiveSpreadsheet().toast('تم إضافة المشروع: ' + projectData.name, 'تمت الإضافة ✓', 3);
 
-    console.log('تم إضافة المشروع بنجاح: ' + code + ' في الصف: ' + targetRow);
+    console.log('تم إضافة المشروع بنجاح: ' + projectData.name + ' في الصف: ' + targetRow);
     return true;
 
   } catch (error) {
@@ -316,67 +382,92 @@ function addProject(projectData) {
 
 /**
  * تحديث مشروع موجود
- * @param {string} code كود المشروع
+ * يستخدم أسماء الأعمدة وليس أرقامها
+ * @param {string} projectName اسم المشروع (المعرف الرئيسي)
  * @param {Object} updates التحديثات
  * @returns {boolean} نجاح العملية
  */
-function updateProject(code, updates) {
+function updateProject(projectName, updates) {
   try {
     const sheet = getSheet(SHEETS.PROJECTS);
     if (!sheet) return false;
 
-    const rowIndex = findRowByValue(SHEETS.PROJECTS, PROJECT_COLS.CODE, code);
+    // الحصول على فهارس الأعمدة بناءً على الأسماء
+    const cols = getProjectColumnIndices(sheet);
+    const phaseRange = getPhaseColumnsRange(sheet);
+
+    // البحث عن الصف بناءً على اسم المشروع
+    const nameCol = cols[PROJECT_HEADERS.NAME];
+    if (!nameCol) {
+      console.error('عمود اسم الفيلم غير موجود');
+      return false;
+    }
+
+    const rowIndex = findRowByValue(SHEETS.PROJECTS, nameCol, projectName);
     if (rowIndex === -1) {
       showError('المشروع غير موجود');
       return false;
     }
 
-    // تحديث الحقول المطلوبة
-    if (updates.name !== undefined) {
-      sheet.getRange(rowIndex, PROJECT_COLS.NAME).setValue(updates.name);
+    // تحديث الحقول المطلوبة بناءً على أسماء الأعمدة
+    if (updates.name !== undefined && cols[PROJECT_HEADERS.NAME]) {
+      sheet.getRange(rowIndex, cols[PROJECT_HEADERS.NAME]).setValue(updates.name);
     }
-    if (updates.type !== undefined) {
-      sheet.getRange(rowIndex, PROJECT_COLS.TYPE).setValue(updates.type);
+    if (updates.type !== undefined && cols[PROJECT_HEADERS.TYPE]) {
+      sheet.getRange(rowIndex, cols[PROJECT_HEADERS.TYPE]).setValue(updates.type);
     }
-    if (updates.startDate !== undefined) {
-      sheet.getRange(rowIndex, PROJECT_COLS.START_DATE).setValue(updates.startDate);
+    if (updates.startDate !== undefined && cols[PROJECT_HEADERS.START_DATE]) {
+      sheet.getRange(rowIndex, cols[PROJECT_HEADERS.START_DATE]).setValue(updates.startDate);
     }
-    if (updates.endDate !== undefined) {
-      sheet.getRange(rowIndex, PROJECT_COLS.END_DATE).setValue(updates.endDate);
+    if (updates.endDate !== undefined && cols[PROJECT_HEADERS.END_DATE]) {
+      sheet.getRange(rowIndex, cols[PROJECT_HEADERS.END_DATE]).setValue(updates.endDate);
     }
-    if (updates.status !== undefined) {
-      sheet.getRange(rowIndex, PROJECT_COLS.STATUS).setValue(updates.status);
+    if (updates.status !== undefined && cols[PROJECT_HEADERS.STATUS]) {
+      sheet.getRange(rowIndex, cols[PROJECT_HEADERS.STATUS]).setValue(updates.status);
     }
-    if (updates.notes !== undefined) {
-      sheet.getRange(rowIndex, PROJECT_COLS.NOTES).setValue(updates.notes);
+    if (updates.channel !== undefined && cols[PROJECT_HEADERS.CHANNEL]) {
+      sheet.getRange(rowIndex, cols[PROJECT_HEADERS.CHANNEL]).setValue(updates.channel);
+    }
+    if (updates.program !== undefined && cols[PROJECT_HEADERS.PROGRAM]) {
+      sheet.getRange(rowIndex, cols[PROJECT_HEADERS.PROGRAM]).setValue(updates.program);
+    }
+    if (updates.notes !== undefined && cols[PROJECT_HEADERS.NOTES]) {
+      sheet.getRange(rowIndex, cols[PROJECT_HEADERS.NOTES]).setValue(updates.notes);
     }
 
-    // تحديث المراحل
+    // تحديث المراحل ديناميكياً
     if (updates.phases) {
-      const phaseColumns = {
-        paper: PROJECT_COLS.PHASE_PAPER,
-        fixer: PROJECT_COLS.PHASE_FIXER,
-        shootField: PROJECT_COLS.PHASE_SHOOT_FIELD,
-        shootInt: PROJECT_COLS.PHASE_SHOOT_INT,
-        shootDrama: PROJECT_COLS.PHASE_SHOOT_DRAMA,
-        vo: PROJECT_COLS.PHASE_VO,
-        animation: PROJECT_COLS.PHASE_ANIMATION,
-        infograph: PROJECT_COLS.PHASE_INFOGRAPH,
-        montage: PROJECT_COLS.PHASE_MONTAGE,
-        archive: PROJECT_COLS.PHASE_ARCHIVE,
-        review: PROJECT_COLS.PHASE_REVIEW,
-        delivery: PROJECT_COLS.PHASE_DELIVERY
+      const phaseMapping = {
+        paper: 'PAPER',
+        fixer: 'FIXER',
+        shootField: 'SHOOT_FIELD',
+        shootInt: 'SHOOT_INT',
+        shootDrama: 'SHOOT_DRAMA',
+        vo: 'VO',
+        animation: 'ANIMATION',
+        infograph: 'INFOGRAPH',
+        montage: 'MONTAGE',
+        archive: 'ARCHIVE',
+        review: 'REVIEW',
+        delivery: 'DELIVERY'
       };
 
-      Object.keys(updates.phases).forEach(phase => {
-        if (phaseColumns[phase]) {
-          sheet.getRange(rowIndex, phaseColumns[phase]).setValue(updates.phases[phase]);
+      Object.keys(updates.phases).forEach(phaseKey => {
+        const stageId = phaseMapping[phaseKey];
+        if (stageId) {
+          // البحث عن العمود المناسب في المراحل
+          const phaseHeader = phaseRange.headers.find(ph => ph.stage.id === stageId);
+          if (phaseHeader) {
+            sheet.getRange(rowIndex, phaseHeader.col).setValue(Boolean(updates.phases[phaseKey]));
+          }
         }
       });
     }
 
     // تحديث تاريخ آخر تعديل
-    sheet.getRange(rowIndex, PROJECT_COLS.UPDATED_AT).setValue(new Date());
+    if (cols[PROJECT_HEADERS.UPDATED_AT]) {
+      sheet.getRange(rowIndex, cols[PROJECT_HEADERS.UPDATED_AT]).setValue(new Date());
+    }
 
     return true;
   } catch (error) {
@@ -387,39 +478,12 @@ function updateProject(code, updates) {
 
 /**
  * تغيير حالة المشروع
- * @param {string} code كود المشروع
+ * @param {string} projectName اسم المشروع
  * @param {string} newStatus الحالة الجديدة
  * @returns {boolean} نجاح العملية
  */
-function changeProjectStatus(code, newStatus) {
-  return updateProject(code, { status: newStatus });
-}
-
-/**
- * إنشاء كود مشروع جديد تلقائياً
- * @returns {string} كود المشروع
- */
-function generateProjectCode() {
-  const year = new Date().getFullYear().toString().substr(-2);
-  const sheet = getSheet(SHEETS.PROJECTS);
-
-  if (!sheet) return `P${year}001`;
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return `P${year}001`;
-
-  // البحث عن آخر كود في نفس السنة
-  const codes = sheet.getRange(2, PROJECT_COLS.CODE, lastRow - 1, 1).getValues()
-    .map(row => row[0])
-    .filter(code => code && code.startsWith(`P${year}`));
-
-  if (codes.length === 0) return `P${year}001`;
-
-  // استخراج أعلى رقم
-  const numbers = codes.map(code => parseInt(code.replace(`P${year}`, ''), 10));
-  const maxNum = Math.max(...numbers);
-
-  return `P${year}${(maxNum + 1).toString().padStart(3, '0')}`;
+function changeProjectStatus(projectName, newStatus) {
+  return updateProject(projectName, { status: newStatus });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -439,7 +503,8 @@ function searchProjects(query) {
 
   return allProjects.filter(project =>
     project.name.toLowerCase().includes(searchTerm) ||
-    project.code.toLowerCase().includes(searchTerm) ||
+    (project.channel && project.channel.toLowerCase().includes(searchTerm)) ||
+    (project.program && project.program.toLowerCase().includes(searchTerm)) ||
     (project.notes && project.notes.toLowerCase().includes(searchTerm))
   );
 }
@@ -542,10 +607,16 @@ function getProjectsStats() {
 
 /**
  * فتح نموذج إضافة مشروع جديد
+ * ترتيب الحقول يتوافق مع ترتيب الأعمدة في الشيت
  */
 function showAddProjectDialog() {
   // تحضير خيارات الأنواع
   const typeOptions = PROJECT_TYPES.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+
+  // تحضير خيارات الحالة
+  const statusOptions = Object.values(PROJECT_STATUS).map(s =>
+    '<option value="' + s + '"' + (s === PROJECT_STATUS.ACTIVE ? ' selected' : '') + '>' + s + '</option>'
+  ).join('');
 
   // تحضير checkboxes المراحل
   const phaseCheckboxes = Object.values(STAGES).map(s =>
@@ -571,40 +642,57 @@ function showAddProjectDialog() {
       .phase-item { display: flex; align-items: center; }
       .phase-item input { width: auto; margin-left: 5px; }
       .buttons { margin-top: 20px; text-align: left; }
+      .row { display: flex; gap: 15px; }
+      .row .form-group { flex: 1; }
     </style>
 
     <h3>إضافة مشروع جديد</h3>
 
     <div class="form-group">
-      <label>اسم المشروع *</label>
-      <input type="text" id="projectName" required>
+      <label>اسم الفيلم *</label>
+      <input type="text" id="projectName" required placeholder="أدخل اسم الفيلم">
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label>نوع الفيلم</label>
+        <select id="projectType">
+          ${typeOptions}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>الحالة</label>
+        <select id="projectStatus">
+          ${statusOptions}
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label>تاريخ البداية</label>
+        <input type="date" id="startDate" value="${today}">
+      </div>
+      <div class="form-group">
+        <label>تاريخ التسليم المتوقع</label>
+        <input type="date" id="endDate">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label>اسم القناة</label>
+        <input type="text" id="channel" placeholder="اسم القناة">
+      </div>
+      <div class="form-group">
+        <label>اسم البرنامج</label>
+        <input type="text" id="program" placeholder="اسم البرنامج">
+      </div>
     </div>
 
     <div class="form-group">
-      <label>القناة</label>
-      <input type="text" id="channel" placeholder="اسم القناة">
-    </div>
-
-    <div class="form-group">
-      <label>اسم البرنامج</label>
-      <input type="text" id="program" placeholder="اسم البرنامج">
-    </div>
-
-    <div class="form-group">
-      <label>النوع</label>
-      <select id="projectType">
-        ${typeOptions}
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>تاريخ البداية</label>
-      <input type="date" id="startDate" value="${today}">
-    </div>
-
-    <div class="form-group">
-      <label>تاريخ التسليم المتوقع</label>
-      <input type="date" id="endDate">
+      <label>ملاحظات</label>
+      <textarea id="notes" rows="2" placeholder="أي ملاحظات إضافية..."></textarea>
     </div>
 
     <div class="form-group">
@@ -612,11 +700,6 @@ function showAddProjectDialog() {
       <div class="phases-grid">
         ${phaseCheckboxes}
       </div>
-    </div>
-
-    <div class="form-group">
-      <label>ملاحظات</label>
-      <textarea id="notes" rows="3"></textarea>
     </div>
 
     <div class="buttons">
@@ -628,17 +711,18 @@ function showAddProjectDialog() {
       function submitForm() {
         var projectName = document.getElementById('projectName').value;
         if (!projectName || projectName.trim() === '') {
-          alert('يرجى إدخال اسم المشروع');
+          alert('يرجى إدخال اسم الفيلم');
           return;
         }
 
         var data = {
           name: projectName,
-          channel: document.getElementById('channel').value,
-          program: document.getElementById('program').value,
           type: document.getElementById('projectType').value,
           startDate: document.getElementById('startDate').value,
           endDate: document.getElementById('endDate').value,
+          status: document.getElementById('projectStatus').value,
+          channel: document.getElementById('channel').value,
+          program: document.getElementById('program').value,
           notes: document.getElementById('notes').value,
           phases: {
             paper: document.getElementById('phase_PAPER').checked === true,
@@ -667,7 +751,7 @@ function showAddProjectDialog() {
           .addProject(data);
       }
     </script>
-  `).setWidth(500).setHeight(750);
+  `).setWidth(550).setHeight(700);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'إضافة مشروع جديد');
 }
