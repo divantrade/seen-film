@@ -398,12 +398,12 @@ function setupProjectsDropdowns() {
     sheet.getRange(2, typeCol, lastRow - 1, 1).setDataValidation(typeRule);
   }
 
-  // 3. إضافة قائمة حالات المشاريع
+  // 3. إضافة قائمة حالات المشاريع (القيم الصحيحة)
   const statusCol = cols[PROJECT_HEADERS.STATUS];
   if (statusCol) {
-    const projectStatuses = Object.values(PROJECT_STATUS);
+    const statusValues = ['نشط', 'متوقف', 'منتهي', 'ملغي'];
     const statusRule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(projectStatuses, true)
+      .requireValueInList(statusValues, true)
       .setAllowInvalid(false)
       .build();
     sheet.getRange(2, statusCol, lastRow - 1, 1).setDataValidation(statusRule);
