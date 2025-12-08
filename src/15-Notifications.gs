@@ -1031,16 +1031,6 @@ function saveAndApplyNotificationSettings(settings) {
 // ====================================================
 
 /**
- * التحقق من صحة البريد الإلكتروني
- * @param {string} email - البريد الإلكتروني
- * @returns {boolean} هل البريد صالح
- */
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-/**
  * إرسال التقرير اليومي الآن (يدوياً)
  */
 function sendDailyReportNow() {

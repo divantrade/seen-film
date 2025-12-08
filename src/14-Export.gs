@@ -332,62 +332,6 @@ function getEditorsList() {
   }));
 }
 
-/**
- * جلب جميع التعليقات الصوتية
- * @returns {Array} مصفوفة بجميع التعليقات الصوتية
- */
-function getAllVoiceOver() {
-  const sheet = getSheet(SHEETS.VOICEOVER);
-  if (!sheet || sheet.getLastRow() < 2) return [];
-
-  const lastCol = sheet.getLastColumn();
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
-
-  // تحويل البيانات إلى كائنات مع خصائص موحدة
-  return data.map(row => ({
-    code: row[0],
-    projectCode: row[1],
-    type: row[2],
-    segmentNum: row[3],
-    text: row[4],
-    performer: row[5],
-    language: row[6],
-    studio: row[7],
-    status: row[8],
-    duration: row[9],
-    fileLink: row[10],
-    notes: row[11]
-  })).filter(item => item.code);
-}
-
-/**
- * جلب جميع الرسوم المتحركة
- * @returns {Array} مصفوفة بجميع الرسوم المتحركة
- */
-function getAllAnimation() {
-  const sheet = getSheet(SHEETS.ANIMATION);
-  if (!sheet || sheet.getLastRow() < 2) return [];
-
-  const lastCol = sheet.getLastColumn();
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
-
-  // تحويل البيانات إلى كائنات مع خصائص موحدة
-  return data.map(row => ({
-    code: row[0],
-    projectCode: row[1],
-    sceneNum: row[2],
-    description: row[3],
-    type: row[4],
-    duration: row[5],
-    scriptLink: row[6],
-    animator: row[7],
-    studio: row[8],
-    status: row[9],
-    fileLink: row[10],
-    notes: row[11]
-  })).filter(item => item.code);
-}
-
 // ====================================================
 // دوال التصدير الرئيسية
 // ====================================================
