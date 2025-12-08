@@ -13,19 +13,20 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const MOVEMENT_COLS = {
-  ID: 1,              // المعرف
+  NUMBER: 1,          // #
   DATE: 2,            // التاريخ (auto-fill)
-  PROJECT: 3,         // المشروع (dropdown)
-  STAGE: 4,           // المرحلة (dropdown ديناميكي)
-  SUBTYPE: 5,         // النوع الفرعي (dropdown ديناميكي)
-  ELEMENT: 6,         // العنصر
-  ACTION: 7,          // الإجراء
-  ASSIGNED_TO: 8,     // المسؤول (dropdown من الفريق)
-  STATUS: 9,          // الحالة (dropdown)
-  DUE_DATE: 10,       // تاريخ الاستحقاق
-  NOTES: 11,          // ملاحظات
-  CREATED_BY: 12,     // أنشئ بواسطة
-  CREATED_AT: 13      // تاريخ الإنشاء
+  PROJECT_CODE: 3,    // كود المشروع (dropdown)
+  PROJECT_NAME: 4,    // اسم المشروع (dropdown)
+  STAGE: 5,           // المرحلة (dropdown ديناميكي)
+  SUBTYPE: 6,         // النوع الفرعي (dropdown ديناميكي)
+  ELEMENT: 7,         // العنصر
+  ACTION: 8,          // الإجراء
+  ASSIGNED_TO: 9,     // المسؤول (dropdown من الفريق)
+  STATUS: 10,         // الحالة (dropdown)
+  DUE_DATE: 11,       // تاريخ الاستحقاق
+  NOTES: 12,          // ملاحظات
+  CREATED_BY: 13,     // أنشئ بواسطة
+  CREATED_AT: 14      // تاريخ الإنشاء
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -43,12 +44,13 @@ function getAllMovements() {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return [];
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+  const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
 
   return data.map(row => ({
-    id: row[MOVEMENT_COLS.ID - 1],
+    number: row[MOVEMENT_COLS.NUMBER - 1],
     date: row[MOVEMENT_COLS.DATE - 1],
-    project: row[MOVEMENT_COLS.PROJECT - 1],
+    projectCode: row[MOVEMENT_COLS.PROJECT_CODE - 1],
+    projectName: row[MOVEMENT_COLS.PROJECT_NAME - 1],
     stage: row[MOVEMENT_COLS.STAGE - 1],
     subtype: row[MOVEMENT_COLS.SUBTYPE - 1],
     element: row[MOVEMENT_COLS.ELEMENT - 1],
@@ -59,7 +61,7 @@ function getAllMovements() {
     notes: row[MOVEMENT_COLS.NOTES - 1],
     createdBy: row[MOVEMENT_COLS.CREATED_BY - 1],
     createdAt: row[MOVEMENT_COLS.CREATED_AT - 1]
-  })).filter(movement => movement.id);
+  })).filter(movement => movement.number);
 }
 
 /**
@@ -261,14 +263,15 @@ function addMovementEntry(movementData) {
       }
     }
 
-    // إنشاء المعرف تلقائياً
-    const id = generateMovementId();
+    // إنشاء الرقم التسلسلي تلقائياً
+    const num = generateMovementNumber();
 
     // تجهيز صف البيانات
     const rowData = [
-      id,
+      num,
       movementData.date || new Date(),
-      movementData.project,
+      movementData.projectCode || '',
+      movementData.projectName || movementData.project || '',
       movementData.stage,
       movementData.subtype || '-',
       movementData.element || '',
@@ -298,16 +301,16 @@ function addMovementEntry(movementData) {
 
 /**
  * تحديث حركة
- * @param {string} id معرف الحركة
+ * @param {string} num رقم الحركة
  * @param {Object} updates التحديثات
  * @returns {boolean} نجاح العملية
  */
-function updateMovement(id, updates) {
+function updateMovement(num, updates) {
   try {
     const sheet = getSheet(SHEETS.MOVEMENT);
     if (!sheet) return false;
 
-    const rowIndex = findRowByValue(SHEETS.MOVEMENT, MOVEMENT_COLS.ID, id);
+    const rowIndex = findRowByValue(SHEETS.MOVEMENT, MOVEMENT_COLS.NUMBER, num);
     if (rowIndex === -1) {
       showError('الحركة غير موجودة');
       return false;
@@ -316,7 +319,8 @@ function updateMovement(id, updates) {
     // تحديث الحقول
     const fieldsMap = {
       date: MOVEMENT_COLS.DATE,
-      project: MOVEMENT_COLS.PROJECT,
+      projectCode: MOVEMENT_COLS.PROJECT_CODE,
+      projectName: MOVEMENT_COLS.PROJECT_NAME,
       stage: MOVEMENT_COLS.STAGE,
       subtype: MOVEMENT_COLS.SUBTYPE,
       element: MOVEMENT_COLS.ELEMENT,
@@ -352,31 +356,29 @@ function updateMovement(id, updates) {
  * @param {string} newStatus الحالة الجديدة
  * @returns {boolean} نجاح العملية
  */
-function updateMovementStatus(id, newStatus) {
-  return updateMovement(id, { status: newStatus });
+function updateMovementStatus(num, newStatus) {
+  return updateMovement(num, { status: newStatus });
 }
 
 /**
- * إنشاء معرف حركة جديد
- * @returns {string} معرف الحركة
+ * إنشاء رقم تسلسلي جديد للحركة
+ * @returns {number} الرقم التسلسلي
  */
-function generateMovementId() {
+function generateMovementNumber() {
   const sheet = getSheet(SHEETS.MOVEMENT);
-  if (!sheet) return 'M001';
+  if (!sheet) return 1;
 
   const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return 'M001';
+  if (lastRow <= 1) return 1;
 
-  const ids = sheet.getRange(2, MOVEMENT_COLS.ID, lastRow - 1, 1).getValues()
+  const nums = sheet.getRange(2, MOVEMENT_COLS.NUMBER, lastRow - 1, 1).getValues()
     .map(row => row[0])
-    .filter(id => id && id.toString().startsWith('M'));
+    .filter(num => num && !isNaN(num));
 
-  if (ids.length === 0) return 'M001';
+  if (nums.length === 0) return 1;
 
-  const numbers = ids.map(id => parseInt(id.toString().replace('M', ''), 10));
-  const maxNum = Math.max(...numbers);
-
-  return 'M' + (maxNum + 1).toString().padStart(3, '0');
+  const maxNum = Math.max(...nums);
+  return maxNum + 1;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

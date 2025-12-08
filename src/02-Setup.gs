@@ -85,7 +85,7 @@ function createSettingsSheet(ss) {
   sheet.getRange('A1:E1').merge().setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
 
   // رؤوس أعمدة المراحل
-  const stageHeaders = ['المعرف', 'الاسم', 'الأيقونة', 'الترتيب', 'الأنواع الفرعية'];
+  const stageHeaders = ['#', 'الاسم', 'الأيقونة', 'الترتيب', 'الأنواع الفرعية'];
   sheet.getRange('A2:E2').setValues([stageHeaders])
     .setFontWeight('bold')
     .setBackground(COLORS.BACKGROUND_LIGHT);
@@ -112,7 +112,7 @@ function createSettingsSheet(ss) {
     .setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
 
   // رؤوس أعمدة الحالات
-  const statusHeaders = ['المعرف', 'الاسم', 'الأيقونة', 'اللون'];
+  const statusHeaders = ['#', 'الاسم', 'الأيقونة', 'اللون'];
   sheet.getRange(statusStartRow + 1, 1, 1, 4).setValues([statusHeaders])
     .setFontWeight('bold')
     .setBackground(COLORS.BACKGROUND_LIGHT);
@@ -192,6 +192,8 @@ function createProjectsSheet(ss) {
   const basicHeaders = [
     'الكود',
     'اسم الفيلم',
+    'القناة',
+    'اسم البرنامج',
     'النوع',
     'تاريخ البداية',
     'التسليم المتوقع',
@@ -221,48 +223,53 @@ function createProjectsSheet(ss) {
   // تعيين عرض الأعمدة الأساسية
   sheet.setColumnWidth(1, 80);   // الكود
   sheet.setColumnWidth(2, 180);  // اسم الفيلم
-  sheet.setColumnWidth(3, 100);  // النوع
-  sheet.setColumnWidth(4, 110);  // تاريخ البداية
-  sheet.setColumnWidth(5, 110);  // التسليم المتوقع
-  sheet.setColumnWidth(6, 80);   // الحالة
-  sheet.setColumnWidth(7, 150);  // ملاحظات
+  sheet.setColumnWidth(3, 120);  // القناة
+  sheet.setColumnWidth(4, 150);  // اسم البرنامج
+  sheet.setColumnWidth(5, 100);  // النوع
+  sheet.setColumnWidth(6, 110);  // تاريخ البداية
+  sheet.setColumnWidth(7, 110);  // التسليم المتوقع
+  sheet.setColumnWidth(8, 80);   // الحالة
+  sheet.setColumnWidth(9, 150);  // ملاحظات
+
+  // عمود بداية المراحل (بعد 9 أعمدة أساسية)
+  const phaseStartCol = 10;
 
   // تعيين عرض أعمدة المراحل (أضيق)
-  for (let i = 8; i < 8 + phaseHeaders.length; i++) {
+  for (let i = phaseStartCol; i < phaseStartCol + phaseHeaders.length; i++) {
     sheet.setColumnWidth(i, 50);
   }
 
   // تعيين عرض أعمدة النظام
-  sheet.setColumnWidth(8 + phaseHeaders.length, 130);
-  sheet.setColumnWidth(9 + phaseHeaders.length, 130);
+  sheet.setColumnWidth(phaseStartCol + phaseHeaders.length, 130);
+  sheet.setColumnWidth(phaseStartCol + phaseHeaders.length + 1, 130);
 
   // إضافة checkboxes لأعمدة المراحل (الصفوف 2-100)
-  const checkboxRange = sheet.getRange(2, 8, 99, phaseHeaders.length);
+  const checkboxRange = sheet.getRange(2, phaseStartCol, 99, phaseHeaders.length);
   checkboxRange.insertCheckboxes();
 
+  // مسح أي قواعد تنسيق شرطي سابقة
+  sheet.clearConditionalFormatRules();
+
   // إضافة تنسيق شرطي للـ checkboxes - أخضر عند التحديد
-  const conditionalRules = sheet.getConditionalFormatRules();
-
-  // قاعدة للخلايا المحددة (TRUE) - خلفية خضراء
+  // استخدام INDIRECT لتطبيق الفورمولا على كل خلية
   const greenRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=H2=TRUE')
-    .setBackground('#C8E6C9')  // أخضر فاتح
+    .whenFormulaSatisfied('=INDIRECT(ADDRESS(ROW(),COLUMN()))=TRUE')
+    .setBackground('#4CAF50')  // أخضر زاهي
+    .setFontColor('#FFFFFF')   // نص أبيض
     .setRanges([checkboxRange])
     .build();
 
-  // قاعدة للخلايا غير المحددة (FALSE) - خلفية رمادية فاتحة
-  const grayRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=H2=FALSE')
-    .setBackground('#F5F5F5')  // رمادي فاتح
+  // قاعدة للخلايا غير المحددة (FALSE) - خلفية بيضاء
+  const whiteRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=INDIRECT(ADDRESS(ROW(),COLUMN()))=FALSE')
+    .setBackground('#FFFFFF')  // أبيض
     .setRanges([checkboxRange])
     .build();
 
-  conditionalRules.push(greenRule);
-  conditionalRules.push(grayRule);
-  sheet.setConditionalFormatRules(conditionalRules);
+  sheet.setConditionalFormatRules([greenRule, whiteRule]);
 
-  // تلوين أعمدة المراحل مع نص مقروء
-  sheet.getRange(1, 8, 1, phaseHeaders.length)
+  // تلوين أعمدة المراحل في الهيدر مع نص مقروء
+  sheet.getRange(1, phaseStartCol, 1, phaseHeaders.length)
     .setBackground('#E3F2FD')
     .setFontColor('#1565C0'); // نص أزرق داكن على خلفية فاتحة
 
@@ -442,9 +449,10 @@ function createMovementSheet(ss) {
   sheet.clear();
 
   const headers = [
-    'المعرف',
+    '#',
     'التاريخ',
-    'المشروع',
+    'كود المشروع',
+    'اسم المشروع',
     'المرحلة',
     'النوع الفرعي',
     'العنصر',
@@ -466,22 +474,23 @@ function createMovementSheet(ss) {
   sheet.setFrozenRows(1);
   sheet.setRightToLeft(true);
 
-  sheet.setColumnWidth(1, 70);   // المعرف
-  sheet.setColumnWidth(2, 90);   // التاريخ
-  sheet.setColumnWidth(3, 140);  // المشروع
-  sheet.setColumnWidth(4, 140);  // المرحلة
-  sheet.setColumnWidth(5, 90);   // النوع الفرعي
-  sheet.setColumnWidth(6, 150);  // العنصر
-  sheet.setColumnWidth(7, 120);  // الإجراء
-  sheet.setColumnWidth(8, 110);  // المسؤول
-  sheet.setColumnWidth(9, 90);   // الحالة
-  sheet.setColumnWidth(10, 100); // تاريخ الاستحقاق
-  sheet.setColumnWidth(11, 180); // ملاحظات
-  sheet.setColumnWidth(12, 110); // أنشئ بواسطة
-  sheet.setColumnWidth(13, 130); // تاريخ الإنشاء
+  sheet.setColumnWidth(1, 50);   // #
+  sheet.setColumnWidth(2, 100);  // التاريخ
+  sheet.setColumnWidth(3, 100);  // كود المشروع
+  sheet.setColumnWidth(4, 150);  // اسم المشروع
+  sheet.setColumnWidth(5, 140);  // المرحلة
+  sheet.setColumnWidth(6, 100);  // النوع الفرعي
+  sheet.setColumnWidth(7, 150);  // العنصر
+  sheet.setColumnWidth(8, 120);  // الإجراء
+  sheet.setColumnWidth(9, 110);  // المسؤول
+  sheet.setColumnWidth(10, 90);  // الحالة
+  sheet.setColumnWidth(11, 100); // تاريخ الاستحقاق
+  sheet.setColumnWidth(12, 180); // ملاحظات
+  sheet.setColumnWidth(13, 110); // أنشئ بواسطة
+  sheet.setColumnWidth(14, 130); // تاريخ الإنشاء
 
   // تلوين تبادلي للصفوف
-  sheet.getRange('A:M').applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY);
+  sheet.getRange('A:N').applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY);
 }
 
 /**
@@ -805,7 +814,7 @@ function createExportLogSheet(ss) {
   sheet.clear();
 
   const headers = [
-    'المعرف',
+    '#',
     'تاريخ التصدير',
     'نوع التقرير',
     'الفترة',
@@ -905,27 +914,28 @@ function applyCheckboxFormatting() {
     return;
   }
 
-  // نطاق أعمدة المراحل (12 عمود من H إلى S)
-  const checkboxRange = sheet.getRange(2, 8, 99, 12);
+  // نطاق أعمدة المراحل (12 عمود من J إلى U - الأعمدة 10 إلى 21)
+  const checkboxRange = sheet.getRange(2, 10, 99, 12);
 
   // مسح التنسيق الشرطي الحالي
   sheet.clearConditionalFormatRules();
 
-  // قاعدة للخلايا المحددة (TRUE) - خلفية خضراء
+  // قاعدة للخلايا المحددة (TRUE) - خلفية خضراء زاهية
   const greenRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=H2=TRUE')
-    .setBackground('#C8E6C9')  // أخضر فاتح
+    .whenFormulaSatisfied('=INDIRECT(ADDRESS(ROW(),COLUMN()))=TRUE')
+    .setBackground('#4CAF50')  // أخضر زاهي
+    .setFontColor('#FFFFFF')   // نص أبيض
     .setRanges([checkboxRange])
     .build();
 
-  // قاعدة للخلايا غير المحددة (FALSE) - خلفية رمادية فاتحة
-  const grayRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=H2=FALSE')
-    .setBackground('#F5F5F5')  // رمادي فاتح
+  // قاعدة للخلايا غير المحددة (FALSE) - خلفية بيضاء
+  const whiteRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=INDIRECT(ADDRESS(ROW(),COLUMN()))=FALSE')
+    .setBackground('#FFFFFF')  // أبيض
     .setRanges([checkboxRange])
     .build();
 
-  sheet.setConditionalFormatRules([greenRule, grayRule]);
+  sheet.setConditionalFormatRules([greenRule, whiteRule]);
 
   SpreadsheetApp.getActiveSpreadsheet().toast('تم تطبيق التنسيق بنجاح', 'تم ✓', 3);
 }
