@@ -29,6 +29,163 @@ const DROPDOWN_COLUMNS = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// دوال قراءة البيانات من شيت الإعدادات
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * الحصول على أنواع المشاريع من شيت الإعدادات
+ * @returns {Array} مصفوفة أنواع المشاريع
+ */
+function getProjectTypesFromSettings() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settingsSheet = ss.getSheetByName(SHEETS.SETTINGS);
+
+  if (!settingsSheet) {
+    // إذا لم يوجد شيت الإعدادات، نستخدم القيم الافتراضية
+    return PROJECT_TYPES;
+  }
+
+  // البحث عن قسم "أنواع المشاريع"
+  const data = settingsSheet.getDataRange().getValues();
+  let typesStartRow = -1;
+
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().includes('أنواع المشاريع')) {
+      typesStartRow = i + 1; // الصف التالي يحتوي على البيانات
+      break;
+    }
+  }
+
+  if (typesStartRow === -1) {
+    return PROJECT_TYPES;
+  }
+
+  // قراءة الأنواع حتى نصل لخلية فارغة أو قسم جديد
+  const types = [];
+  for (let i = typesStartRow; i < data.length; i++) {
+    const value = data[i][0];
+    if (!value || value === '' || value.toString().includes('═')) {
+      break;
+    }
+    types.push(value.toString());
+  }
+
+  return types.length > 0 ? types : PROJECT_TYPES;
+}
+
+/**
+ * الحصول على حالات المشاريع من شيت الإعدادات
+ * @returns {Array} مصفوفة حالات المشاريع
+ */
+function getProjectStatusesFromSettings() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settingsSheet = ss.getSheetByName(SHEETS.SETTINGS);
+
+  if (!settingsSheet) {
+    // إذا لم يوجد شيت الإعدادات، نستخدم القيم الافتراضية
+    return Object.values(PROJECT_STATUS);
+  }
+
+  // البحث عن قسم "الحالات"
+  const data = settingsSheet.getDataRange().getValues();
+  let statusStartRow = -1;
+
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString() === 'الحالات') {
+      statusStartRow = i + 2; // تخطي صف العناوين
+      break;
+    }
+  }
+
+  if (statusStartRow === -1) {
+    return Object.values(PROJECT_STATUS);
+  }
+
+  // قراءة أسماء الحالات من العمود الثاني (الاسم)
+  const statuses = [];
+  for (let i = statusStartRow; i < data.length; i++) {
+    const value = data[i][1]; // العمود الثاني = اسم الحالة
+    if (!value || value === '' || data[i][0].toString().includes('أنواع')) {
+      break;
+    }
+    statuses.push(value.toString());
+  }
+
+  return statuses.length > 0 ? statuses : Object.values(PROJECT_STATUS);
+}
+
+/**
+ * الحصول على نطاق أنواع المشاريع في شيت الإعدادات (للـ Data Validation)
+ * @returns {Range|null} نطاق الخلايا أو null
+ */
+function getProjectTypesRange() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settingsSheet = ss.getSheetByName(SHEETS.SETTINGS);
+
+  if (!settingsSheet) return null;
+
+  // البحث عن قسم "أنواع المشاريع"
+  const data = settingsSheet.getDataRange().getValues();
+  let startRow = -1;
+  let endRow = -1;
+
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().includes('أنواع المشاريع')) {
+      startRow = i + 2; // الصف التالي للعنوان (1-indexed)
+      // البحث عن نهاية القسم
+      for (let j = i + 1; j < data.length; j++) {
+        if (!data[j][0] || data[j][0] === '' || data[j][0].toString().includes('═')) {
+          endRow = j + 1; // 1-indexed
+          break;
+        }
+        endRow = j + 2;
+      }
+      break;
+    }
+  }
+
+  if (startRow === -1 || endRow <= startRow) return null;
+
+  return settingsSheet.getRange(startRow, 1, endRow - startRow, 1);
+}
+
+/**
+ * الحصول على نطاق حالات المشاريع في شيت الإعدادات (للـ Data Validation)
+ * @returns {Range|null} نطاق الخلايا أو null
+ */
+function getProjectStatusesRange() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settingsSheet = ss.getSheetByName(SHEETS.SETTINGS);
+
+  if (!settingsSheet) return null;
+
+  // البحث عن قسم "الحالات"
+  const data = settingsSheet.getDataRange().getValues();
+  let startRow = -1;
+  let endRow = -1;
+
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString() === 'الحالات') {
+      startRow = i + 3; // تخطي صف العنوان وصف الهيدر (1-indexed)
+      // البحث عن نهاية القسم
+      for (let j = i + 2; j < data.length; j++) {
+        if (!data[j][1] || data[j][1] === '' || data[j][0].toString().includes('أنواع')) {
+          endRow = j + 1;
+          break;
+        }
+        endRow = j + 2;
+      }
+      break;
+    }
+  }
+
+  if (startRow === -1 || endRow <= startRow) return null;
+
+  // العمود الثاني يحتوي على أسماء الحالات
+  return settingsSheet.getRange(startRow, 2, endRow - startRow, 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // دالة onEdit - المُشغل الرئيسي
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -354,6 +511,10 @@ function setupMovementDropdowns() {
  * ملاحظة: هذه الدالة تضيف dropdown فقط لعمودي النوع والحالة
  * ولا تضيف أي validation للأعمدة الأخرى (التواريخ، القناة، البرنامج، الملاحظات)
  * الـ checkboxes تُضاف فقط من عمود 10 (PHASE_START_COL) وما بعده
+ *
+ * القوائم المنسدلة تُقرأ ديناميكياً من شيت الإعدادات:
+ * - نوع الفيلم: من قسم "أنواع المشاريع"
+ * - الحالة: من قسم "الحالات"
  */
 function setupProjectsDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -376,24 +537,49 @@ function setupProjectsDropdowns() {
     sheet.getRange(2, col, lastRow - 1, 1).clearDataValidations();
   }
 
-  // 2. إضافة قائمة أنواع المشاريع (عمود 3)
+  // 2. إضافة قائمة أنواع المشاريع (عمود 3) - من شيت الإعدادات
   const typeCol = cols[PROJECT_HEADERS.TYPE];
   if (typeCol && typeCol <= 9) {
-    const typeRule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(PROJECT_TYPES, true)
-      .setAllowInvalid(false)
-      .build();
+    const typesRange = getProjectTypesRange();
+    let typeRule;
+
+    if (typesRange) {
+      // ربط ديناميكي بشيت الإعدادات
+      typeRule = SpreadsheetApp.newDataValidation()
+        .requireValueInRange(typesRange, true)
+        .setAllowInvalid(false)
+        .build();
+    } else {
+      // استخدام القيم من شيت الإعدادات أو الافتراضية
+      const types = getProjectTypesFromSettings();
+      typeRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(types, true)
+        .setAllowInvalid(false)
+        .build();
+    }
     sheet.getRange(2, typeCol, lastRow - 1, 1).setDataValidation(typeRule);
   }
 
-  // 3. إضافة قائمة حالات المشاريع (عمود 6)
+  // 3. إضافة قائمة حالات المشاريع (عمود 6) - من شيت الإعدادات
   const statusCol = cols[PROJECT_HEADERS.STATUS];
   if (statusCol && statusCol <= 9) {
-    const statusValues = ['نشط', 'متوقف', 'منتهي', 'ملغي'];
-    const statusRule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(statusValues, true)
-      .setAllowInvalid(false)
-      .build();
+    const statusRange = getProjectStatusesRange();
+    let statusRule;
+
+    if (statusRange) {
+      // ربط ديناميكي بشيت الإعدادات
+      statusRule = SpreadsheetApp.newDataValidation()
+        .requireValueInRange(statusRange, true)
+        .setAllowInvalid(false)
+        .build();
+    } else {
+      // استخدام القيم من شيت الإعدادات أو الافتراضية
+      const statuses = getProjectStatusesFromSettings();
+      statusRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(statuses, true)
+        .setAllowInvalid(false)
+        .build();
+    }
     sheet.getRange(2, statusCol, lastRow - 1, 1).setDataValidation(statusRule);
   }
 
