@@ -15,27 +15,29 @@
 const PROJECT_COLS = {
   CODE: 1,           // كود المشروع
   NAME: 2,           // اسم الفيلم
-  TYPE: 3,           // النوع
-  START_DATE: 4,     // تاريخ البداية
-  END_DATE: 5,       // التسليم المتوقع
-  STATUS: 6,         // الحالة (نشط/متوقف/منتهي)
-  NOTES: 7,          // ملاحظات
-  // أعمدة المراحل (checkboxes)
-  PHASE_PAPER: 8,
-  PHASE_FIXER: 9,
-  PHASE_SHOOT_FIELD: 10,
-  PHASE_SHOOT_INT: 11,
-  PHASE_SHOOT_DRAMA: 12,
-  PHASE_VO: 13,
-  PHASE_ANIMATION: 14,
-  PHASE_INFOGRAPH: 15,
-  PHASE_MONTAGE: 16,
-  PHASE_ARCHIVE: 17,
-  PHASE_REVIEW: 18,
-  PHASE_DELIVERY: 19,
+  CHANNEL: 3,        // القناة
+  PROGRAM: 4,        // اسم البرنامج
+  TYPE: 5,           // النوع
+  START_DATE: 6,     // تاريخ البداية
+  END_DATE: 7,       // التسليم المتوقع
+  STATUS: 8,         // الحالة (نشط/متوقف/منتهي)
+  NOTES: 9,          // ملاحظات
+  // أعمدة المراحل (checkboxes) - تبدأ من العمود 10
+  PHASE_PAPER: 10,
+  PHASE_FIXER: 11,
+  PHASE_SHOOT_FIELD: 12,
+  PHASE_SHOOT_INT: 13,
+  PHASE_SHOOT_DRAMA: 14,
+  PHASE_VO: 15,
+  PHASE_ANIMATION: 16,
+  PHASE_INFOGRAPH: 17,
+  PHASE_MONTAGE: 18,
+  PHASE_ARCHIVE: 19,
+  PHASE_REVIEW: 20,
+  PHASE_DELIVERY: 21,
   // أعمدة النظام
-  CREATED_AT: 20,
-  UPDATED_AT: 21
+  CREATED_AT: 22,
+  UPDATED_AT: 23
 };
 
 // حالات المشروع
@@ -61,11 +63,13 @@ function getAllProjects() {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return [];
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 21).getValues();
+  const data = sheet.getRange(2, 1, lastRow - 1, 23).getValues();
 
   return data.map(row => ({
     code: row[PROJECT_COLS.CODE - 1],
     name: row[PROJECT_COLS.NAME - 1],
+    channel: row[PROJECT_COLS.CHANNEL - 1],
+    program: row[PROJECT_COLS.PROGRAM - 1],
     type: row[PROJECT_COLS.TYPE - 1],
     startDate: row[PROJECT_COLS.START_DATE - 1],
     endDate: row[PROJECT_COLS.END_DATE - 1],
@@ -253,6 +257,8 @@ function addProject(projectData) {
     const basicData = [
       code,
       projectData.name,
+      projectData.channel || '',
+      projectData.program || '',
       projectData.type || PROJECT_TYPES[0],
       startDate,
       endDate,
@@ -286,8 +292,8 @@ function addProject(projectData) {
     // إضافة البيانات في الصف المحدد
     sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
 
-    // تطبيق checkbox validation على أعمدة المراحل (H إلى S = أعمدة 8 إلى 19)
-    const phaseRange = sheet.getRange(targetRow, 8, 1, 12); // 12 مرحلة
+    // تطبيق checkbox validation على أعمدة المراحل (J إلى U = أعمدة 10 إلى 21)
+    const phaseRange = sheet.getRange(targetRow, 10, 1, 12); // 12 مرحلة تبدأ من العمود 10
     const checkboxRule = SpreadsheetApp.newDataValidation()
       .requireCheckbox()
       .build();
@@ -575,6 +581,16 @@ function showAddProjectDialog() {
     </div>
 
     <div class="form-group">
+      <label>القناة</label>
+      <input type="text" id="channel" placeholder="اسم القناة">
+    </div>
+
+    <div class="form-group">
+      <label>اسم البرنامج</label>
+      <input type="text" id="program" placeholder="اسم البرنامج">
+    </div>
+
+    <div class="form-group">
       <label>النوع</label>
       <select id="projectType">
         ${typeOptions}
@@ -618,6 +634,8 @@ function showAddProjectDialog() {
 
         var data = {
           name: projectName,
+          channel: document.getElementById('channel').value,
+          program: document.getElementById('program').value,
           type: document.getElementById('projectType').value,
           startDate: document.getElementById('startDate').value,
           endDate: document.getElementById('endDate').value,
@@ -649,7 +667,7 @@ function showAddProjectDialog() {
           .addProject(data);
       }
     </script>
-  `).setWidth(500).setHeight(650);
+  `).setWidth(500).setHeight(750);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'إضافة مشروع جديد');
 }
