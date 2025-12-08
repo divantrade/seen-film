@@ -260,20 +260,21 @@ function addProject(projectData) {
       projectData.notes || ''
     ];
 
-    // قيم المراحل
+    // قيم المراحل - تحويل صريح للقيم البوليانية
+    const phases = projectData.phases || {};
     const phaseValues = [
-      projectData.phases && projectData.phases.paper === true,
-      projectData.phases && projectData.phases.fixer === true,
-      projectData.phases && projectData.phases.shootField === true,
-      projectData.phases && projectData.phases.shootInt === true,
-      projectData.phases && projectData.phases.shootDrama === true,
-      projectData.phases && projectData.phases.vo === true,
-      projectData.phases && projectData.phases.animation === true,
-      projectData.phases && projectData.phases.infograph === true,
-      projectData.phases && projectData.phases.montage === true,
-      projectData.phases && projectData.phases.archive === true,
-      projectData.phases && projectData.phases.review === true,
-      projectData.phases && projectData.phases.delivery === true
+      Boolean(phases.paper),
+      Boolean(phases.fixer),
+      Boolean(phases.shootField),
+      Boolean(phases.shootInt),
+      Boolean(phases.shootDrama),
+      Boolean(phases.vo),
+      Boolean(phases.animation),
+      Boolean(phases.infograph),
+      Boolean(phases.montage),
+      Boolean(phases.archive),
+      Boolean(phases.review),
+      Boolean(phases.delivery)
     ];
 
     // تواريخ النظام
@@ -294,6 +295,9 @@ function addProject(projectData) {
 
     // التأكد من حفظ البيانات فوراً
     SpreadsheetApp.flush();
+
+    // إظهار رسالة نجاح
+    SpreadsheetApp.getActiveSpreadsheet().toast('تم إضافة المشروع: ' + projectData.name, 'تمت الإضافة ✓', 3);
 
     console.log('تم إضافة المشروع بنجاح: ' + code + ' في الصف: ' + targetRow);
     return true;
@@ -619,32 +623,28 @@ function showAddProjectDialog() {
           endDate: document.getElementById('endDate').value,
           notes: document.getElementById('notes').value,
           phases: {
-            paper: document.getElementById('phase_PAPER').checked,
-            fixer: document.getElementById('phase_FIXER').checked,
-            shootField: document.getElementById('phase_SHOOT_FIELD').checked,
-            shootInt: document.getElementById('phase_SHOOT_INT').checked,
-            shootDrama: document.getElementById('phase_SHOOT_DRAMA').checked,
-            vo: document.getElementById('phase_VO').checked,
-            animation: document.getElementById('phase_ANIMATION').checked,
-            infograph: document.getElementById('phase_INFOGRAPH').checked,
-            montage: document.getElementById('phase_MONTAGE').checked,
-            archive: document.getElementById('phase_ARCHIVE').checked,
-            review: document.getElementById('phase_REVIEW').checked,
-            delivery: document.getElementById('phase_DELIVERY').checked
+            paper: document.getElementById('phase_PAPER').checked === true,
+            fixer: document.getElementById('phase_FIXER').checked === true,
+            shootField: document.getElementById('phase_SHOOT_FIELD').checked === true,
+            shootInt: document.getElementById('phase_SHOOT_INT').checked === true,
+            shootDrama: document.getElementById('phase_SHOOT_DRAMA').checked === true,
+            vo: document.getElementById('phase_VO').checked === true,
+            animation: document.getElementById('phase_ANIMATION').checked === true,
+            infograph: document.getElementById('phase_INFOGRAPH').checked === true,
+            montage: document.getElementById('phase_MONTAGE').checked === true,
+            archive: document.getElementById('phase_ARCHIVE').checked === true,
+            review: document.getElementById('phase_REVIEW').checked === true,
+            delivery: document.getElementById('phase_DELIVERY').checked === true
           }
         };
 
         google.script.run
           .withSuccessHandler(function(result) {
-            if (result) {
-              alert('تم إضافة المشروع بنجاح');
-              google.script.host.close();
-            } else {
-              alert('حدث خطأ أثناء إضافة المشروع');
-            }
+            google.script.host.close();
           })
           .withFailureHandler(function(err) {
             alert('حدث خطأ: ' + err.message);
+            google.script.host.close();
           })
           .addProject(data);
       }
