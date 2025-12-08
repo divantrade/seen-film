@@ -351,6 +351,8 @@ function setupMovementDropdowns() {
 /**
  * إعداد القوائم المنسدلة في شيت المشاريع
  * يستخدم البحث الديناميكي عن الأعمدة بالاسم
+ * ملاحظة: هذه الدالة تضيف dropdown فقط لعمودي النوع والحالة
+ * ولا تضيف أي validation للأعمدة الأخرى (التواريخ، القناة، البرنامج، الملاحظات)
  */
 function setupProjectsDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -365,8 +367,28 @@ function setupProjectsDropdowns() {
 
   // الحصول على فهارس الأعمدة بالاسم
   const cols = getProjectColumnIndices(sheet);
+  const phaseRange = getPhaseColumnsRange(sheet);
 
-  // قائمة أنواع المشاريع
+  // 1. مسح جميع الـ data validations من الأعمدة الأساسية (غير المراحل)
+  // لتجنب أي validations خاطئة على أعمدة التواريخ وغيرها
+  const basicCols = [
+    cols[PROJECT_HEADERS.CODE],
+    cols[PROJECT_HEADERS.NAME],
+    cols[PROJECT_HEADERS.START_DATE],
+    cols[PROJECT_HEADERS.END_DATE],
+    cols[PROJECT_HEADERS.CHANNEL],
+    cols[PROJECT_HEADERS.PROGRAM],
+    cols[PROJECT_HEADERS.NOTES],
+    cols[PROJECT_HEADERS.CREATED_AT],
+    cols[PROJECT_HEADERS.UPDATED_AT]
+  ].filter(c => c); // فلترة الأعمدة الموجودة فقط
+
+  // مسح validations من الأعمدة التي لا يجب أن يكون بها dropdown
+  basicCols.forEach(colNum => {
+    sheet.getRange(2, colNum, lastRow - 1, 1).clearDataValidations();
+  });
+
+  // 2. إضافة قائمة أنواع المشاريع
   const typeCol = cols[PROJECT_HEADERS.TYPE];
   if (typeCol) {
     const typeRule = SpreadsheetApp.newDataValidation()
@@ -376,7 +398,7 @@ function setupProjectsDropdowns() {
     sheet.getRange(2, typeCol, lastRow - 1, 1).setDataValidation(typeRule);
   }
 
-  // قائمة حالات المشاريع
+  // 3. إضافة قائمة حالات المشاريع
   const statusCol = cols[PROJECT_HEADERS.STATUS];
   if (statusCol) {
     const projectStatuses = Object.values(PROJECT_STATUS);
@@ -387,11 +409,18 @@ function setupProjectsDropdowns() {
     sheet.getRange(2, statusCol, lastRow - 1, 1).setDataValidation(statusRule);
   }
 
+  // 4. التأكد من أن أعمدة المراحل بها checkboxes فقط (وليس dropdown)
+  if (phaseRange.startCol > 0) {
+    const checkboxCells = sheet.getRange(2, phaseRange.startCol, lastRow - 1, phaseRange.count);
+    checkboxCells.insertCheckboxes();
+  }
+
   showToast('تم إعداد القوائم المنسدلة لشيت المشاريع', 'نجاح');
 }
 
 /**
  * إعداد القوائم المنسدلة في شيت الفريق
+ * الأعمدة: الكود(1), الاسم(2), الدور(3), البريد(4), الهاتف(5), المراحل(6), الحالة(7), تاريخ الانضمام(8), ملاحظات(9)
  */
 function setupTeamDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -404,25 +433,27 @@ function setupTeamDropdowns() {
 
   const lastRow = Math.max(sheet.getLastRow(), 50);
 
-  // قائمة الأدوار
+  // قائمة الأدوار - عمود 3
   const roleRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(TEAM_ROLES, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange(2, 3, lastRow - 1, 1).setDataValidation(roleRule); // عمود الدور
+  sheet.getRange(2, 3, lastRow - 1, 1).setDataValidation(roleRule);
 
-  // قائمة الحالة (نشط/غير نشط)
+  // قائمة الحالة (نشط/غير نشط) - عمود 7 (وليس 6)
   const statusRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['نشط', 'غير نشط'], true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange(2, 6, lastRow - 1, 1).setDataValidation(statusRule); // عمود الحالة
+  sheet.getRange(2, 7, lastRow - 1, 1).setDataValidation(statusRule);
 
   showToast('تم إعداد القوائم المنسدلة لشيت الفريق', 'نجاح');
 }
 
 /**
  * إعداد القوائم المنسدلة في شيت الضيوف
+ * الأعمدة: الكود(1), الاسم(2), المشروع(3), نوع المشاركة(4), حالة التواصل(5), حالة الأسئلة(6),
+ *          البلد(7), مكان التصوير(8), تاريخ التصوير(9), حالة التصوير(10), يحتاج دوبلاج(11), ...
  */
 function setupGuestsDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -435,7 +466,7 @@ function setupGuestsDropdowns() {
 
   const lastRow = Math.max(sheet.getLastRow(), 50);
 
-  // قائمة المشاريع النشطة
+  // قائمة المشاريع النشطة - عمود 3
   const activeProjects = getActiveProjects();
   const projectNames = activeProjects.map(p => p.name);
 
@@ -444,47 +475,47 @@ function setupGuestsDropdowns() {
       .requireValueInList(projectNames, true)
       .setAllowInvalid(false)
       .build();
-    sheet.getRange(2, 3, lastRow - 1, 1).setDataValidation(projectRule); // عمود المشروع
+    sheet.getRange(2, 3, lastRow - 1, 1).setDataValidation(projectRule);
   }
 
-  // قائمة نوع المشاركة
+  // قائمة نوع المشاركة - عمود 4
   const participationTypes = ['مقابلة', 'دراما', 'تعليق صوتي', 'أخرى'];
   const typeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(participationTypes, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange(2, 4, lastRow - 1, 1).setDataValidation(typeRule); // عمود نوع المشاركة
+  sheet.getRange(2, 4, lastRow - 1, 1).setDataValidation(typeRule);
 
-  // قائمة حالة التواصل
+  // قائمة حالة التواصل - عمود 5
   const contactStatuses = ['لم يبدأ', 'جاري التواصل', 'تم التأكيد', 'رفض', 'مؤجل'];
   const contactRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(contactStatuses, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange(2, 5, lastRow - 1, 1).setDataValidation(contactRule); // عمود حالة التواصل
+  sheet.getRange(2, 5, lastRow - 1, 1).setDataValidation(contactRule);
 
-  // قائمة حالة الأسئلة
+  // قائمة حالة الأسئلة - عمود 6
   const questionStatuses = ['لم ترسل', 'أُرسلت', 'تم الرد'];
   const questionRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(questionStatuses, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange(2, 6, lastRow - 1, 1).setDataValidation(questionRule); // عمود حالة الأسئلة
+  sheet.getRange(2, 6, lastRow - 1, 1).setDataValidation(questionRule);
 
-  // قائمة حالة التصوير
+  // قائمة حالة التصوير - عمود 10 (وليس 9)
   const shootStatuses = ['لم يتم', 'مجدول', 'تم', 'ملغي'];
   const shootRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(shootStatuses, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange(2, 9, lastRow - 1, 1).setDataValidation(shootRule); // عمود حالة التصوير
+  sheet.getRange(2, 10, lastRow - 1, 1).setDataValidation(shootRule);
 
-  // قائمة يحتاج دوبلاج
+  // قائمة يحتاج دوبلاج - عمود 11 (وليس 10)
   const dubbingRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['نعم', 'لا'], true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange(2, 10, lastRow - 1, 1).setDataValidation(dubbingRule); // عمود الدوبلاج
+  sheet.getRange(2, 11, lastRow - 1, 1).setDataValidation(dubbingRule);
 
   showToast('تم إعداد القوائم المنسدلة لشيت الضيوف', 'نجاح');
 }
