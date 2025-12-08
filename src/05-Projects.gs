@@ -344,13 +344,18 @@ function addProject(projectData) {
     // إضافة البيانات في الصف المحدد
     sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
 
-    // تطبيق checkbox validation على أعمدة المراحل ديناميكياً
-    if (phaseRange.startCol > 0) {
-      const checkboxCells = sheet.getRange(targetRow, phaseRange.startCol, 1, phaseRange.count);
-      const checkboxRule = SpreadsheetApp.newDataValidation()
-        .requireCheckbox()
-        .build();
-      checkboxCells.setDataValidation(checkboxRule);
+    // تطبيق checkbox validation على أعمدة المراحل فقط (من عمود 10 فصاعداً)
+    // نستخدم PHASE_START_COL كحد أدنى لضمان عدم إضافة checkboxes للأعمدة 1-9
+    const actualStartCol = Math.max(phaseRange.startCol, PHASE_START_COL);
+    if (actualStartCol >= PHASE_START_COL && phaseRange.endCol >= actualStartCol) {
+      const actualCount = phaseRange.endCol - actualStartCol + 1;
+      if (actualCount > 0) {
+        const checkboxCells = sheet.getRange(targetRow, actualStartCol, 1, actualCount);
+        const checkboxRule = SpreadsheetApp.newDataValidation()
+          .requireCheckbox()
+          .build();
+        checkboxCells.setDataValidation(checkboxRule);
+      }
     }
 
     // التأكد من حفظ البيانات فوراً
