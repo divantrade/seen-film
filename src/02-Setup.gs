@@ -240,6 +240,27 @@ function createProjectsSheet(ss) {
   const checkboxRange = sheet.getRange(2, 8, 99, phaseHeaders.length);
   checkboxRange.insertCheckboxes();
 
+  // إضافة تنسيق شرطي للـ checkboxes - أخضر عند التحديد
+  const conditionalRules = sheet.getConditionalFormatRules();
+
+  // قاعدة للخلايا المحددة (TRUE) - خلفية خضراء
+  const greenRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=H2=TRUE')
+    .setBackground('#C8E6C9')  // أخضر فاتح
+    .setRanges([checkboxRange])
+    .build();
+
+  // قاعدة للخلايا غير المحددة (FALSE) - خلفية رمادية فاتحة
+  const grayRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=H2=FALSE')
+    .setBackground('#F5F5F5')  // رمادي فاتح
+    .setRanges([checkboxRange])
+    .build();
+
+  conditionalRules.push(greenRule);
+  conditionalRules.push(grayRule);
+  sheet.setConditionalFormatRules(conditionalRules);
+
   // تلوين أعمدة المراحل مع نص مقروء
   sheet.getRange(1, 8, 1, phaseHeaders.length)
     .setBackground('#E3F2FD')
@@ -869,6 +890,44 @@ function resetSheet(sheetName) {
       sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clear();
     }
   }
+}
+
+/**
+ * تطبيق تنسيق الـ checkboxes الخضراء على شيت المشاريع الحالي
+ * يمكن تشغيل هذه الدالة لتحديث التنسيق على شيت موجود
+ */
+function applyCheckboxFormatting() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.PROJECTS);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('شيت المشاريع غير موجود');
+    return;
+  }
+
+  // نطاق أعمدة المراحل (12 عمود من H إلى S)
+  const checkboxRange = sheet.getRange(2, 8, 99, 12);
+
+  // مسح التنسيق الشرطي الحالي
+  sheet.clearConditionalFormatRules();
+
+  // قاعدة للخلايا المحددة (TRUE) - خلفية خضراء
+  const greenRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=H2=TRUE')
+    .setBackground('#C8E6C9')  // أخضر فاتح
+    .setRanges([checkboxRange])
+    .build();
+
+  // قاعدة للخلايا غير المحددة (FALSE) - خلفية رمادية فاتحة
+  const grayRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=H2=FALSE')
+    .setBackground('#F5F5F5')  // رمادي فاتح
+    .setRanges([checkboxRange])
+    .build();
+
+  sheet.setConditionalFormatRules([greenRule, grayRule]);
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('تم تطبيق التنسيق بنجاح', 'تم ✓', 3);
 }
 
 /**

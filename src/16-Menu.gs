@@ -144,6 +144,7 @@ function createCustomMenu() {
     .addSubMenu(ui.createMenu('🔧 الأدوات')
       .addItem('🔄 تحديث القوائم المنسدلة', 'refreshAllDropdowns')
       .addItem('🎨 تحديث ألوان الحالات', 'refreshStatusColors')
+      .addItem('✅ تطبيق تنسيق الـ Checkboxes الخضراء', 'applyCheckboxFormatting')
       .addSeparator()
       .addItem('🔍 التحقق من البيانات', 'validateAllData')
       .addItem('🧹 تنظيف البيانات المكررة', 'cleanDuplicateData')
