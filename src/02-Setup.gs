@@ -187,7 +187,16 @@ function createProjectsSheet(ss) {
     sheet = ss.insertSheet(sheetName);
   }
 
+  // مسح كل شيء - المحتوى والتنسيق والـ validations
   sheet.clear();
+  sheet.clearConditionalFormatRules();
+
+  // مسح جميع data validations من كل الخلايا
+  const maxRows = sheet.getMaxRows();
+  const maxCols = sheet.getMaxColumns();
+  if (maxRows > 0 && maxCols > 0) {
+    sheet.getRange(1, 1, maxRows, maxCols).clearDataValidations();
+  }
 
   // رؤوس الأعمدة الأساسية
   const basicHeaders = [
@@ -234,46 +243,67 @@ function createProjectsSheet(ss) {
 
   // عمود بداية المراحل (بعد 9 أعمدة أساسية)
   const phaseStartCol = basicHeaders.length + 1; // = 10
+  const phaseEndCol = phaseStartCol + phaseHeaders.length - 1;
 
   // تعيين عرض أعمدة المراحل (أضيق)
-  for (let i = phaseStartCol; i < phaseStartCol + phaseHeaders.length; i++) {
+  for (let i = phaseStartCol; i <= phaseEndCol; i++) {
     sheet.setColumnWidth(i, 50);
   }
 
   // تعيين عرض أعمدة النظام
-  const systemStartCol = phaseStartCol + phaseHeaders.length;
+  const systemStartCol = phaseEndCol + 1;
   sheet.setColumnWidth(systemStartCol, 130);     // تاريخ الإنشاء
   sheet.setColumnWidth(systemStartCol + 1, 130); // تاريخ التحديث
 
-  // إضافة checkboxes لأعمدة المراحل (الصفوف 2-100)
+  // إضافة checkboxes لأعمدة المراحل فقط (الصفوف 2-100)
   const checkboxRange = sheet.getRange(2, phaseStartCol, 99, phaseHeaders.length);
   checkboxRange.insertCheckboxes();
 
-  // مسح أي قواعد تنسيق شرطي سابقة
-  sheet.clearConditionalFormatRules();
-
   // إضافة تنسيق شرطي للـ checkboxes - أخضر عند التحديد
-  // استخدام INDIRECT لتطبيق الفورمولا على كل خلية
+  // استخدام صيغة بسيطة تعمل مباشرة على القيمة
   const greenRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=INDIRECT(ADDRESS(ROW(),COLUMN()))=TRUE')
+    .whenCellNotEmpty()
+    .whenFormulaSatisfied('=AND(ISNUMBER(COLUMN()), COLUMN()>=' + phaseStartCol + ', COLUMN()<=' + phaseEndCol + ', INDIRECT(ADDRESS(ROW(),COLUMN()))=TRUE)')
     .setBackground('#4CAF50')  // أخضر زاهي
     .setFontColor('#FFFFFF')   // نص أبيض
     .setRanges([checkboxRange])
     .build();
 
-  // قاعدة للخلايا غير المحددة (FALSE) - خلفية بيضاء
-  const whiteRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=INDIRECT(ADDRESS(ROW(),COLUMN()))=FALSE')
-    .setBackground('#FFFFFF')  // أبيض
+  // قاعدة بسيطة: TRUE = أخضر
+  const trueRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('TRUE')
+    .setBackground('#4CAF50')
     .setRanges([checkboxRange])
     .build();
 
-  sheet.setConditionalFormatRules([greenRule, whiteRule]);
+  // قاعدة بسيطة: FALSE = أبيض
+  const falseRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('FALSE')
+    .setBackground('#FFFFFF')
+    .setRanges([checkboxRange])
+    .build();
+
+  sheet.setConditionalFormatRules([trueRule, falseRule]);
 
   // تلوين أعمدة المراحل في الهيدر مع نص مقروء
   sheet.getRange(1, phaseStartCol, 1, phaseHeaders.length)
     .setBackground('#E3F2FD')
     .setFontColor('#1565C0'); // نص أزرق داكن على خلفية فاتحة
+
+  // إضافة dropdown للحالة
+  const projectStatuses = Object.values(PROJECT_STATUS);
+  const statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(projectStatuses, true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, 6, 99, 1).setDataValidation(statusRule); // عمود الحالة = 6
+
+  // إضافة dropdown لنوع الفيلم
+  const typeRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(PROJECT_TYPES, true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, 3, 99, 1).setDataValidation(typeRule); // عمود نوع الفيلم = 3
 
   // تعيين تنسيق الاتجاه من اليمين لليسار
   sheet.setRightToLeft(true);
@@ -931,24 +961,80 @@ function applyCheckboxFormatting() {
   // مسح التنسيق الشرطي الحالي
   sheet.clearConditionalFormatRules();
 
-  // قاعدة للخلايا المحددة (TRUE) - خلفية خضراء زاهية
-  const greenRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=INDIRECT(ADDRESS(ROW(),COLUMN()))=TRUE')
-    .setBackground('#4CAF50')  // أخضر زاهي
-    .setFontColor('#FFFFFF')   // نص أبيض
+  // قاعدة بسيطة: TRUE = أخضر
+  const trueRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('TRUE')
+    .setBackground('#4CAF50')
     .setRanges([checkboxRange])
     .build();
 
-  // قاعدة للخلايا غير المحددة (FALSE) - خلفية بيضاء
-  const whiteRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=INDIRECT(ADDRESS(ROW(),COLUMN()))=FALSE')
-    .setBackground('#FFFFFF')  // أبيض
+  // قاعدة بسيطة: FALSE = أبيض
+  const falseRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('FALSE')
+    .setBackground('#FFFFFF')
     .setRanges([checkboxRange])
     .build();
 
-  sheet.setConditionalFormatRules([greenRule, whiteRule]);
+  sheet.setConditionalFormatRules([trueRule, falseRule]);
 
   SpreadsheetApp.getActiveSpreadsheet().toast('تم تطبيق التنسيق بنجاح', 'تم ✓', 3);
+}
+
+/**
+ * إصلاح شيت المشاريع الموجود
+ * يزيل الـ validations الخاطئة ويصلح الـ checkboxes والـ dropdowns
+ * دون حذف البيانات الموجودة
+ */
+function fixProjectsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.PROJECTS);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('شيت المشاريع غير موجود');
+    return;
+  }
+
+  const lastRow = Math.max(sheet.getLastRow(), 100);
+
+  // الحصول على فهارس الأعمدة
+  const cols = getProjectColumnIndices(sheet);
+  const phaseRange = getPhaseColumnsRange(sheet);
+
+  // 1. إزالة جميع الـ data validations أولاً
+  const maxCols = sheet.getLastColumn();
+  sheet.getRange(2, 1, lastRow - 1, maxCols).clearDataValidations();
+
+  // 2. إضافة dropdown لنوع الفيلم فقط
+  const typeCol = cols[PROJECT_HEADERS.TYPE];
+  if (typeCol) {
+    const typeRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(PROJECT_TYPES, true)
+      .setAllowInvalid(false)
+      .build();
+    sheet.getRange(2, typeCol, lastRow - 1, 1).setDataValidation(typeRule);
+  }
+
+  // 3. إضافة dropdown للحالة فقط
+  const statusCol = cols[PROJECT_HEADERS.STATUS];
+  if (statusCol) {
+    const projectStatuses = Object.values(PROJECT_STATUS);
+    const statusRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(projectStatuses, true)
+      .setAllowInvalid(false)
+      .build();
+    sheet.getRange(2, statusCol, lastRow - 1, 1).setDataValidation(statusRule);
+  }
+
+  // 4. إضافة checkboxes لأعمدة المراحل فقط
+  if (phaseRange.startCol > 0) {
+    const checkboxCells = sheet.getRange(2, phaseRange.startCol, lastRow - 1, phaseRange.count);
+    checkboxCells.insertCheckboxes();
+  }
+
+  // 5. تطبيق التنسيق الشرطي للـ checkboxes
+  applyCheckboxFormatting();
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('تم إصلاح شيت المشاريع بنجاح', 'تم ✓', 3);
 }
 
 /**
