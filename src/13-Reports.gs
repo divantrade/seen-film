@@ -69,17 +69,17 @@ function generatePersonReport(personName) {
   const movements = getMovementByPerson(personName);
 
   movements.forEach(movement => {
-    const deadline = movement[MOVEMENT_COLS.DEADLINE];
-    const status = movement[MOVEMENT_COLS.STATUS];
+    const deadline = movement.dueDate;
+    const status = movement.status || '';
 
     let taskStatus = 'pending';
     let color = TASK_COLORS.PENDING;
 
-    if (status === STATUS.COMPLETED) {
+    if (status.includes('تم') || status.includes('✅')) {
       taskStatus = 'completed';
       color = TASK_COLORS.COMPLETED;
       report.summary.completed++;
-    } else if (status === STATUS.IN_PROGRESS) {
+    } else if (status.includes('جاري') || status.includes('🔄')) {
       taskStatus = 'inProgress';
       color = TASK_COLORS.IN_PROGRESS;
       report.summary.inProgress++;
@@ -91,7 +91,7 @@ function generatePersonReport(personName) {
         report.summary.overdue++;
         report.summary.inProgress--;
       }
-    } else if (deadline && new Date(deadline) < today && status !== STATUS.COMPLETED) {
+    } else if (deadline && new Date(deadline) < today && !status.includes('تم') && !status.includes('✅')) {
       taskStatus = 'overdue';
       color = TASK_COLORS.OVERDUE;
       report.summary.overdue++;
@@ -162,13 +162,13 @@ function showPersonReport(personName = null) {
   let currentRow = 6;
   report.movements.forEach(movement => {
     const values = [
-      movement[MOVEMENT_COLS.PROJECT],
-      movement[MOVEMENT_COLS.STAGE],
-      movement[MOVEMENT_COLS.TASK],
-      movement[MOVEMENT_COLS.STATUS],
-      movement[MOVEMENT_COLS.DEADLINE] ? formatDate(movement[MOVEMENT_COLS.DEADLINE]) : '',
-      movement[MOVEMENT_COLS.PRIORITY] || '',
-      movement[MOVEMENT_COLS.NOTES] || ''
+      movement.projectCode || movement.projectName || '',
+      movement.stage || '',
+      movement.element || movement.action || '',
+      movement.status || '',
+      movement.dueDate ? formatDate(movement.dueDate) : '',
+      '', // الأولوية - غير متاحة
+      movement.notes || ''
     ];
 
     const rowRange = sheet.getRange(currentRow, 1, 1, values.length);
@@ -196,10 +196,12 @@ function getOverdueTasks() {
   today.setHours(0, 0, 0, 0);
 
   return allMovements.filter(movement => {
-    const deadline = movement[MOVEMENT_COLS.DEADLINE];
-    const status = movement[MOVEMENT_COLS.STATUS];
+    const deadline = movement.dueDate;
+    const status = movement.status || '';
 
-    if (!deadline || status === STATUS.COMPLETED || status === STATUS.CANCELLED) {
+    if (!deadline) return false;
+    // التحقق من الحالة - مكتمل أو ملغي
+    if (status.includes('تم') || status.includes('✅') || status.includes('ملغي') || status.includes('❌')) {
       return false;
     }
 
@@ -208,7 +210,7 @@ function getOverdueTasks() {
 
     return deadlineDate < today;
   }).sort((a, b) => {
-    return new Date(a[MOVEMENT_COLS.DEADLINE]) - new Date(b[MOVEMENT_COLS.DEADLINE]);
+    return new Date(a.dueDate) - new Date(b.dueDate);
   });
 }
 
@@ -220,16 +222,25 @@ function getAllMovements() {
   const sheet = getSheet(SHEETS.MOVEMENT);
   if (!sheet || sheet.getLastRow() < 2) return [];
 
-  const headers = Object.values(MOVEMENT_COLS);
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+  const lastCol = sheet.getLastColumn();
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
 
+  // تحويل البيانات إلى كائنات مع خصائص موحدة
   return data.map(row => {
-    const item = {};
-    headers.forEach((header, index) => {
-      item[header] = row[index];
-    });
-    return item;
-  }).filter(item => item[MOVEMENT_COLS.ID]);
+    return {
+      number: row[0],
+      projectCode: row[1],
+      projectName: row[2],
+      stage: row[3],
+      element: row[4],
+      action: row[5],
+      assignedTo: row[6],
+      dueDate: row[7],
+      actualDate: row[8],
+      status: row[9],
+      notes: row[10]
+    };
+  }).filter(item => item.number);
 }
 
 /**
@@ -263,17 +274,17 @@ function showOverdueReport() {
   let currentRow = 6;
 
   overdueTasks.forEach(task => {
-    const deadline = new Date(task[MOVEMENT_COLS.DEADLINE]);
+    const deadline = new Date(task.dueDate);
     const daysOverdue = Math.ceil((today - deadline) / (1000 * 60 * 60 * 24));
 
     const values = [
-      task[MOVEMENT_COLS.PROJECT],
-      task[MOVEMENT_COLS.STAGE],
-      task[MOVEMENT_COLS.TASK],
-      task[MOVEMENT_COLS.ASSIGNED_TO],
-      formatDate(task[MOVEMENT_COLS.DEADLINE]),
+      task.projectCode || task.projectName || '',
+      task.stage || '',
+      task.element || task.action || '',
+      task.assignedTo || '',
+      formatDate(task.dueDate),
       `${daysOverdue} يوم`,
-      task[MOVEMENT_COLS.PRIORITY] || ''
+      '' // الأولوية - غير متاحة
     ];
 
     const rowRange = sheet.getRange(currentRow, 1, 1, values.length);
@@ -303,10 +314,12 @@ function getUpcomingDeadlines(daysAhead = 7) {
   const futureDate = new Date(today.getTime() + (daysAhead * 24 * 60 * 60 * 1000));
 
   return allMovements.filter(movement => {
-    const deadline = movement[MOVEMENT_COLS.DEADLINE];
-    const status = movement[MOVEMENT_COLS.STATUS];
+    const deadline = movement.dueDate;
+    const status = movement.status || '';
 
-    if (!deadline || status === STATUS.COMPLETED || status === STATUS.CANCELLED) {
+    if (!deadline) return false;
+    // التحقق من الحالة - مكتمل أو ملغي
+    if (status.includes('تم') || status.includes('✅') || status.includes('ملغي') || status.includes('❌')) {
       return false;
     }
 
@@ -315,7 +328,7 @@ function getUpcomingDeadlines(daysAhead = 7) {
 
     return deadlineDate >= today && deadlineDate <= futureDate;
   }).sort((a, b) => {
-    return new Date(a[MOVEMENT_COLS.DEADLINE]) - new Date(b[MOVEMENT_COLS.DEADLINE]);
+    return new Date(a.dueDate) - new Date(b.dueDate);
   });
 }
 
@@ -349,17 +362,17 @@ function showUpcomingDeadlinesReport(days = 7) {
   let currentRow = 6;
 
   upcoming.forEach(task => {
-    const deadline = new Date(task[MOVEMENT_COLS.DEADLINE]);
+    const deadline = new Date(task.dueDate);
     const daysLeft = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
 
     const values = [
-      task[MOVEMENT_COLS.PROJECT],
-      task[MOVEMENT_COLS.STAGE],
-      task[MOVEMENT_COLS.TASK],
-      task[MOVEMENT_COLS.ASSIGNED_TO],
-      formatDate(task[MOVEMENT_COLS.DEADLINE]),
+      task.projectCode || task.projectName || '',
+      task.stage || '',
+      task.element || task.action || '',
+      task.assignedTo || '',
+      formatDate(task.dueDate),
       daysLeft === 0 ? 'اليوم!' : `${daysLeft} يوم`,
-      task[MOVEMENT_COLS.STATUS]
+      task.status || ''
     ];
 
     const rowRange = sheet.getRange(currentRow, 1, 1, values.length);
@@ -406,13 +419,23 @@ function generateProjectSummary(projectCode) {
   // حساب إحصائيات المهام
   const taskStats = {
     total: movements.length,
-    completed: movements.filter(m => m[MOVEMENT_COLS.STATUS] === STATUS.COMPLETED).length,
-    inProgress: movements.filter(m => m[MOVEMENT_COLS.STATUS] === STATUS.IN_PROGRESS).length,
-    overdue: movements.filter(m => {
-      const deadline = m[MOVEMENT_COLS.DEADLINE];
-      return deadline && new Date(deadline) < today && m[MOVEMENT_COLS.STATUS] !== STATUS.COMPLETED;
+    completed: movements.filter(m => {
+      const status = m.status || '';
+      return status.includes('تم') || status.includes('✅');
     }).length,
-    delayed: movements.filter(m => m[MOVEMENT_COLS.STATUS] === STATUS.DELAYED).length
+    inProgress: movements.filter(m => {
+      const status = m.status || '';
+      return status.includes('جاري') || status.includes('🔄');
+    }).length,
+    overdue: movements.filter(m => {
+      const deadline = m.dueDate;
+      const status = m.status || '';
+      return deadline && new Date(deadline) < today && !status.includes('تم') && !status.includes('✅');
+    }).length,
+    delayed: movements.filter(m => {
+      const status = m.status || '';
+      return status.includes('متأخر') || status.includes('⏰');
+    }).length
   };
 
   // حساب نسبة الإكمال الكلية
@@ -423,48 +446,65 @@ function generateProjectSummary(projectCode) {
   // إحصائيات الضيوف
   const guestStats = {
     total: guests.length,
-    contacted: guests.filter(g => g[GUEST_COLS.CONTACT_STATUS] === CONTACT_STATUS.CONTACTED).length,
-    confirmed: guests.filter(g => g[GUEST_COLS.SHOOT_STATUS] === SHOOT_STATUS.SCHEDULED ||
-                                  g[GUEST_COLS.SHOOT_STATUS] === SHOOT_STATUS.COMPLETED).length,
-    shotCompleted: guests.filter(g => g[GUEST_COLS.SHOOT_STATUS] === SHOOT_STATUS.COMPLETED).length
+    contacted: guests.filter(g => {
+      const status = g.contactStatus || '';
+      return status.includes('تم التواصل') || status.includes('✅');
+    }).length,
+    confirmed: guests.filter(g => {
+      const status = g.shootStatus || '';
+      return status.includes('مجدول') || status.includes('مكتمل') || status.includes('✅');
+    }).length,
+    shotCompleted: guests.filter(g => {
+      const status = g.shootStatus || '';
+      return status.includes('مكتمل') || status.includes('✅');
+    }).length
   };
 
   // إحصائيات التعليق الصوتي
   const voStats = {
     total: voiceOvers.length,
-    completed: voiceOvers.filter(v => v[VO_COLS.STATUS] === 'مكتمل').length,
+    completed: voiceOvers.filter(v => {
+      const status = v.status || '';
+      return status.includes('مكتمل') || status.includes('✅');
+    }).length,
     totalDuration: getTotalVoiceOverDuration(projectCode)
   };
 
   // إحصائيات الرسوم المتحركة
   const animStats = {
     total: animations.length,
-    completed: animations.filter(a => a[ANIM_COLS.STATUS] === 'مكتمل').length,
+    completed: animations.filter(a => {
+      const status = a.status || '';
+      return status.includes('مكتمل') || status.includes('✅');
+    }).length,
     totalDuration: getTotalAnimationDuration(projectCode)
   };
 
   // إحصائيات الأرشيف
   const archiveStats = {
     total: archive.length,
-    licensed: archive.filter(a => a[ARCHIVE_COLS.LICENSE_STATUS] === LICENSE_STATUS.LICENSED).length,
+    licensed: archive.filter(a => {
+      const status = a.licenseStatus || '';
+      return status.includes('مرخص') || status.includes('✅');
+    }).length,
     totalCost: getProjectLicenseCost(projectCode)
   };
 
   // حساب الأيام المتبقية
   let daysRemaining = null;
-  if (project[PROJECT_COLS.DEADLINE]) {
-    const deadline = new Date(project[PROJECT_COLS.DEADLINE]);
+  if (project.deadline) {
+    const deadline = new Date(project.deadline);
     daysRemaining = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
   }
 
   return {
     project: {
       code: projectCode,
-      name: project[PROJECT_COLS.NAME],
-      client: project[PROJECT_COLS.CLIENT],
-      status: project[PROJECT_COLS.STATUS],
-      startDate: project[PROJECT_COLS.START_DATE],
-      deadline: project[PROJECT_COLS.DEADLINE],
+      name: project.name || '',
+      client: project.client || '',
+      status: project.status || '',
+      startDate: project.startDate || '',
+      deadline: project.deadline || '',
       daysRemaining: daysRemaining
     },
     tasks: taskStats,
@@ -633,26 +673,25 @@ function generateWeeklyReport(projectCode = null) {
   // الحصول على جميع الحركات
   let movements = getAllMovements();
   if (projectCode) {
-    movements = movements.filter(m => m[MOVEMENT_COLS.PROJECT] === projectCode);
+    movements = movements.filter(m => m.projectCode === projectCode || m.projectName === projectCode);
   }
 
   // المهام المكتملة هذا الأسبوع
+  // ملاحظة: لا يوجد عمود تاريخ التحديث، لذا نعرض جميع المهام المكتملة
   const completedThisWeek = movements.filter(m => {
-    const updatedAt = m[MOVEMENT_COLS.UPDATED_AT];
-    return m[MOVEMENT_COLS.STATUS] === STATUS.COMPLETED &&
-           updatedAt && new Date(updatedAt) >= weekStart && new Date(updatedAt) <= weekEnd;
+    const status = m.status || '';
+    return status.includes('تم') || status.includes('✅');
   });
 
   // المهام الجديدة هذا الأسبوع
-  const newThisWeek = movements.filter(m => {
-    const createdAt = m[MOVEMENT_COLS.CREATED_AT];
-    return createdAt && new Date(createdAt) >= weekStart && new Date(createdAt) <= weekEnd;
-  });
+  // ملاحظة: لا يوجد عمود تاريخ الإنشاء، لذا نعرض قائمة فارغة
+  const newThisWeek = [];
 
   // المهام المتأخرة
   const overdue = movements.filter(m => {
-    const deadline = m[MOVEMENT_COLS.DEADLINE];
-    return deadline && new Date(deadline) < today && m[MOVEMENT_COLS.STATUS] !== STATUS.COMPLETED;
+    const deadline = m.dueDate;
+    const status = m.status || '';
+    return deadline && new Date(deadline) < today && !status.includes('تم') && !status.includes('✅');
   });
 
   // المواعيد القادمة الأسبوع القادم
@@ -662,9 +701,10 @@ function generateWeeklyReport(projectCode = null) {
   nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
 
   const upcomingNextWeek = movements.filter(m => {
-    const deadline = m[MOVEMENT_COLS.DEADLINE];
+    const deadline = m.dueDate;
+    const status = m.status || '';
     return deadline && new Date(deadline) >= nextWeekStart && new Date(deadline) <= nextWeekEnd &&
-           m[MOVEMENT_COLS.STATUS] !== STATUS.COMPLETED;
+           !status.includes('تم') && !status.includes('✅');
   });
 
   return {
@@ -754,7 +794,7 @@ function setupPersonReportSheet() {
   // إنشاء قائمة منسدلة بأسماء الفريق
   const team = getTeamMembers();
   const photographers = getPhotographers();
-  const names = [...team.map(t => t[TEAM_COLS.NAME]), ...photographers.map(p => p[PHOTOGRAPHER_COLS.NAME])];
+  const names = [...team.map(t => t.name || ''), ...photographers.map(p => p.name || '')].filter(n => n);
 
   if (names.length > 0) {
     const rule = SpreadsheetApp.newDataValidation()
