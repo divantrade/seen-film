@@ -62,7 +62,8 @@ function setupSystem() {
 
 /**
  * إنشاء شيت الإعدادات
- * يحتوي على المراحل والحالات
+ * هيكل أفقي: كل عمود يمثل قائمة منفصلة
+ * كل قائمة لها 25 صف للتوسع المستقبلي
  * @param {Spreadsheet} ss الجدول
  */
 function createSettingsSheet(ss) {
@@ -76,101 +77,93 @@ function createSettingsSheet(ss) {
   // مسح المحتوى الحالي
   sheet.clear();
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // قسم المراحل
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // عنوان المراحل
-  sheet.getRange('A1').setValue('المراحل').setFontWeight('bold').setFontSize(14);
-  sheet.getRange('A1:E1').merge().setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
-
-  // رؤوس أعمدة المراحل
-  const stageHeaders = ['#', 'الاسم', 'الأيقونة', 'الترتيب', 'الأنواع الفرعية'];
-  sheet.getRange('A2:E2').setValues([stageHeaders])
-    .setFontWeight('bold')
-    .setBackground(COLORS.BACKGROUND_LIGHT);
-
-  // بيانات المراحل
-  const stageData = Object.values(STAGES).map(stage => [
-    stage.id,
-    stage.name,
-    stage.icon,
-    stage.order,
-    stage.subtypes ? stage.subtypes.join('، ') : '-'
-  ]);
-  sheet.getRange(3, 1, stageData.length, 5).setValues(stageData);
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // قسم الحالات
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  const statusStartRow = stageData.length + 5;
-
-  // عنوان الحالات
-  sheet.getRange(statusStartRow, 1).setValue('الحالات').setFontWeight('bold').setFontSize(14);
-  sheet.getRange(statusStartRow, 1, 1, 4).merge()
-    .setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
-
-  // رؤوس أعمدة الحالات
-  const statusHeaders = ['#', 'الاسم', 'الأيقونة', 'اللون'];
-  sheet.getRange(statusStartRow + 1, 1, 1, 4).setValues([statusHeaders])
-    .setFontWeight('bold')
-    .setBackground(COLORS.BACKGROUND_LIGHT);
-
-  // بيانات الحالات مع تلوين الخلايا
-  const statusData = Object.values(STATUS);
-  statusData.forEach((status, index) => {
-    const row = statusStartRow + 2 + index;
-    sheet.getRange(row, 1, 1, 4).setValues([[
-      status.id,
-      status.name,
-      status.icon,
-      status.color
-    ]]);
-    // تلوين خلية اللون
-    sheet.getRange(row, 4).setBackground(status.color);
+  // حذف Named Ranges القديمة إن وجدت
+  const oldRanges = ['StagesList', 'StatusList', 'ProjectTypesList', 'TeamRolesList', 'ProjectStatusList', 'TaskStatusList', 'PhasesList'];
+  oldRanges.forEach(name => {
+    try {
+      const range = ss.getRangeByName(name);
+      if (range) ss.removeNamedRange(name);
+    } catch (e) { /* ignore */ }
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // قسم أنواع المشاريع
-  // ═══════════════════════════════════════════════════════════════════════════
+  const MAX_ROWS = 25; // عدد الصفوف لكل قائمة
 
-  const typesStartRow = statusStartRow + statusData.length + 4;
-
-  sheet.getRange(typesStartRow, 1).setValue('أنواع المشاريع').setFontWeight('bold').setFontSize(14);
-  sheet.getRange(typesStartRow, 1, 1, 2).merge()
-    .setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // العمود A: أنواع الأفلام
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A1').setValue('أنواع الأفلام')
+    .setFontWeight('bold').setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
 
   PROJECT_TYPES.forEach((type, index) => {
-    sheet.getRange(typesStartRow + 1 + index, 1).setValue(type);
+    sheet.getRange(index + 2, 1).setValue(type);
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // قسم أدوار الفريق
+  // العمود B: حالات المشاريع
   // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('B1').setValue('حالات المشاريع')
+    .setFontWeight('bold').setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
 
-  const rolesStartRow = typesStartRow;
+  const projectStatuses = Object.values(PROJECT_STATUS);
+  projectStatuses.forEach((status, index) => {
+    sheet.getRange(index + 2, 2).setValue(status);
+  });
 
-  sheet.getRange(rolesStartRow, 3).setValue('أدوار الفريق').setFontWeight('bold').setFontSize(14);
-  sheet.getRange(rolesStartRow, 3, 1, 2).merge()
-    .setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // العمود C: حالات المهام
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('C1').setValue('حالات المهام')
+    .setFontWeight('bold').setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
+
+  const taskStatuses = Object.values(STATUS).map(s => s.name);
+  taskStatuses.forEach((status, index) => {
+    sheet.getRange(index + 2, 3).setValue(status);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // العمود D: أدوار الفريق
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('D1').setValue('أدوار الفريق')
+    .setFontWeight('bold').setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
 
   TEAM_ROLES.forEach((role, index) => {
-    sheet.getRange(rolesStartRow + 1 + index, 3).setValue(role);
+    sheet.getRange(index + 2, 4).setValue(role);
   });
 
-  // تنسيق الشيت
-  sheet.setColumnWidth(1, 150);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 100);
-  sheet.setColumnWidth(4, 100);
-  sheet.setColumnWidth(5, 250); // الأنواع الفرعية
+  // ═══════════════════════════════════════════════════════════════════════════
+  // العمود E: المراحل (للـ Checkboxes في شيت المشاريع)
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('E1').setValue('المراحل')
+    .setFontWeight('bold').setBackground(COLORS.HEADER).setFontColor(COLORS.HEADER_TEXT);
 
-  // تسمية النطاقات للقوائم المنسدلة
-  ss.setNamedRange('StagesList', sheet.getRange(3, 2, stageData.length, 1));
-  ss.setNamedRange('StatusList', sheet.getRange(statusStartRow + 2, 2, statusData.length, 1));
-  ss.setNamedRange('ProjectTypesList', sheet.getRange(typesStartRow + 1, 1, PROJECT_TYPES.length, 1));
-  ss.setNamedRange('TeamRolesList', sheet.getRange(rolesStartRow + 1, 3, TEAM_ROLES.length, 1));
+  const phases = Object.values(STAGES).map(s => s.icon + ' ' + s.name);
+  phases.forEach((phase, index) => {
+    sheet.getRange(index + 2, 5).setValue(phase);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // تنسيق الشيت
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.setColumnWidth(1, 150); // أنواع الأفلام
+  sheet.setColumnWidth(2, 120); // حالات المشاريع
+  sheet.setColumnWidth(3, 120); // حالات المهام
+  sheet.setColumnWidth(4, 150); // أدوار الفريق
+  sheet.setColumnWidth(5, 180); // المراحل
+
+  // تجميد الصف الأول
+  sheet.setFrozenRows(1);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // تعريف Named Ranges (25 صف لكل قائمة للتوسع المستقبلي)
+  // ═══════════════════════════════════════════════════════════════════════════
+  ss.setNamedRange('ProjectTypesList', sheet.getRange(2, 1, MAX_ROWS, 1));
+  ss.setNamedRange('ProjectStatusList', sheet.getRange(2, 2, MAX_ROWS, 1));
+  ss.setNamedRange('TaskStatusList', sheet.getRange(2, 3, MAX_ROWS, 1));
+  ss.setNamedRange('TeamRolesList', sheet.getRange(2, 4, MAX_ROWS, 1));
+  ss.setNamedRange('PhasesList', sheet.getRange(2, 5, MAX_ROWS, 1));
+
+  // للتوافق مع الكود القديم
+  ss.setNamedRange('StatusList', sheet.getRange(2, 3, MAX_ROWS, 1)); // alias لحالات المهام
 }
 
 /**
