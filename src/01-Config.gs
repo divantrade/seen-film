@@ -230,125 +230,44 @@ const COLORS = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// أعمدة الشيتات (فهرس الأعمدة)
+// هيدرات شيت المشاريع
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const COLUMNS = {
-  // أعمدة شيت المشاريع
-  PROJECTS: {
-    ID: 1,
-    NAME: 2,
-    CODE: 3,
-    TYPE: 4,
-    STATUS: 5,
-    START_DATE: 6,
-    END_DATE: 7,
-    PRODUCER: 8,
-    DIRECTOR: 9,
-    NOTES: 10,
-    CREATED_AT: 11,
-    UPDATED_AT: 12
-  },
+const PROJECT_HEADERS = [
+  'الكود',
+  'اسم الفيلم',
+  'نوع الفيلم',
+  'تاريخ البداية',
+  'تاريخ التسليم المتوقع',
+  'الحالة',
+  'اسم القناة',
+  'اسم البرنامج',
+  'ملاحظات'
+];
 
-  // أعمدة شيت الفريق
-  TEAM: {
-    ID: 1,
-    NAME: 2,
-    ROLE: 3,
-    EMAIL: 4,
-    PHONE: 5,
-    STATUS: 6,
-    JOIN_DATE: 7,
-    NOTES: 8
-  },
+// عمود بداية المراحل في شيت المشاريع (بعد الأعمدة الأساسية)
+const PHASE_START_COL = 10;
 
-  // أعمدة شيت المصورين
-  PHOTOGRAPHERS: {
-    ID: 1,
-    NAME: 2,
-    SPECIALIZATION: 3,
-    PHONE: 4,
-    EMAIL: 5,
-    RATE: 6,
-    STATUS: 7,
-    NOTES: 8
-  },
+// ═══════════════════════════════════════════════════════════════════════════════
+// هيدرات شيت الحركة
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  // أعمدة شيت الضيوف
-  GUESTS: {
-    ID: 1,
-    NAME: 2,
-    TITLE: 3,
-    ORGANIZATION: 4,
-    PHONE: 5,
-    EMAIL: 6,
-    PROJECT: 7,
-    INTERVIEW_DATE: 8,
-    STATUS: 9,
-    NOTES: 10
-  },
-
-  // أعمدة شيت الحركة (الإدخال الرئيسي)
-  MOVEMENT: {
-    ID: 1,
-    DATE: 2,
-    PROJECT: 3,
-    STAGE: 4,
-    TASK: 5,
-    ASSIGNED_TO: 6,
-    STATUS: 7,
-    START_DATE: 8,
-    END_DATE: 9,
-    DURATION: 10,
-    NOTES: 11,
-    CREATED_BY: 12,
-    CREATED_AT: 13
-  },
-
-  // أعمدة شيت التعليق الصوتي
-  VOICEOVER: {
-    ID: 1,
-    PROJECT: 2,
-    EPISODE: 3,
-    TYPE: 4,
-    SCRIPT_STATUS: 5,
-    RECORDING_STATUS: 6,
-    VOICE_ACTOR: 7,
-    DURATION: 8,
-    RECORDING_DATE: 9,
-    NOTES: 10
-  },
-
-  // أعمدة شيت الرسوم المتحركة
-  ANIMATION: {
-    ID: 1,
-    PROJECT: 2,
-    EPISODE: 3,
-    SCENE: 4,
-    TYPE: 5,
-    ANIMATOR: 6,
-    STATUS: 7,
-    START_DATE: 8,
-    END_DATE: 9,
-    DURATION: 10,
-    NOTES: 11
-  },
-
-  // أعمدة شيت الأرشيف
-  ARCHIVE: {
-    ID: 1,
-    PROJECT: 2,
-    TYPE: 3,
-    DESCRIPTION: 4,
-    SOURCE: 5,
-    DURATION: 6,
-    STATUS: 7,
-    RESEARCHER: 8,
-    REQUEST_DATE: 9,
-    RECEIVE_DATE: 10,
-    NOTES: 11
-  }
-};
+const MOVEMENT_HEADERS = [
+  '#',
+  'التاريخ',
+  'كود المشروع',
+  'اسم المشروع',
+  'المرحلة',
+  'النوع الفرعي',
+  'العنصر',
+  'الإجراء',
+  'المسؤول',
+  'الحالة',
+  'تاريخ الاستحقاق',
+  'ملاحظات',
+  'أنشئ بواسطة',
+  'تاريخ الإنشاء'
+];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // أنواع المشاريع
