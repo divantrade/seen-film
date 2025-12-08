@@ -198,7 +198,8 @@ function createProjectsSheet(ss) {
     sheet.getRange(1, 1, maxRows, maxCols).clearDataValidations();
   }
 
-  // رؤوس الأعمدة الأساسية
+  // رؤوس الأعمدة الأساسية (9 أعمدة)
+  // 1=الكود, 2=اسم الفيلم, 3=نوع الفيلم, 4=تاريخ البداية, 5=تاريخ التسليم, 6=الحالة, 7=القناة, 8=البرنامج, 9=ملاحظات
   const basicHeaders = [
     'الكود',
     'اسم الفيلم',
@@ -211,7 +212,7 @@ function createProjectsSheet(ss) {
     'ملاحظات'
   ];
 
-  // أعمدة المراحل (checkboxes)
+  // أعمدة المراحل (checkboxes) - تبدأ من العمود 10
   const phaseHeaders = Object.values(STAGES).map(s => s.icon + ' ' + s.name);
 
   // أعمدة النظام
@@ -242,8 +243,9 @@ function createProjectsSheet(ss) {
   sheet.setColumnWidth(9, 150);  // ملاحظات
 
   // عمود بداية المراحل (بعد 9 أعمدة أساسية)
-  const phaseStartCol = basicHeaders.length + 1; // = 10
-  const phaseEndCol = phaseStartCol + phaseHeaders.length - 1;
+  const phaseStartCol = 10; // العمود 10 بالضبط
+  const phaseCount = phaseHeaders.length;
+  const phaseEndCol = phaseStartCol + phaseCount - 1;
 
   // تعيين عرض أعمدة المراحل (أضيق)
   for (let i = phaseStartCol; i <= phaseEndCol; i++) {
@@ -255,28 +257,21 @@ function createProjectsSheet(ss) {
   sheet.setColumnWidth(systemStartCol, 130);     // تاريخ الإنشاء
   sheet.setColumnWidth(systemStartCol + 1, 130); // تاريخ التحديث
 
-  // إضافة checkboxes لأعمدة المراحل فقط (الصفوف 2-100)
-  const checkboxRange = sheet.getRange(2, phaseStartCol, 99, phaseHeaders.length);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // إضافة checkboxes فقط لأعمدة المراحل (من العمود 10 فقط)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const checkboxRange = sheet.getRange(2, phaseStartCol, 99, phaseCount);
   checkboxRange.insertCheckboxes();
 
-  // إضافة تنسيق شرطي للـ checkboxes - أخضر عند التحديد
-  // استخدام صيغة بسيطة تعمل مباشرة على القيمة
-  const greenRule = SpreadsheetApp.newConditionalFormatRule()
-    .whenCellNotEmpty()
-    .whenFormulaSatisfied('=AND(ISNUMBER(COLUMN()), COLUMN()>=' + phaseStartCol + ', COLUMN()<=' + phaseEndCol + ', INDIRECT(ADDRESS(ROW(),COLUMN()))=TRUE)')
-    .setBackground('#4CAF50')  // أخضر زاهي
-    .setFontColor('#FFFFFF')   // نص أبيض
-    .setRanges([checkboxRange])
-    .build();
-
-  // قاعدة بسيطة: TRUE = أخضر
+  // تنسيق شرطي بسيط: checkbox محدد = أخضر
   const trueRule = SpreadsheetApp.newConditionalFormatRule()
     .whenTextEqualTo('TRUE')
     .setBackground('#4CAF50')
+    .setFontColor('#FFFFFF')
     .setRanges([checkboxRange])
     .build();
 
-  // قاعدة بسيطة: FALSE = أبيض
+  // checkbox غير محدد = أبيض
   const falseRule = SpreadsheetApp.newConditionalFormatRule()
     .whenTextEqualTo('FALSE')
     .setBackground('#FFFFFF')
@@ -285,25 +280,39 @@ function createProjectsSheet(ss) {
 
   sheet.setConditionalFormatRules([trueRule, falseRule]);
 
-  // تلوين أعمدة المراحل في الهيدر مع نص مقروء
-  sheet.getRange(1, phaseStartCol, 1, phaseHeaders.length)
+  // تلوين أعمدة المراحل في الهيدر
+  sheet.getRange(1, phaseStartCol, 1, phaseCount)
     .setBackground('#E3F2FD')
-    .setFontColor('#1565C0'); // نص أزرق داكن على خلفية فاتحة
+    .setFontColor('#1565C0');
 
-  // إضافة dropdown للحالة
-  const projectStatuses = Object.values(PROJECT_STATUS);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // إضافة dropdown للحالة فقط (عمود 6)
+  // القيم: نشط، متوقف، منتهي، ملغي
+  // ═══════════════════════════════════════════════════════════════════════════
+  const statusValues = ['نشط', 'متوقف', 'منتهي', 'ملغي'];
   const statusRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(projectStatuses, true)
+    .requireValueInList(statusValues, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange(2, 6, 99, 1).setDataValidation(statusRule); // عمود الحالة = 6
+  sheet.getRange(2, 6, 99, 1).setDataValidation(statusRule);
 
-  // إضافة dropdown لنوع الفيلم
+  // ═══════════════════════════════════════════════════════════════════════════
+  // إضافة dropdown لنوع الفيلم فقط (عمود 3)
+  // ═══════════════════════════════════════════════════════════════════════════
   const typeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(PROJECT_TYPES, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange(2, 3, 99, 1).setDataValidation(typeRule); // عمود نوع الفيلم = 3
+  sheet.getRange(2, 3, 99, 1).setDataValidation(typeRule);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // التأكد من عدم وجود أي validation على الأعمدة الأخرى
+  // أعمدة 1, 2, 4, 5, 7, 8, 9 يجب أن تكون نصوص/تواريخ عادية
+  // ═══════════════════════════════════════════════════════════════════════════
+  const noValidationCols = [1, 2, 4, 5, 7, 8, 9];
+  noValidationCols.forEach(col => {
+    sheet.getRange(2, col, 99, 1).clearDataValidations();
+  });
 
   // تعيين تنسيق الاتجاه من اليمين لليسار
   sheet.setRightToLeft(true);
@@ -1000,11 +1009,11 @@ function fixProjectsSheet() {
   const cols = getProjectColumnIndices(sheet);
   const phaseRange = getPhaseColumnsRange(sheet);
 
-  // 1. إزالة جميع الـ data validations أولاً
+  // 1. إزالة جميع الـ data validations أولاً من كل الخلايا
   const maxCols = sheet.getLastColumn();
   sheet.getRange(2, 1, lastRow - 1, maxCols).clearDataValidations();
 
-  // 2. إضافة dropdown لنوع الفيلم فقط
+  // 2. إضافة dropdown لنوع الفيلم فقط (عمود 3)
   const typeCol = cols[PROJECT_HEADERS.TYPE];
   if (typeCol) {
     const typeRule = SpreadsheetApp.newDataValidation()
@@ -1014,12 +1023,12 @@ function fixProjectsSheet() {
     sheet.getRange(2, typeCol, lastRow - 1, 1).setDataValidation(typeRule);
   }
 
-  // 3. إضافة dropdown للحالة فقط
+  // 3. إضافة dropdown للحالة فقط (عمود 6) - القيم الصحيحة
   const statusCol = cols[PROJECT_HEADERS.STATUS];
   if (statusCol) {
-    const projectStatuses = Object.values(PROJECT_STATUS);
+    const statusValues = ['نشط', 'متوقف', 'منتهي', 'ملغي'];
     const statusRule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(projectStatuses, true)
+      .requireValueInList(statusValues, true)
       .setAllowInvalid(false)
       .build();
     sheet.getRange(2, statusCol, lastRow - 1, 1).setDataValidation(statusRule);
