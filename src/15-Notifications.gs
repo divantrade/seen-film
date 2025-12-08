@@ -302,13 +302,13 @@ function generateDailyReportHtml() {
                 <th>التأخير</th>
               </tr>
               ${overdue.slice(0, 10).map(task => {
-                const daysOverdue = Math.ceil((today - new Date(task[MOVEMENT_COLS.DEADLINE])) / (1000 * 60 * 60 * 24));
+                const daysOverdue = Math.ceil((today - new Date(task.dueDate)) / (1000 * 60 * 60 * 24));
                 return `
                   <tr>
-                    <td>${task[MOVEMENT_COLS.PROJECT]}</td>
-                    <td>${task[MOVEMENT_COLS.TASK]}</td>
-                    <td>${task[MOVEMENT_COLS.ASSIGNED_TO] || '-'}</td>
-                    <td>${formatDate(task[MOVEMENT_COLS.DEADLINE])}</td>
+                    <td>${task.projectCode || task.projectName || '-'}</td>
+                    <td>${task.element || task.action || '-'}</td>
+                    <td>${task.assignedTo || '-'}</td>
+                    <td>${formatDate(task.dueDate)}</td>
                     <td><span class="badge badge-danger">${daysOverdue} يوم</span></td>
                   </tr>
                 `;
@@ -335,15 +335,15 @@ function generateDailyReportHtml() {
                 <th>متبقي</th>
               </tr>
               ${upcoming.slice(0, 10).map(task => {
-                const daysLeft = Math.ceil((new Date(task[MOVEMENT_COLS.DEADLINE]) - today) / (1000 * 60 * 60 * 24));
+                const daysLeft = Math.ceil((new Date(task.dueDate) - today) / (1000 * 60 * 60 * 24));
                 const badgeClass = daysLeft === 0 ? 'badge-danger' : daysLeft <= 1 ? 'badge-warning' : 'badge-info';
                 const daysText = daysLeft === 0 ? 'اليوم!' : `${daysLeft} يوم`;
                 return `
                   <tr>
-                    <td>${task[MOVEMENT_COLS.PROJECT]}</td>
-                    <td>${task[MOVEMENT_COLS.TASK]}</td>
-                    <td>${task[MOVEMENT_COLS.ASSIGNED_TO] || '-'}</td>
-                    <td>${formatDate(task[MOVEMENT_COLS.DEADLINE])}</td>
+                    <td>${task.projectCode || task.projectName || '-'}</td>
+                    <td>${task.element || task.action || '-'}</td>
+                    <td>${task.assignedTo || '-'}</td>
+                    <td>${formatDate(task.dueDate)}</td>
                     <td><span class="badge ${badgeClass}">${daysText}</span></td>
                   </tr>
                 `;
@@ -487,10 +487,10 @@ function generateWeeklyReportHtml() {
               </tr>
               ${weeklyReport.upcomingNextWeek.slice(0, 10).map(task => `
                 <tr>
-                  <td>${task[MOVEMENT_COLS.PROJECT]}</td>
-                  <td>${task[MOVEMENT_COLS.TASK]}</td>
-                  <td>${task[MOVEMENT_COLS.ASSIGNED_TO] || '-'}</td>
-                  <td>${formatDate(task[MOVEMENT_COLS.DEADLINE])}</td>
+                  <td>${task.projectCode || task.projectName || '-'}</td>
+                  <td>${task.element || task.action || '-'}</td>
+                  <td>${task.assignedTo || '-'}</td>
+                  <td>${formatDate(task.dueDate)}</td>
                 </tr>
               `).join('')}
             </table>
@@ -550,15 +550,15 @@ function generateDeadlineReminderHtml(tasks, days) {
               <th>متبقي</th>
             </tr>
             ${tasks.map(task => {
-              const daysLeft = Math.ceil((new Date(task[MOVEMENT_COLS.DEADLINE]) - today) / (1000 * 60 * 60 * 24));
+              const daysLeft = Math.ceil((new Date(task.dueDate) - today) / (1000 * 60 * 60 * 24));
               const badgeClass = daysLeft === 0 ? 'badge-danger' : daysLeft <= 1 ? 'badge-warning' : 'badge-info';
               const daysText = daysLeft === 0 ? 'اليوم!' : `${daysLeft} يوم`;
               return `
                 <tr>
-                  <td>${task[MOVEMENT_COLS.PROJECT]}</td>
-                  <td>${task[MOVEMENT_COLS.TASK]}</td>
-                  <td>${task[MOVEMENT_COLS.ASSIGNED_TO] || '-'}</td>
-                  <td>${formatDate(task[MOVEMENT_COLS.DEADLINE])}</td>
+                  <td>${task.projectCode || task.projectName || '-'}</td>
+                  <td>${task.element || task.action || '-'}</td>
+                  <td>${task.assignedTo || '-'}</td>
+                  <td>${formatDate(task.dueDate)}</td>
                   <td><span class="badge ${badgeClass}">${daysText}</span></td>
                 </tr>
               `;
@@ -612,13 +612,13 @@ function generateOverdueTasksHtml(tasks) {
               <th>التأخير</th>
             </tr>
             ${tasks.map(task => {
-              const daysOverdue = Math.ceil((today - new Date(task[MOVEMENT_COLS.DEADLINE])) / (1000 * 60 * 60 * 24));
+              const daysOverdue = Math.ceil((today - new Date(task.dueDate)) / (1000 * 60 * 60 * 24));
               return `
                 <tr>
-                  <td>${task[MOVEMENT_COLS.PROJECT]}</td>
-                  <td>${task[MOVEMENT_COLS.TASK]}</td>
-                  <td>${task[MOVEMENT_COLS.ASSIGNED_TO] || '-'}</td>
-                  <td>${formatDate(task[MOVEMENT_COLS.DEADLINE])}</td>
+                  <td>${task.projectCode || task.projectName || '-'}</td>
+                  <td>${task.element || task.action || '-'}</td>
+                  <td>${task.assignedTo || '-'}</td>
+                  <td>${formatDate(task.dueDate)}</td>
                   <td><span class="badge badge-danger">${daysOverdue} يوم</span></td>
                 </tr>
               `;
@@ -694,11 +694,11 @@ function generatePersonTasksHtml(report) {
                                   m.taskStatus === 'completed' ? 'badge-success' : 'badge-info';
               return `
                 <tr style="background: ${m.color};">
-                  <td>${m[MOVEMENT_COLS.PROJECT]}</td>
-                  <td>${m[MOVEMENT_COLS.STAGE]}</td>
-                  <td>${m[MOVEMENT_COLS.TASK]}</td>
-                  <td><span class="badge ${statusBadge}">${m[MOVEMENT_COLS.STATUS]}</span></td>
-                  <td>${m[MOVEMENT_COLS.DEADLINE] ? formatDate(m[MOVEMENT_COLS.DEADLINE]) : '-'}</td>
+                  <td>${m.projectCode || m.projectName || '-'}</td>
+                  <td>${m.stage || '-'}</td>
+                  <td>${m.element || m.action || '-'}</td>
+                  <td><span class="badge ${statusBadge}">${m.status || '-'}</span></td>
+                  <td>${m.dueDate ? formatDate(m.dueDate) : '-'}</td>
                 </tr>
               `;
             }).join('')}
