@@ -75,7 +75,6 @@ function onEdit(e) {
 
 /**
  * معالجة التعديلات في شيت الحركة
- * ملاحظة: النظام الآن يعتمد على اسم المشروع كمعرف رئيسي
  * @param {Sheet} sheet الشيت
  * @param {number} row رقم الصف
  * @param {number} col رقم العمود
@@ -84,14 +83,14 @@ function onEdit(e) {
 function handleMovementEdit(sheet, row, col, value) {
   const cols = DROPDOWN_COLUMNS.MOVEMENT;
 
-  // عند اختيار كود المشروع (للتوافقية - يبحث بالاسم الآن)
+  // عند اختيار كود المشروع ← جلب اسم المشروع وتحديث المراحل
   if (col === cols.PROJECT_CODE && value) {
-    const project = getProjectByName(value);
+    const project = getProjectByCode(value);
     if (project) {
       // تعبئة اسم المشروع
       sheet.getRange(row, cols.PROJECT_NAME).setValue(project.name);
       // تحديث المراحل المتاحة
-      updateStagesDropdown(sheet, row, project.name);
+      updateStagesDropdown(sheet, row, project.code);
       // مسح المرحلة والنوع الفرعي السابقين
       sheet.getRange(row, cols.STAGE).clearContent();
       sheet.getRange(row, cols.SUBTYPE).clearContent();
@@ -103,14 +102,14 @@ function handleMovementEdit(sheet, row, col, value) {
     }
   }
 
-  // عند اختيار اسم المشروع ← تحديث المراحل وملء العمود الأول
+  // عند اختيار اسم المشروع ← جلب كود المشروع وتحديث المراحل
   if (col === cols.PROJECT_NAME && value) {
     const project = getProjectByName(value);
     if (project) {
-      // تعبئة اسم المشروع في العمود الأول أيضاً (للتوافقية)
-      sheet.getRange(row, cols.PROJECT_CODE).setValue(project.name);
+      // تعبئة كود المشروع
+      sheet.getRange(row, cols.PROJECT_CODE).setValue(project.code);
       // تحديث المراحل المتاحة
-      updateStagesDropdown(sheet, row, project.name);
+      updateStagesDropdown(sheet, row, project.code || project.name);
       // مسح المرحلة والنوع الفرعي السابقين
       sheet.getRange(row, cols.STAGE).clearContent();
       sheet.getRange(row, cols.SUBTYPE).clearContent();
@@ -282,7 +281,6 @@ function autoColorStatus(sheet, row, col, value) {
 
 /**
  * إعداد جميع القوائم المنسدلة في شيت الحركة
- * ملاحظة: النظام الآن يعتمد على اسم المشروع بدلاً من الكود
  */
 function setupMovementDropdowns() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -296,26 +294,27 @@ function setupMovementDropdowns() {
   const lastRow = Math.max(sheet.getLastRow(), 100);
   const cols = DROPDOWN_COLUMNS.MOVEMENT;
 
-  // قائمة المشاريع النشطة (نستخدم الأسماء فقط الآن)
+  // قائمة المشاريع النشطة
   const activeProjects = getActiveProjects();
+  const projectCodes = activeProjects.map(p => p.code).filter(c => c);
   const projectNames = activeProjects.map(p => p.name);
 
-  // قائمة المشاريع في العمود الأول (كان كود، الآن اسم)
-  if (projectNames.length > 0) {
-    const nameRule1 = SpreadsheetApp.newDataValidation()
-      .requireValueInList(projectNames, true)
+  // قائمة أكواد المشاريع
+  if (projectCodes.length > 0) {
+    const codeRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(projectCodes, true)
       .setAllowInvalid(false)
       .build();
-    sheet.getRange(2, cols.PROJECT_CODE, lastRow - 1, 1).setDataValidation(nameRule1);
+    sheet.getRange(2, cols.PROJECT_CODE, lastRow - 1, 1).setDataValidation(codeRule);
   }
 
-  // قائمة أسماء المشاريع في العمود الثاني
+  // قائمة أسماء المشاريع
   if (projectNames.length > 0) {
-    const nameRule2 = SpreadsheetApp.newDataValidation()
+    const nameRule = SpreadsheetApp.newDataValidation()
       .requireValueInList(projectNames, true)
       .setAllowInvalid(false)
       .build();
-    sheet.getRange(2, cols.PROJECT_NAME, lastRow - 1, 1).setDataValidation(nameRule2);
+    sheet.getRange(2, cols.PROJECT_NAME, lastRow - 1, 1).setDataValidation(nameRule);
   }
 
   // قائمة المراحل (الافتراضية - كل المراحل)
