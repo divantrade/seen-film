@@ -79,6 +79,7 @@ function createCustomMenu() {
       .addItem('📋 عرض قائمة الفريق', 'goToTeamSheet')
       .addItem('📸 عرض المصورين', 'goToPhotographersSheet')
       .addSeparator()
+      .addItem('🔢 توليد أكواد الفريق المفقودة', 'generateMissingTeamCodes')
       .addItem('📊 تقرير أداء الفريق', 'showTeamPerformance')
     )
 

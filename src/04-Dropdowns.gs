@@ -144,8 +144,8 @@ function onEdit(e) {
   const sheet = e.range.getSheet();
   const sheetName = sheet.getName();
 
-  // الشيتات المسموح بها فقط: الحركة والضيوف
-  const allowedSheets = [SHEETS.MOVEMENT, SHEETS.GUESTS];
+  // الشيتات المسموح بها فقط: الحركة والضيوف والفريق
+  const allowedSheets = [SHEETS.MOVEMENT, SHEETS.GUESTS, SHEETS.TEAM];
   if (!allowedSheets.includes(sheetName)) return;
 
   const row = e.range.getRow();
@@ -162,6 +162,9 @@ function onEdit(e) {
       break;
     case SHEETS.GUESTS:
       handleGuestsEdit(sheet, row, col, value);
+      break;
+    case SHEETS.TEAM:
+      handleTeamEdit(sheet, row, col, value);
       break;
   }
 
@@ -306,6 +309,21 @@ function handleGuestsEdit(sheet, row, col, value) {
   // عند اختيار المشروع، تحديث الخيارات المتاحة
   if (col === 3 && value) { // عمود المشروع
     // يمكن إضافة منطق إضافي هنا
+  }
+}
+
+/**
+ * معالجة التعديلات في شيت الفريق
+ * عند تعديل عمود الدور، يتم توليد كود تلقائي للعضو
+ * @param {Sheet} sheet الشيت
+ * @param {number} row رقم الصف
+ * @param {number} col رقم العمود
+ * @param {string} value القيمة الجديدة
+ */
+function handleTeamEdit(sheet, row, col, value) {
+  // عند اختيار الدور (عمود 3)، توليد كود تلقائي
+  if (col === TEAM_COLS.ROLE && value) {
+    handleTeamRoleChange(sheet, row, value);
   }
 }
 
