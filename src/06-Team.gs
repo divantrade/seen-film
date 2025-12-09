@@ -68,24 +68,30 @@ const PHOTOGRAPHER_STATUS = {
  */
 function getAllTeamMembers() {
   const sheet = getSheet(SHEETS.TEAM);
-  if (!sheet) return [];
+  if (!sheet) {
+    console.log('شيت الفريق غير موجود: ' + SHEETS.TEAM);
+    return [];
+  }
 
   const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return [];
+  if (lastRow <= 1) {
+    console.log('شيت الفريق فارغ، lastRow = ' + lastRow);
+    return [];
+  }
 
   const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
 
   return data.map(row => ({
-    code: row[TEAM_COLS.CODE - 1],
-    name: row[TEAM_COLS.NAME - 1],
-    role: row[TEAM_COLS.ROLE - 1],
-    email: row[TEAM_COLS.EMAIL - 1],
-    phone: row[TEAM_COLS.PHONE - 1],
-    stages: row[TEAM_COLS.STAGES - 1],
-    status: row[TEAM_COLS.STATUS - 1],
+    code: row[TEAM_COLS.CODE - 1] || '',
+    name: row[TEAM_COLS.NAME - 1] || '',
+    role: row[TEAM_COLS.ROLE - 1] || '',
+    email: row[TEAM_COLS.EMAIL - 1] || '',
+    phone: row[TEAM_COLS.PHONE - 1] || '',
+    stages: row[TEAM_COLS.STAGES - 1] || '',
+    status: row[TEAM_COLS.STATUS - 1] || '',
     joinDate: row[TEAM_COLS.JOIN_DATE - 1],
-    notes: row[TEAM_COLS.NOTES - 1]
-  })).filter(member => member.code); // تصفية الصفوف الفارغة
+    notes: row[TEAM_COLS.NOTES - 1] || ''
+  })).filter(member => member.code || member.name); // تصفية الصفوف الفارغة - يكفي وجود كود أو اسم
 }
 
 /**
@@ -183,33 +189,50 @@ function getTeamMemberNames() {
  */
 function getAllPhotographers() {
   const sheet = getSheet(SHEETS.PHOTOGRAPHERS);
-  if (!sheet) return [];
+  if (!sheet) {
+    console.log('شيت المصورين غير موجود: ' + SHEETS.PHOTOGRAPHERS);
+    return [];
+  }
 
   const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return [];
+  if (lastRow <= 1) {
+    console.log('شيت المصورين فارغ، lastRow = ' + lastRow);
+    return [];
+  }
 
   const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
 
   return data.map(row => ({
-    code: row[PHOTOGRAPHER_COLS.CODE - 1],
-    name: row[PHOTOGRAPHER_COLS.NAME - 1],
-    specialization: row[PHOTOGRAPHER_COLS.SPECIALIZATION - 1],
-    email: row[PHOTOGRAPHER_COLS.EMAIL - 1],
-    phone: row[PHOTOGRAPHER_COLS.PHONE - 1],
-    equipment: row[PHOTOGRAPHER_COLS.EQUIPMENT - 1],
-    status: row[PHOTOGRAPHER_COLS.STATUS - 1],
-    rate: row[PHOTOGRAPHER_COLS.RATE - 1],
-    notes: row[PHOTOGRAPHER_COLS.NOTES - 1]
-  })).filter(photographer => photographer.code);
+    code: row[PHOTOGRAPHER_COLS.CODE - 1] || '',
+    name: row[PHOTOGRAPHER_COLS.NAME - 1] || '',
+    specialization: row[PHOTOGRAPHER_COLS.SPECIALIZATION - 1] || '',
+    email: row[PHOTOGRAPHER_COLS.EMAIL - 1] || '',
+    phone: row[PHOTOGRAPHER_COLS.PHONE - 1] || '',
+    equipment: row[PHOTOGRAPHER_COLS.EQUIPMENT - 1] || '',
+    status: row[PHOTOGRAPHER_COLS.STATUS - 1] || '',
+    rate: row[PHOTOGRAPHER_COLS.RATE - 1] || '',
+    notes: row[PHOTOGRAPHER_COLS.NOTES - 1] || ''
+  })).filter(photographer => photographer.code || photographer.name); // يكفي وجود كود أو اسم
 }
 
 /**
  * الحصول على المصورين المتاحين
+ * يُرجع جميع المصورين ما عدا "غير متاح"
+ * إذا كانت الحالة فارغة، يعتبر المصور متاح
  * @returns {Array} مصفوفة المصورين المتاحين
  */
 function getPhotographers() {
   const allPhotographers = getAllPhotographers();
-  return allPhotographers.filter(p => p.status !== PHOTOGRAPHER_STATUS.UNAVAILABLE);
+  // إذا لم يوجد مصورين، أرجع مصفوفة فارغة
+  if (allPhotographers.length === 0) return [];
+
+  return allPhotographers.filter(p => {
+    const status = (p.status || '').trim();
+    // إذا كانت الحالة فارغة، اعتبره متاح
+    if (!status) return true;
+    // استبعد فقط "غير متاح"
+    return status !== PHOTOGRAPHER_STATUS.UNAVAILABLE;
+  });
 }
 
 /**
