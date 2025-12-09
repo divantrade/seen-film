@@ -90,11 +90,25 @@ function getAllTeamMembers() {
 
 /**
  * الحصول على أعضاء الفريق النشطين
+ * يعتبر الأعضاء نشطين إذا:
+ * - الحالة = "نشط"
+ * - أو الحالة فارغة (افتراضياً نشط)
+ * - أو الحالة ليست "غير نشط"
  * @returns {Array} مصفوفة الأعضاء النشطين
  */
 function getTeamMembers() {
   const allMembers = getAllTeamMembers();
-  return allMembers.filter(member => member.status === MEMBER_STATUS.ACTIVE);
+  return allMembers.filter(member => {
+    const status = (member.status || '').trim();
+    // إذا كانت الحالة فارغة، نعتبره نشط
+    if (!status) return true;
+    // إذا كانت الحالة "نشط" بالضبط
+    if (status === MEMBER_STATUS.ACTIVE) return true;
+    // استبعاد فقط من حالتهم "غير نشط"
+    if (status === MEMBER_STATUS.INACTIVE) return false;
+    // أي حالة أخرى تعتبر نشط
+    return true;
+  });
 }
 
 /**

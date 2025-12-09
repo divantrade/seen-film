@@ -314,21 +314,45 @@ function getAnimationStudiosList() {
 
 /**
  * جلب قائمة المونتيرين (من الفريق)
+ * يُظهر جميع أعضاء الفريق النشطين الذين يمكنهم القيام بالمونتاج
  * @returns {Array} قائمة المونتيرين
  */
 function getEditorsList() {
   const team = getTeamMembers();
-  // نفترض أن المونتيرين لديهم دور "مونتير" أو يتعاملون مع مرحلة المونتاج
+
+  // إذا لم يكن هناك أعضاء فريق، جرب جلب الكل
+  if (team.length === 0) {
+    const allTeam = getAllTeamMembers();
+    if (allTeam.length > 0) {
+      return allTeam.map(e => ({
+        value: e.code || e.name || '',
+        label: e.name || e.code || ''
+      }));
+    }
+    return [];
+  }
+
+  // فلترة المونتيرين أو من يتعاملون مع مرحلة المونتاج
   const editors = team.filter(t => {
     const role = (t.role || '').toLowerCase();
     const stages = (t.stages || '').toLowerCase();
     return role.includes('مونتير') || role.includes('مونتاج') ||
-           stages.includes('مونتاج') || stages.includes('montage');
+           role.includes('editor') || role.includes('editing') ||
+           stages.includes('مونتاج') || stages.includes('montage') ||
+           stages.includes('🎞️');
   });
 
+  // إذا لم يوجد مونتيرين محددين، أظهر جميع أعضاء الفريق النشطين
+  if (editors.length === 0) {
+    return team.map(e => ({
+      value: e.code || e.name || '',
+      label: e.name || e.code || ''
+    }));
+  }
+
   return editors.map(e => ({
-    value: e.code || '',
-    label: e.name || ''
+    value: e.code || e.name || '',
+    label: e.name || e.code || ''
   }));
 }
 
