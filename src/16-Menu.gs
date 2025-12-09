@@ -88,6 +88,7 @@ function createCustomMenu() {
     // ═══════════════════════════════════════════════════════════════════════════
     .addSubMenu(ui.createMenu('🎬 الإنتاج')
       .addItem('📝 إضافة حركة جديدة', 'addNewMovement')
+      .addItem('✨ إضافة حركة ذكية', 'showSmartMovementForm')
       .addItem('📋 عرض شيت الحركة', 'goToMovementSheet')
       .addSeparator()
       .addItem('🎤 إضافة ضيف جديد', 'addNewGuest')

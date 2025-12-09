@@ -795,3 +795,523 @@ ${projectList}
 
   showInfo(message, 'ملخص اليوم');
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// النموذج الذكي لإضافة الحركات
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * الأنواع الفرعية الذكية حسب المرحلة
+ */
+const SMART_SUBTYPES = {
+  'تصوير المقابلات': ['مقابلة شخصية', 'مقابلة جماعية', 'مقابلة هاتفية'],
+  'التصوير الميداني': ['تصوير خارجي', 'تصوير داخلي'],
+  'التعليق الصوتي': ['تعليق رئيسي', 'دوبلاج', 'مؤثرات صوتية'],
+  'الرسوم المتحركة': ['2D', '3D', 'موشن جرافيك']
+};
+
+/**
+ * الإجراءات المتاحة
+ */
+const MOVEMENT_ACTIONS = ['تصوير', 'تسجيل', 'تسليم', 'مراجعة', 'تعديل', 'إلغاء'];
+
+/**
+ * الحصول على الأنواع الفرعية حسب المرحلة
+ * @param {string} stageName اسم المرحلة
+ * @returns {Array} قائمة الأنواع الفرعية
+ */
+function getSmartSubtypes(stageName) {
+  // إزالة الأيقونة من اسم المرحلة
+  const cleanName = stageName.replace(/^[^\s]+\s/, '').trim();
+  return SMART_SUBTYPES[cleanName] || ['عام'];
+}
+
+/**
+ * الحصول على ضيوف مشروع للنموذج الذكي
+ * @param {string} projectName اسم المشروع
+ * @returns {Array} قائمة أسماء الضيوف
+ */
+function getGuestsForSmartForm(projectName) {
+  if (!projectName) return [];
+  const guests = getGuestsByProject(projectName);
+  return guests.map(g => g.name).filter(n => n);
+}
+
+/**
+ * التحقق من كون المرحلة مرحلة تصوير
+ * @param {string} stageName اسم المرحلة
+ * @returns {boolean}
+ */
+function isShootingStage(stageName) {
+  const cleanName = stageName.replace(/^[^\s]+\s/, '').trim();
+  return cleanName.includes('تصوير') || cleanName.includes('الميداني');
+}
+
+/**
+ * التحقق من كون المرحلة مرحلة تصوير مقابلات
+ * @param {string} stageName اسم المرحلة
+ * @returns {boolean}
+ */
+function isInterviewStage(stageName) {
+  const cleanName = stageName.replace(/^[^\s]+\s/, '').trim();
+  return cleanName.includes('المقابلات');
+}
+
+/**
+ * عرض النموذج الذكي لإضافة حركة جديدة
+ */
+function showSmartMovementForm() {
+  // تجهيز بيانات المشاريع
+  const activeProjects = getActiveProjects();
+  const projectsData = activeProjects.map(p => ({
+    code: p.code || '',
+    name: p.name || ''
+  }));
+
+  // تجهيز بيانات المراحل
+  const stagesData = Object.values(STAGES).map(s => ({
+    id: s.id,
+    name: s.name,
+    icon: s.icon,
+    displayName: `${s.icon} ${s.name}`
+  }));
+
+  // تجهيز بيانات الحالات
+  const statusData = Object.values(STATUS).map(s => ({
+    name: s.name,
+    icon: s.icon,
+    displayName: `${s.icon} ${s.name}`
+  }));
+
+  // تجهيز بيانات الفريق
+  const teamMembers = getTeamMembers();
+  const teamData = teamMembers.map(t => t.name).filter(n => n);
+
+  // تجهيز بيانات المصورين
+  const photographers = getPhotographers();
+  const photographersData = photographers.map(p => p.name).filter(n => n);
+
+  // حساب تاريخ الاستحقاق الافتراضي (اليوم + 7 أيام)
+  const defaultDueDate = new Date();
+  defaultDueDate.setDate(defaultDueDate.getDate() + 7);
+  const dueDateStr = Utilities.formatDate(defaultDueDate, CONFIG.TIMEZONE, 'yyyy-MM-dd');
+  const todayStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd');
+
+  const html = HtmlService.createHtmlOutput(`
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        * {
+          box-sizing: border-box;
+          font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        }
+        body {
+          direction: rtl;
+          padding: 20px;
+          background: #f5f5f5;
+          margin: 0;
+        }
+        .form-container {
+          background: white;
+          border-radius: 12px;
+          padding: 25px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+          color: #1565c0;
+          margin-top: 0;
+          margin-bottom: 20px;
+          padding-bottom: 10px;
+          border-bottom: 2px solid #e3f2fd;
+        }
+        .form-row {
+          display: flex;
+          gap: 15px;
+          margin-bottom: 15px;
+        }
+        .form-group {
+          flex: 1;
+          margin-bottom: 15px;
+        }
+        .form-group.full-width {
+          flex: 100%;
+        }
+        label {
+          display: block;
+          margin-bottom: 6px;
+          font-weight: 600;
+          color: #333;
+          font-size: 14px;
+        }
+        label .required {
+          color: #d32f2f;
+        }
+        input, select, textarea {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          font-size: 14px;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+          outline: none;
+          border-color: #1565c0;
+          box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+        }
+        select {
+          background: white;
+          cursor: pointer;
+        }
+        textarea {
+          resize: vertical;
+          min-height: 80px;
+        }
+        .info-box {
+          background: #e3f2fd;
+          border: 1px solid #90caf9;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 20px;
+          display: none;
+        }
+        .info-box.show {
+          display: block;
+        }
+        .info-box .label {
+          font-size: 12px;
+          color: #1565c0;
+          margin-bottom: 4px;
+        }
+        .info-box .value {
+          font-weight: 600;
+          color: #0d47a1;
+        }
+        .btn-container {
+          display: flex;
+          gap: 10px;
+          justify-content: flex-start;
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 1px solid #eee;
+        }
+        .btn {
+          padding: 12px 28px;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s;
+        }
+        .btn-primary {
+          background: #1565c0;
+          color: white;
+        }
+        .btn-primary:hover {
+          background: #0d47a1;
+        }
+        .btn-primary:disabled {
+          background: #90caf9;
+          cursor: not-allowed;
+        }
+        .btn-secondary {
+          background: #757575;
+          color: white;
+        }
+        .btn-secondary:hover {
+          background: #616161;
+        }
+        .loading {
+          display: none;
+          color: #1565c0;
+          font-size: 14px;
+          margin-right: 10px;
+        }
+        .loading.show {
+          display: inline;
+        }
+        #elementContainer {
+          transition: all 0.3s;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="form-container">
+        <h2>إضافة حركة ذكية</h2>
+
+        <!-- معلومات المشروع المختار -->
+        <div class="info-box" id="projectInfo">
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <div class="label">كود المشروع</div>
+              <div class="value" id="projectCodeDisplay">-</div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <div class="label">اسم المشروع</div>
+              <div class="value" id="projectNameDisplay">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- المشروع والمرحلة -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>المشروع <span class="required">*</span></label>
+            <select id="project" onchange="onProjectChange()">
+              <option value="">-- اختر المشروع --</option>
+              ${projectsData.map(p => '<option value="' + p.name + '" data-code="' + p.code + '">' + p.name + '</option>').join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>المرحلة <span class="required">*</span></label>
+            <select id="stage" onchange="onStageChange()">
+              <option value="">-- اختر المرحلة --</option>
+              ${stagesData.map(s => '<option value="' + s.displayName + '" data-name="' + s.name + '">' + s.displayName + '</option>').join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- النوع الفرعي والإجراء -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>النوع الفرعي</label>
+            <select id="subtype">
+              <option value="عام">عام</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>الإجراء</label>
+            <select id="action">
+              <option value="">-- اختر الإجراء --</option>
+              ${MOVEMENT_ACTIONS.map(a => '<option value="' + a + '">' + a + '</option>').join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- العنصر -->
+        <div class="form-group" id="elementContainer">
+          <label>العنصر</label>
+          <input type="text" id="element" placeholder="مثال: مشهد 1، ضيف أحمد...">
+        </div>
+
+        <!-- المسؤول والحالة -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>المسؤول</label>
+            <select id="assignedTo">
+              <option value="">-- اختر المسؤول --</option>
+              ${teamData.map(t => '<option value="' + t + '">' + t + '</option>').join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>الحالة</label>
+            <select id="status">
+              ${statusData.map(s => '<option value="' + s.displayName + '">' + s.displayName + '</option>').join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- تاريخ الاستحقاق -->
+        <div class="form-group">
+          <label>تاريخ الاستحقاق</label>
+          <input type="date" id="dueDate" value="${dueDateStr}">
+        </div>
+
+        <!-- ملاحظات -->
+        <div class="form-group">
+          <label>ملاحظات</label>
+          <textarea id="notes" placeholder="أضف أي ملاحظات إضافية..."></textarea>
+        </div>
+
+        <!-- أزرار -->
+        <div class="btn-container">
+          <button class="btn btn-primary" id="submitBtn" onclick="submitForm()">
+            حفظ الحركة
+          </button>
+          <button class="btn btn-secondary" onclick="google.script.host.close()">إلغاء</button>
+          <span class="loading" id="loading">جاري الحفظ...</span>
+        </div>
+      </div>
+
+      <script>
+        // بيانات مخزنة محلياً
+        const projectsData = ${JSON.stringify(projectsData)};
+        const stagesData = ${JSON.stringify(stagesData)};
+        const teamData = ${JSON.stringify(teamData)};
+        const photographersData = ${JSON.stringify(photographersData)};
+        const smartSubtypes = ${JSON.stringify(SMART_SUBTYPES)};
+
+        let currentProjectCode = '';
+        let currentProjectName = '';
+        let guestsCache = {};
+
+        // عند تغيير المشروع
+        function onProjectChange() {
+          const select = document.getElementById('project');
+          const selectedOption = select.options[select.selectedIndex];
+          const infoBox = document.getElementById('projectInfo');
+
+          if (select.value) {
+            currentProjectCode = selectedOption.getAttribute('data-code') || '';
+            currentProjectName = select.value;
+
+            document.getElementById('projectCodeDisplay').textContent = currentProjectCode || '-';
+            document.getElementById('projectNameDisplay').textContent = currentProjectName;
+            infoBox.classList.add('show');
+
+            // تحميل ضيوف المشروع للكاش
+            loadProjectGuests(currentProjectName);
+          } else {
+            currentProjectCode = '';
+            currentProjectName = '';
+            infoBox.classList.remove('show');
+          }
+
+          // تحديث حقل العنصر إذا كانت المرحلة تصوير مقابلات
+          updateElementField();
+        }
+
+        // عند تغيير المرحلة
+        function onStageChange() {
+          const stage = document.getElementById('stage').value;
+          const stageName = stage.replace(/^[^\\s]+\\s/, '').trim();
+
+          // تحديث الأنواع الفرعية
+          updateSubtypes(stageName);
+
+          // تحديث حقل العنصر
+          updateElementField();
+
+          // تحديث قائمة المسؤولين
+          updateAssignedTo(stageName);
+        }
+
+        // تحديث الأنواع الفرعية
+        function updateSubtypes(stageName) {
+          const subtypeSelect = document.getElementById('subtype');
+          subtypeSelect.innerHTML = '';
+
+          const subtypes = smartSubtypes[stageName] || ['عام'];
+          subtypes.forEach(function(st) {
+            const option = document.createElement('option');
+            option.value = st;
+            option.textContent = st;
+            subtypeSelect.appendChild(option);
+          });
+        }
+
+        // تحديث حقل العنصر (dropdown للضيوف أو نص حر)
+        function updateElementField() {
+          const stage = document.getElementById('stage').value;
+          const stageName = stage.replace(/^[^\\s]+\\s/, '').trim();
+          const container = document.getElementById('elementContainer');
+
+          if (stageName.includes('المقابلات') && currentProjectName) {
+            // مرحلة تصوير مقابلات - عرض dropdown للضيوف
+            const guests = guestsCache[currentProjectName] || [];
+
+            let html = '<label>الضيف</label><select id="element">';
+            html += '<option value="">-- اختر الضيف --</option>';
+            guests.forEach(function(g) {
+              html += '<option value="' + g + '">' + g + '</option>';
+            });
+            html += '</select>';
+            container.innerHTML = html;
+          } else {
+            // حقل نص حر
+            container.innerHTML = '<label>العنصر</label><input type="text" id="element" placeholder="مثال: مشهد 1، ملف صوتي...">';
+          }
+        }
+
+        // تحديث قائمة المسؤولين
+        function updateAssignedTo(stageName) {
+          const select = document.getElementById('assignedTo');
+          select.innerHTML = '<option value="">-- اختر المسؤول --</option>';
+
+          // إذا كانت مرحلة تصوير، استخدم المصورين
+          const isShootingStage = stageName.includes('تصوير') || stageName.includes('الميداني');
+          const people = isShootingStage ? photographersData : teamData;
+
+          people.forEach(function(p) {
+            const option = document.createElement('option');
+            option.value = p;
+            option.textContent = p;
+            select.appendChild(option);
+          });
+        }
+
+        // تحميل ضيوف المشروع
+        function loadProjectGuests(projectName) {
+          if (guestsCache[projectName]) return;
+
+          google.script.run
+            .withSuccessHandler(function(guests) {
+              guestsCache[projectName] = guests || [];
+              // تحديث حقل العنصر إذا كانت المرحلة مقابلات
+              const stage = document.getElementById('stage').value;
+              if (stage && stage.includes('المقابلات')) {
+                updateElementField();
+              }
+            })
+            .getGuestsForSmartForm(projectName);
+        }
+
+        // إرسال النموذج
+        function submitForm() {
+          const project = document.getElementById('project').value;
+          const stage = document.getElementById('stage').value;
+
+          if (!project) {
+            alert('الرجاء اختيار المشروع');
+            return;
+          }
+          if (!stage) {
+            alert('الرجاء اختيار المرحلة');
+            return;
+          }
+
+          // تعطيل الزر وإظهار التحميل
+          document.getElementById('submitBtn').disabled = true;
+          document.getElementById('loading').classList.add('show');
+
+          const data = {
+            projectCode: currentProjectCode,
+            projectName: currentProjectName,
+            project: currentProjectName,
+            stage: stage,
+            subtype: document.getElementById('subtype').value,
+            element: document.getElementById('element').value,
+            action: document.getElementById('action').value,
+            assignedTo: document.getElementById('assignedTo').value,
+            status: document.getElementById('status').value,
+            dueDate: document.getElementById('dueDate').value,
+            notes: document.getElementById('notes').value
+          };
+
+          google.script.run
+            .withSuccessHandler(function(success) {
+              if (success) {
+                alert('تم إضافة الحركة بنجاح!');
+                google.script.host.close();
+              } else {
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('loading').classList.remove('show');
+              }
+            })
+            .withFailureHandler(function(err) {
+              alert('حدث خطأ: ' + err.message);
+              document.getElementById('submitBtn').disabled = false;
+              document.getElementById('loading').classList.remove('show');
+            })
+            .addMovementEntry(data);
+        }
+      </script>
+    </body>
+    </html>
+  `).setWidth(600).setHeight(700);
+
+  SpreadsheetApp.getUi().showModalDialog(html, 'إضافة حركة ذكية');
+}
