@@ -289,6 +289,46 @@ function findRowByValue(sheet, column, value) {
 }
 
 /**
+ * الحصول على جميع المراحل الفرعية من شيت الإعدادات
+ */
+function getAllSubtypes() {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  if (!sheet) {
+    // استخدام القيم الافتراضية من STAGES
+    const subtypes = [];
+    for (const key in STAGES) {
+      if (STAGES[key].subtypes) {
+        subtypes.push(...STAGES[key].subtypes);
+      }
+    }
+    return subtypes;
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 6) {
+    // استخدام القيم الافتراضية
+    const subtypes = [];
+    for (const key in STAGES) {
+      if (STAGES[key].subtypes) {
+        subtypes.push(...STAGES[key].subtypes);
+      }
+    }
+    return subtypes;
+  }
+
+  const data = sheet.getRange(6, 5, lastRow - 5, 2).getValues();
+  const subtypes = new Set();
+
+  for (const row of data) {
+    if (row[1]) {
+      subtypes.add(row[1]);
+    }
+  }
+
+  return Array.from(subtypes);
+}
+
+/**
  * الحصول على الأنواع الفرعية لمرحلة معينة من شيت الإعدادات
  */
 function getSubtypesFromSettings(stageName) {
