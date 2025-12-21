@@ -532,3 +532,64 @@ function traceMainFolder() {
 
   ui.alert('نتيجة التتبع', trace, ui.ButtonSet.OK);
 }
+
+/**
+ * اختبار الدالة الفعلية getMainProductionFolder
+ */
+function testGetMainFolder() {
+  const ui = SpreadsheetApp.getUi();
+
+  try {
+    const folder = getMainProductionFolder();
+
+    if (folder) {
+      ui.alert('نجاح!',
+        'الدالة getMainProductionFolder() تعمل بنجاح!\n\n' +
+        'اسم الفولدر: ' + folder.getName() + '\n' +
+        'ID: ' + folder.getId(),
+        ui.ButtonSet.OK);
+    } else {
+      ui.alert('فشل!',
+        'الدالة getMainProductionFolder() أرجعت null!\n\n' +
+        'هذا يعني أن هناك مشكلة في الكود.',
+        ui.ButtonSet.OK);
+    }
+  } catch (e) {
+    ui.alert('خطأ!',
+      'حدث خطأ عند استدعاء getMainProductionFolder():\n\n' + e.message,
+      ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * اختبار إنشاء فولدر مشروع تجريبي
+ */
+function testCreateProjectFolder() {
+  const ui = SpreadsheetApp.getUi();
+
+  const result = ui.prompt(
+    'اختبار إنشاء فولدر',
+    'أدخل اسم مشروع تجريبي:',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (result.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  const testName = result.getResponseText() || 'مشروع تجريبي';
+
+  try {
+    ui.alert('جاري الاختبار...', 'سيتم محاولة إنشاء فولدر للمشروع: ' + testName, ui.ButtonSet.OK);
+
+    const folderUrl = createProjectFolderStructure(testName, 'TEST001');
+
+    if (folderUrl) {
+      ui.alert('نجاح!', 'تم إنشاء الفولدر بنجاح!\n\nالرابط: ' + folderUrl, ui.ButtonSet.OK);
+    } else {
+      ui.alert('فشل!', 'لم يتم إنشاء الفولدر. تحقق من رسائل الخطأ.', ui.ButtonSet.OK);
+    }
+  } catch (e) {
+    ui.alert('خطأ!', 'حدث خطأ:\n\n' + e.message + '\n\nStack: ' + e.stack, ui.ButtonSet.OK);
+  }
+}
