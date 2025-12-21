@@ -442,3 +442,29 @@ function diagnoseFolderIssue() {
 
   ui.alert('تشخيص', message, ui.ButtonSet.OK);
 }
+
+/**
+ * تشخيص شامل للنظام
+ */
+function debugSettings() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheets = ss.getSheets();
+
+  let msg = 'الشيتات الموجودة:\n';
+  sheets.forEach(s => msg += '- "' + s.getName() + '"\n');
+
+  msg += '\n--- البحث عن شيت الإعدادات ---\n';
+  msg += 'الاسم المطلوب: "' + SHEETS.SETTINGS + '"\n\n';
+
+  const settingsSheet = ss.getSheetByName(SHEETS.SETTINGS);
+  if (settingsSheet) {
+    msg += 'شيت الإعدادات موجود!\n';
+    msg += 'A3 = "' + settingsSheet.getRange('A3').getValue() + '"\n';
+    msg += 'B3 = "' + settingsSheet.getRange('B3').getValue() + '"';
+  } else {
+    msg += 'شيت الإعدادات غير موجود!';
+  }
+
+  ui.alert('تشخيص النظام', msg, ui.ButtonSet.OK);
+}
