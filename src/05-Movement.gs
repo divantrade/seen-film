@@ -216,7 +216,8 @@ function onMovementEdit(e) {
   // تحديث الأنواع الفرعية عند تغيير المرحلة
   if (col === MOVEMENT_COLS.STAGE && row > 1) {
     const stage = e.value;
-    const subtypes = getSubtypesForStage(stage);
+    // قراءة الأنواع الفرعية من شيت الإعدادات
+    const subtypes = getSubtypesFromSettings(stage);
 
     if (subtypes && subtypes.length > 0) {
       const subtypeCell = sheet.getRange(row, MOVEMENT_COLS.SUBTYPE);

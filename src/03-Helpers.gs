@@ -289,6 +289,56 @@ function findRowByValue(sheet, column, value) {
 }
 
 /**
+ * الحصول على الأنواع الفرعية لمرحلة معينة من شيت الإعدادات
+ */
+function getSubtypesFromSettings(stageName) {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  if (!sheet) return [];
+
+  // قراءة البيانات من الأعمدة E, F (بداية من الصف 6)
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 6) return [];
+
+  const data = sheet.getRange(6, 5, lastRow - 5, 2).getValues();
+  const subtypes = [];
+
+  for (const row of data) {
+    if (row[0] === stageName && row[1]) {
+      subtypes.push(row[1]);
+    }
+  }
+
+  return subtypes;
+}
+
+/**
+ * الحصول على جميع المراحل من شيت الإعدادات
+ */
+function getStagesFromSettings() {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  if (!sheet) return STAGE_NAMES; // fallback للقيم الافتراضية
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 6) return STAGE_NAMES;
+
+  const data = sheet.getRange(6, 5, lastRow - 5, 1).getValues();
+  const stages = new Set();
+
+  for (const row of data) {
+    if (row[0]) {
+      stages.add(row[0]);
+    }
+  }
+
+  // إضافة المراحل التي ليس لها أنواع فرعية (مثل التصوير)
+  for (const name of STAGE_NAMES) {
+    stages.add(name);
+  }
+
+  return Array.from(stages);
+}
+
+/**
  * عرض رسالة نجاح
  */
 function showSuccess(message) {
