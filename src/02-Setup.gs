@@ -161,6 +161,12 @@ function createMovementSheet(ss) {
   // إضافة القوائم المنسدلة للمراحل
   setDropdown(sheet, 2, MOVEMENT_COLS.STAGE, 500, STAGE_NAMES);
 
+  // إضافة القوائم المنسدلة للمراحل الفرعية (كل الخيارات)
+  const allSubtypes = getAllSubtypes();
+  if (allSubtypes.length > 0) {
+    setDropdown(sheet, 2, MOVEMENT_COLS.SUBTYPE, 500, allSubtypes);
+  }
+
   // إضافة القوائم المنسدلة للحالات
   setDropdown(sheet, 2, MOVEMENT_COLS.STATUS, 500, STATUS_WITH_ICONS);
 
@@ -445,6 +451,19 @@ function fixMovementSheet() {
   sheet.setColumnWidth(MOVEMENT_COLS.DUE_DATE, 110);
   sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
   sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
+
+  // إضافة القوائم المنسدلة
+  setDropdown(sheet, 2, MOVEMENT_COLS.STAGE, 500, STAGE_NAMES);
+
+  const allSubtypes = getAllSubtypes();
+  if (allSubtypes.length > 0) {
+    setDropdown(sheet, 2, MOVEMENT_COLS.SUBTYPE, 500, allSubtypes);
+  }
+
+  setDropdown(sheet, 2, MOVEMENT_COLS.STATUS, 500, STATUS_WITH_ICONS);
+
+  // تحديث قائمة المشاريع والفريق
+  updateMovementDropdowns();
 
   SpreadsheetApp.getActiveSpreadsheet().toast('تم إصلاح شيت الحركة بنجاح!', 'نجاح', 3);
 }
