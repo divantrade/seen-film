@@ -370,12 +370,12 @@ function getStagesFromSettings() {
     }
   }
 
-  // إضافة المراحل التي ليس لها أنواع فرعية (مثل التصوير)
-  for (const name of STAGE_NAMES) {
-    stages.add(name);
+  // إرجاع المراحل من الإعدادات فقط إذا وجدت
+  if (stages.size > 0) {
+    return Array.from(stages);
   }
 
-  return Array.from(stages);
+  return STAGE_NAMES;
 }
 
 /**

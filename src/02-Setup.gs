@@ -158,8 +158,9 @@ function createMovementSheet(ss) {
   // تجميد الصف الأول
   sheet.setFrozenRows(1);
 
-  // إضافة القوائم المنسدلة للمراحل
-  setDropdown(sheet, 2, MOVEMENT_COLS.STAGE, 500, STAGE_NAMES);
+  // إضافة القوائم المنسدلة للمراحل (من شيت الإعدادات)
+  const stagesFromSettings = getStagesFromSettings();
+  setDropdown(sheet, 2, MOVEMENT_COLS.STAGE, 500, stagesFromSettings);
 
   // إضافة القوائم المنسدلة للمراحل الفرعية (كل الخيارات)
   const allSubtypes = getAllSubtypes();
@@ -452,8 +453,9 @@ function fixMovementSheet() {
   sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
   sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
 
-  // إضافة القوائم المنسدلة
-  setDropdown(sheet, 2, MOVEMENT_COLS.STAGE, 500, STAGE_NAMES);
+  // إضافة القوائم المنسدلة (من شيت الإعدادات)
+  const stagesForFix = getStagesFromSettings();
+  setDropdown(sheet, 2, MOVEMENT_COLS.STAGE, 500, stagesForFix);
 
   const allSubtypes = getAllSubtypes();
   if (allSubtypes.length > 0) {
