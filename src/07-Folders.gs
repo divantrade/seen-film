@@ -35,8 +35,11 @@ function getMainProductionFolder() {
 function extractFolderIdFromUrl(url) {
   if (!url) return null;
 
-  // إذا كان ID مباشرة
-  if (!url.includes('/')) {
+  // تنظيف الرابط
+  url = url.toString().trim();
+
+  // إذا كان ID مباشرة (بدون /)
+  if (!url.includes('/') && !url.includes('?')) {
     return url;
   }
 
@@ -44,17 +47,44 @@ function extractFolderIdFromUrl(url) {
   const patterns = [
     /\/folders\/([a-zA-Z0-9_-]+)/,
     /id=([a-zA-Z0-9_-]+)/,
-    /\/d\/([a-zA-Z0-9_-]+)/
+    /\/d\/([a-zA-Z0-9_-]+)/,
+    /[-\w]{25,}/  // أي ID طويل
   ];
 
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) {
-      return match[1];
+      return match[1] || match[0];
     }
   }
 
   return null;
+}
+
+/**
+ * اختبار الفولدر الرئيسي
+ */
+function testMainFolder() {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  const folderUrl = sheet.getRange('B3').getValue();
+
+  console.log('الرابط المُدخل:', folderUrl);
+
+  const folderId = extractFolderIdFromUrl(folderUrl);
+  console.log('ID المستخرج:', folderId);
+
+  if (!folderId) {
+    showError('لم يتم استخراج ID الفولدر. تأكد من صحة الرابط.');
+    return;
+  }
+
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    showSuccess('تم الاتصال بالفولدر: ' + folder.getName());
+  } catch (e) {
+    showError('خطأ في الوصول للفولدر: ' + e.message);
+    console.error(e);
+  }
 }
 
 /**
