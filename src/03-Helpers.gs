@@ -1,145 +1,26 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * نظام متابعة الإنتاج الفني - شركة أفلام وثائقية
- * ملف الدوال المساعدة
+ * نظام إدارة الإنتاج - Seen Film
+ * الدوال المساعدة
  * ═══════════════════════════════════════════════════════════════════════════════
- *
- * هذا الملف يحتوي على الدوال المساعدة المستخدمة في جميع أجزاء النظام
  */
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// دوال التاريخ والوقت
-// ═══════════════════════════════════════════════════════════════════════════════
-
 /**
- * الحصول على التاريخ والوقت الحالي بتنسيق معين
- * @param {string} format تنسيق التاريخ (اختياري)
- * @returns {string} التاريخ والوقت بالتنسيق المطلوب
- */
-function getCurrentDateTime(format) {
-  const now = new Date();
-  const timezone = CONFIG.TIMEZONE;
-  format = format || CONFIG.DATETIME_FORMAT;
-  return Utilities.formatDate(now, timezone, format);
-}
-
-/**
- * الحصول على التاريخ الحالي فقط
- * @returns {string} التاريخ الحالي
+ * الحصول على التاريخ الحالي منسق
  */
 function getCurrentDate() {
-  return getCurrentDateTime(CONFIG.DATE_FORMAT);
+  return Utilities.formatDate(new Date(), CONFIG.TIMEZONE, CONFIG.DATE_FORMAT);
 }
 
 /**
- * الحصول على الوقت الحالي فقط
- * @returns {string} الوقت الحالي
+ * الحصول على التاريخ والوقت الحالي منسق
  */
-function getCurrentTime() {
-  return getCurrentDateTime(CONFIG.TIME_FORMAT);
+function getCurrentDateTime() {
+  return Utilities.formatDate(new Date(), CONFIG.TIMEZONE, CONFIG.DATETIME_FORMAT);
 }
-
-/**
- * تنسيق تاريخ معين
- * @param {Date} date التاريخ
- * @param {string} format التنسيق المطلوب
- * @returns {string} التاريخ بالتنسيق المطلوب
- */
-function formatDate(date, format) {
-  if (!date) return '';
-  format = format || CONFIG.DATE_FORMAT;
-  return Utilities.formatDate(new Date(date), CONFIG.TIMEZONE, format);
-}
-
-/**
- * حساب الفرق بين تاريخين بالأيام
- * @param {Date} startDate تاريخ البداية
- * @param {Date} endDate تاريخ النهاية
- * @returns {number} عدد الأيام
- */
-function daysBetween(startDate, endDate) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diffTime = Math.abs(end - start);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
-
-/**
- * حساب الأيام المتبقية من تاريخ معين
- * @param {Date} targetDate التاريخ المستهدف
- * @returns {number} عدد الأيام المتبقية (سالب إذا كان في الماضي)
- */
-function daysRemaining(targetDate) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(targetDate);
-  target.setHours(0, 0, 0, 0);
-  const diffTime = target - today;
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
-
-/**
- * إضافة أيام لتاريخ معين
- * @param {Date} date التاريخ
- * @param {number} days عدد الأيام المراد إضافتها
- * @returns {Date} التاريخ الجديد
- */
-function addDays(date, days) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// دوال إنشاء الأكواد
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * إنشاء كود فريد جديد
- * @param {string} prefix بادئة الكود (اختياري)
- * @returns {string} الكود الفريد
- */
-function generateId(prefix) {
-  prefix = prefix || '';
-  const timestamp = new Date().getTime();
-  const random = Math.floor(Math.random() * 10000);
-  return `${prefix}${timestamp}${random}`;
-}
-
-/**
- * إنشاء كود تسلسلي للشيت
- * @param {string} sheetName اسم الشيت
- * @param {string} prefix بادئة الكود
- * @returns {string} الكود التسلسلي
- */
-function generateSequentialId(sheetName, prefix) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetName);
-
-  if (!sheet) return prefix + '001';
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return prefix + '001';
-
-  // الحصول على آخر معرف
-  const lastId = sheet.getRange(lastRow, 1).getValue();
-  if (!lastId) return prefix + '001';
-
-  // استخراج الرقم وزيادته
-  const numPart = parseInt(lastId.toString().replace(prefix, ''), 10);
-  const newNum = isNaN(numPart) ? 1 : numPart + 1;
-
-  return prefix + newNum.toString().padStart(3, '0');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// دوال الشيتات
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * الحصول على شيت بالاسم
- * @param {string} sheetName اسم الشيت
- * @returns {Sheet} الشيت
  */
 function getSheet(sheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -147,405 +28,257 @@ function getSheet(sheetName) {
 }
 
 /**
- * الحصول على جميع البيانات من شيت (بدون الهيدر)
- * @param {string} sheetName اسم الشيت
- * @returns {Array} مصفوفة البيانات
+ * الحصول على آخر صف يحتوي على بيانات
  */
-function getSheetData(sheetName) {
-  const sheet = getSheet(sheetName);
-  if (!sheet) return [];
-
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
-
-  if (lastRow <= 1 || lastCol <= 0) return [];
-
-  return sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-}
-
-/**
- * الحصول على البيانات مع الهيدر ككائنات
- * @param {string} sheetName اسم الشيت
- * @returns {Array} مصفوفة من الكائنات
- */
-function getSheetDataAsObjects(sheetName) {
-  const sheet = getSheet(sheetName);
-  if (!sheet) return [];
-
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
-
-  if (lastRow <= 1 || lastCol <= 0) return [];
-
-  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-
-  return data.map(row => {
-    const obj = {};
-    headers.forEach((header, index) => {
-      obj[header] = row[index];
-    });
-    return obj;
-  });
-}
-
-/**
- * إضافة صف جديد لشيت
- * @param {string} sheetName اسم الشيت
- * @param {Array} rowData بيانات الصف
- */
-function appendRow(sheetName, rowData) {
-  const sheet = getSheet(sheetName);
-  if (sheet) {
-    sheet.appendRow(rowData);
+function getLastRow(sheet) {
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].some(cell => cell !== '')) {
+      return i + 1;
+    }
   }
+  return 1;
 }
 
 /**
- * تحديث صف في شيت
- * @param {string} sheetName اسم الشيت
- * @param {number} rowIndex رقم الصف (يبدأ من 1)
- * @param {Array} rowData بيانات الصف
+ * الحصول على آخر صف في عمود معين
  */
-function updateRow(sheetName, rowIndex, rowData) {
-  const sheet = getSheet(sheetName);
-  if (sheet && rowIndex > 0) {
-    sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+function getLastRowInColumn(sheet, column) {
+  const data = sheet.getRange(1, column, sheet.getMaxRows(), 1).getValues();
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i][0] !== '') {
+      return i + 1;
+    }
   }
+  return 1;
 }
 
 /**
- * حذف صف من شيت
- * @param {string} sheetName اسم الشيت
- * @param {number} rowIndex رقم الصف
+ * توليد كود المشروع التلقائي
+ * الصيغة: P + السنة (آخر رقمين) + رقم تسلسلي (3 أرقام)
+ * مثال: P25001
  */
-function deleteRow(sheetName, rowIndex) {
-  const sheet = getSheet(sheetName);
-  if (sheet && rowIndex > 1) {
-    sheet.deleteRow(rowIndex);
+function generateProjectCode() {
+  const sheet = getSheet(SHEETS.PROJECTS);
+  const year = new Date().getFullYear().toString().slice(-2);
+  const prefix = 'P' + year;
+
+  // البحث عن آخر كود
+  const lastRow = getLastRowInColumn(sheet, PROJECT_COLS.CODE);
+
+  if (lastRow <= 1) {
+    return prefix + '001';
   }
-}
 
-/**
- * البحث عن صف بقيمة معينة في عمود محدد
- * @param {string} sheetName اسم الشيت
- * @param {number} columnIndex رقم العمود (يبدأ من 1)
- * @param {*} value القيمة المراد البحث عنها
- * @returns {number} رقم الصف أو -1 إذا لم يوجد
- */
-function findRowByValue(sheetName, columnIndex, value) {
-  const sheet = getSheet(sheetName);
-  if (!sheet) return -1;
+  const codes = sheet.getRange(2, PROJECT_COLS.CODE, lastRow - 1, 1).getValues();
+  let maxNum = 0;
 
-  const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return -1;
-
-  const columnData = sheet.getRange(2, columnIndex, lastRow - 1, 1).getValues();
-
-  for (let i = 0; i < columnData.length; i++) {
-    if (columnData[i][0] == value) {
-      return i + 2; // +2 لأننا بدأنا من الصف 2 والمصفوفة تبدأ من 0
+  for (const [code] of codes) {
+    if (code && code.toString().startsWith(prefix)) {
+      const num = parseInt(code.toString().slice(-3));
+      if (num > maxNum) {
+        maxNum = num;
+      }
     }
   }
 
+  return prefix + String(maxNum + 1).padStart(3, '0');
+}
+
+/**
+ * توليد كود عضو الفريق التلقائي
+ * الصيغة: رمز الدور + رقم تسلسلي (3 أرقام)
+ * مثال: PRD-001
+ */
+function generateTeamCode(role) {
+  const sheet = getSheet(SHEETS.TEAM);
+  const prefix = ROLE_CODES[role] || 'OTH';
+
+  // البحث عن آخر كود لهذا الدور
+  const lastRow = getLastRowInColumn(sheet, TEAM_COLS.CODE);
+
+  if (lastRow <= 1) {
+    return prefix + '-001';
+  }
+
+  const codes = sheet.getRange(2, TEAM_COLS.CODE, lastRow - 1, 1).getValues();
+  let maxNum = 0;
+
+  for (const [code] of codes) {
+    if (code && code.toString().startsWith(prefix)) {
+      const num = parseInt(code.toString().split('-')[1]);
+      if (num > maxNum) {
+        maxNum = num;
+      }
+    }
+  }
+
+  return prefix + '-' + String(maxNum + 1).padStart(3, '0');
+}
+
+/**
+ * الحصول على قائمة المشاريع النشطة
+ */
+function getActiveProjects() {
+  const sheet = getSheet(SHEETS.PROJECTS);
+  const lastRow = getLastRowInColumn(sheet, PROJECT_COLS.NAME);
+
+  if (lastRow <= 1) {
+    return [];
+  }
+
+  const data = sheet.getRange(2, 1, lastRow - 1, PROJECT_COLS.NOTES).getValues();
+  const projects = [];
+
+  for (const row of data) {
+    if (row[PROJECT_COLS.STATUS - 1] === 'نشط') {
+      projects.push({
+        code: row[PROJECT_COLS.CODE - 1],
+        name: row[PROJECT_COLS.NAME - 1]
+      });
+    }
+  }
+
+  return projects;
+}
+
+/**
+ * الحصول على قائمة أسماء المشاريع النشطة
+ */
+function getActiveProjectNames() {
+  return getActiveProjects().map(p => p.name);
+}
+
+/**
+ * الحصول على قائمة أعضاء الفريق النشطين
+ */
+function getActiveTeamMembers() {
+  const sheet = getSheet(SHEETS.TEAM);
+  const lastRow = getLastRowInColumn(sheet, TEAM_COLS.NAME);
+
+  if (lastRow <= 1) {
+    return [];
+  }
+
+  const data = sheet.getRange(2, 1, lastRow - 1, TEAM_COLS.NOTES).getValues();
+  const members = [];
+
+  for (const row of data) {
+    if (row[TEAM_COLS.STATUS - 1] === 'نشط') {
+      members.push({
+        code: row[TEAM_COLS.CODE - 1],
+        name: row[TEAM_COLS.NAME - 1],
+        role: row[TEAM_COLS.ROLE - 1]
+      });
+    }
+  }
+
+  return members;
+}
+
+/**
+ * الحصول على قائمة أسماء أعضاء الفريق النشطين
+ */
+function getActiveTeamNames() {
+  return getActiveTeamMembers().map(m => m.name);
+}
+
+/**
+ * الحصول على الأنواع الفرعية لمرحلة معينة
+ */
+function getSubtypesForStage(stageName) {
+  for (const key in STAGES) {
+    if (STAGES[key].name === stageName) {
+      return STAGES[key].subtypes;
+    }
+  }
+  return [];
+}
+
+/**
+ * تلوين الصف حسب الحالة
+ */
+function colorRowByStatus(sheet, row, status) {
+  const statusObj = Object.values(STATUS).find(s =>
+    s.name === status || `${s.icon} ${s.name}` === status
+  );
+
+  if (statusObj) {
+    const range = sheet.getRange(row, 1, 1, sheet.getLastColumn());
+    range.setBackground(statusObj.color);
+  }
+}
+
+/**
+ * الحصول على لون الحالة
+ */
+function getStatusColor(status) {
+  const statusObj = Object.values(STATUS).find(s =>
+    s.name === status || `${s.icon} ${s.name}` === status
+  );
+  return statusObj ? statusObj.color : COLORS.BACKGROUND;
+}
+
+/**
+ * التحقق من وجود قيمة في عمود
+ */
+function valueExistsInColumn(sheet, column, value) {
+  const lastRow = getLastRowInColumn(sheet, column);
+  if (lastRow <= 1) return false;
+
+  const values = sheet.getRange(2, column, lastRow - 1, 1).getValues();
+  return values.some(([v]) => v === value);
+}
+
+/**
+ * البحث عن صف بقيمة في عمود معين
+ */
+function findRowByValue(sheet, column, value) {
+  const lastRow = getLastRowInColumn(sheet, column);
+  if (lastRow <= 1) return -1;
+
+  const values = sheet.getRange(2, column, lastRow - 1, 1).getValues();
+  for (let i = 0; i < values.length; i++) {
+    if (values[i][0] === value) {
+      return i + 2; // +2 لأن البيانات تبدأ من الصف 2
+    }
+  }
   return -1;
 }
 
 /**
- * الحصول على قيم فريدة من عمود معين
- * @param {string} sheetName اسم الشيت
- * @param {number} columnIndex رقم العمود
- * @returns {Array} قائمة القيم الفريدة
+ * عرض رسالة نجاح
  */
-function getUniqueValues(sheetName, columnIndex) {
-  const sheet = getSheet(sheetName);
-  if (!sheet) return [];
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return [];
-
-  const columnData = sheet.getRange(2, columnIndex, lastRow - 1, 1).getValues();
-  const uniqueValues = [...new Set(columnData.map(row => row[0]).filter(val => val !== ''))];
-
-  return uniqueValues;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// دوال التنسيق والعرض
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * تطبيق تلوين حسب الحالة على نطاق
- * @param {Range} range النطاق
- * @param {string} status الحالة
- */
-function applyStatusColor(range, status) {
-  const color = getStatusColor(status);
-  range.setBackground(color);
+function showSuccess(message) {
+  SpreadsheetApp.getActiveSpreadsheet().toast(message, 'نجاح', 3);
 }
 
 /**
- * تنسيق رقم بفواصل الآلاف
- * @param {number} num الرقم
- * @returns {string} الرقم المنسق
+ * عرض رسالة خطأ
  */
-function formatNumber(num) {
-  if (num === null || num === undefined) return '0';
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+function showError(message) {
+  SpreadsheetApp.getActiveSpreadsheet().toast(message, 'خطأ', 5);
 }
 
 /**
- * تحويل الدقائق إلى صيغة ساعات:دقائق
- * @param {number} minutes عدد الدقائق
- * @returns {string} الوقت بصيغة HH:MM
+ * عرض رسالة معلومات
  */
-function minutesToHoursMinutes(minutes) {
-  if (!minutes || minutes <= 0) return '00:00';
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+function showInfo(message) {
+  SpreadsheetApp.getActiveSpreadsheet().toast(message, 'معلومات', 3);
 }
-
-/**
- * تحويل الثواني إلى صيغة دقائق:ثواني
- * @param {number} seconds عدد الثواني
- * @returns {string} الوقت بصيغة MM:SS
- */
-function secondsToMinutesSeconds(seconds) {
-  if (!seconds || seconds <= 0) return '00:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// دوال التحقق والتنظيف
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * التحقق من صحة البريد الإلكتروني
- * @param {string} email البريد الإلكتروني
- * @returns {boolean} صحيح إذا كان البريد صالحاً
  */
 function isValidEmail(email) {
-  if (!email) return false;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
 /**
- * التحقق من صحة رقم الهاتف
- * @param {string} phone رقم الهاتف
- * @returns {boolean} صحيح إذا كان الرقم صالحاً
- */
-function isValidPhone(phone) {
-  if (!phone) return false;
-  const phoneRegex = /^[\d\s\-\+\(\)]+$/;
-  return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 7;
-}
-
-/**
  * تنظيف النص من المسافات الزائدة
- * @param {string} text النص
- * @returns {string} النص النظيف
  */
 function cleanText(text) {
   if (!text) return '';
   return text.toString().trim().replace(/\s+/g, ' ');
-}
-
-/**
- * التحقق من أن القيمة ليست فارغة
- * @param {*} value القيمة
- * @returns {boolean} صحيح إذا كانت القيمة ليست فارغة
- */
-function isNotEmpty(value) {
-  if (value === null || value === undefined) return false;
-  if (typeof value === 'string') return value.trim() !== '';
-  return true;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// دوال الإشعارات والرسائل
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * عرض رسالة نجاح
- * @param {string} message الرسالة
- * @param {string} title العنوان (اختياري)
- */
-function showSuccess(message, title) {
-  const ui = SpreadsheetApp.getUi();
-  ui.alert(title || 'نجاح ✅', message, ui.ButtonSet.OK);
-}
-
-/**
- * عرض رسالة خطأ
- * @param {string} message الرسالة
- * @param {string} title العنوان (اختياري)
- */
-function showError(message, title) {
-  const ui = SpreadsheetApp.getUi();
-  ui.alert(title || 'خطأ ❌', message, ui.ButtonSet.OK);
-}
-
-/**
- * عرض رسالة تحذير
- * @param {string} message الرسالة
- * @param {string} title العنوان (اختياري)
- */
-function showWarning(message, title) {
-  const ui = SpreadsheetApp.getUi();
-  ui.alert(title || 'تحذير ⚠️', message, ui.ButtonSet.OK);
-}
-
-/**
- * عرض رسالة معلومات
- * @param {string} message الرسالة
- * @param {string} title العنوان (اختياري)
- */
-function showInfo(message, title) {
-  const ui = SpreadsheetApp.getUi();
-  ui.alert(title || 'معلومات ℹ️', message, ui.ButtonSet.OK);
-}
-
-/**
- * عرض سؤال تأكيد
- * @param {string} message الرسالة
- * @param {string} title العنوان (اختياري)
- * @returns {boolean} صحيح إذا اختار المستخدم نعم
- */
-function confirmAction(message, title) {
-  const ui = SpreadsheetApp.getUi();
-  const response = ui.alert(
-    title || 'تأكيد',
-    message,
-    ui.ButtonSet.YES_NO
-  );
-  return response === ui.Button.YES;
-}
-
-/**
- * عرض إشعار عائم (Toast)
- * @param {string} message الرسالة
- * @param {string} title العنوان (اختياري)
- * @param {number} timeout مدة العرض بالثواني (اختياري)
- */
-function showToast(message, title, timeout) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.toast(message, title || '', timeout || 3);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// دوال المستخدم
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * الحصول على بريد المستخدم الحالي
- * @returns {string} البريد الإلكتروني
- */
-function getCurrentUserEmail() {
-  return Session.getActiveUser().getEmail();
-}
-
-/**
- * الحصول على اسم المستخدم الحالي (من البريد)
- * @returns {string} اسم المستخدم
- */
-function getCurrentUserName() {
-  const email = getCurrentUserEmail();
-  if (!email) return 'مجهول';
-  return email.split('@')[0];
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// دوال القوائم المنسدلة
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * إنشاء قائمة منسدلة من قائمة قيم
- * @param {Range} range النطاق
- * @param {Array} values قائمة القيم
- */
-function createDropdown(range, values) {
-  const rule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(values, true)
-    .setAllowInvalid(false)
-    .build();
-  range.setDataValidation(rule);
-}
-
-/**
- * إنشاء قائمة منسدلة من نطاق مسمى
- * @param {Range} range النطاق
- * @param {string} namedRange اسم النطاق المسمى
- */
-function createDropdownFromRange(range, namedRange) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sourceRange = ss.getRangeByName(namedRange);
-
-  if (sourceRange) {
-    const rule = SpreadsheetApp.newDataValidation()
-      .requireValueInRange(sourceRange, true)
-      .setAllowInvalid(false)
-      .build();
-    range.setDataValidation(rule);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// دوال التصدير
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * تصدير شيت كـ PDF
- * @param {string} sheetName اسم الشيت
- * @param {string} fileName اسم الملف
- * @returns {string} رابط الملف
- */
-function exportSheetAsPDF(sheetName, fileName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetName);
-
-  if (!sheet) {
-    throw new Error('الشيت غير موجود: ' + sheetName);
-  }
-
-  const ssId = ss.getId();
-  const sheetId = sheet.getSheetId();
-
-  const url = `https://docs.google.com/spreadsheets/d/${ssId}/export?` +
-    `format=pdf&gid=${sheetId}&portrait=false&fitw=true&gridlines=false`;
-
-  const response = UrlFetchApp.fetch(url, {
-    headers: {
-      'Authorization': 'Bearer ' + ScriptApp.getOAuthToken()
-    }
-  });
-
-  const blob = response.getBlob().setName(fileName + '.pdf');
-  const file = DriveApp.createFile(blob);
-
-  return file.getUrl();
-}
-
-/**
- * تسجيل عملية تصدير
- * @param {string} reportType نوع التقرير
- * @param {string} period الفترة
- * @param {string} fileUrl رابط الملف
- * @param {string} notes ملاحظات
- */
-function logExport(reportType, period, fileUrl, notes) {
-  const rowData = [
-    generateSequentialId(SHEETS.EXPORT_LOG, 'EXP'),
-    getCurrentDateTime(),
-    reportType,
-    period,
-    getCurrentUserEmail(),
-    fileUrl,
-    notes || ''
-  ];
-
-  appendRow(SHEETS.EXPORT_LOG, rowData);
 }
