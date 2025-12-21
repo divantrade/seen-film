@@ -47,6 +47,9 @@ function onOpen() {
       .addItem('تحديث القوائم المنسدلة', 'updateAllDropdowns')
       .addItem('🔧 إصلاح شيت الحركة', 'fixMovementSheet')
       .addSeparator()
+      .addItem('👁️ إظهار شيت الروابط', 'showFolderLinksSheet')
+      .addItem('🙈 إخفاء شيت الروابط', 'hideFolderLinksSheet')
+      .addSeparator()
       .addItem('🔄 تهيئة النظام', 'initializeSystem')
       .addItem('🔧 تشخيص النظام', 'debugSettings'))
 

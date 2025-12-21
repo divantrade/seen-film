@@ -5,6 +5,162 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// دوال إدارة روابط الفولدرات
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * حفظ رابط فولدر في شيت الروابط
+ */
+function saveFolderLink(projectCode, projectName, folderType, stage, element, folderId, folderUrl) {
+  const sheet = getSheet(SHEETS.FOLDER_LINKS);
+  if (!sheet) {
+    console.log('شيت روابط الفولدرات غير موجود');
+    return false;
+  }
+
+  // البحث عن سجل موجود بنفس المعايير
+  const existingRow = findFolderLinkRow(projectCode, folderType, stage, element);
+
+  const rowData = [
+    projectCode,
+    projectName,
+    folderType,
+    stage || '',
+    element || '',
+    folderId,
+    folderUrl,
+    getCurrentDate()
+  ];
+
+  if (existingRow > 0) {
+    // تحديث السجل الموجود
+    sheet.getRange(existingRow, 1, 1, rowData.length).setValues([rowData]);
+  } else {
+    // إضافة سجل جديد
+    const lastRow = getLastRowInColumn(sheet, FOLDER_LINKS_COLS.PROJECT_CODE);
+    const newRow = Math.max(lastRow + 1, 2);
+    sheet.getRange(newRow, 1, 1, rowData.length).setValues([rowData]);
+  }
+
+  return true;
+}
+
+/**
+ * البحث عن صف رابط فولدر
+ */
+function findFolderLinkRow(projectCode, folderType, stage, element) {
+  const sheet = getSheet(SHEETS.FOLDER_LINKS);
+  if (!sheet) return -1;
+
+  const lastRow = getLastRowInColumn(sheet, FOLDER_LINKS_COLS.PROJECT_CODE);
+  if (lastRow <= 1) return -1;
+
+  const data = sheet.getRange(2, 1, lastRow - 1, FOLDER_LINKS_COLS.ELEMENT).getValues();
+
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][FOLDER_LINKS_COLS.PROJECT_CODE - 1] === projectCode &&
+        data[i][FOLDER_LINKS_COLS.FOLDER_TYPE - 1] === folderType &&
+        data[i][FOLDER_LINKS_COLS.STAGE - 1] === (stage || '') &&
+        data[i][FOLDER_LINKS_COLS.ELEMENT - 1] === (element || '')) {
+      return i + 2;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * الحصول على معرف الفولدر الرئيسي للمشروع من شيت الروابط
+ */
+function getProjectMainFolderId(projectCode) {
+  return getFolderIdFromLinks(projectCode, FOLDER_TYPES.MAIN, '', '');
+}
+
+/**
+ * الحصول على معرف فولدر المرحلة من شيت الروابط
+ */
+function getStageFolderId(projectCode, stageName) {
+  return getFolderIdFromLinks(projectCode, FOLDER_TYPES.STAGE, stageName, '');
+}
+
+/**
+ * الحصول على معرف فولدر عنصر من شيت الروابط
+ */
+function getElementFolderId(projectCode, stageName, elementName) {
+  return getFolderIdFromLinks(projectCode, FOLDER_TYPES.ELEMENT, stageName, elementName);
+}
+
+/**
+ * الحصول على معرف فولدر من شيت الروابط
+ */
+function getFolderIdFromLinks(projectCode, folderType, stage, element) {
+  const sheet = getSheet(SHEETS.FOLDER_LINKS);
+  if (!sheet) return null;
+
+  const lastRow = getLastRowInColumn(sheet, FOLDER_LINKS_COLS.PROJECT_CODE);
+  if (lastRow <= 1) return null;
+
+  const data = sheet.getRange(2, 1, lastRow - 1, FOLDER_LINKS_COLS.FOLDER_ID).getValues();
+
+  for (const row of data) {
+    if (row[FOLDER_LINKS_COLS.PROJECT_CODE - 1] === projectCode &&
+        row[FOLDER_LINKS_COLS.FOLDER_TYPE - 1] === folderType &&
+        row[FOLDER_LINKS_COLS.STAGE - 1] === (stage || '') &&
+        row[FOLDER_LINKS_COLS.ELEMENT - 1] === (element || '')) {
+      return row[FOLDER_LINKS_COLS.FOLDER_ID - 1];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * الحصول على فولدر من شيت الروابط باستخدام المعرف المحفوظ
+ */
+function getFolderFromLinks(projectCode, folderType, stage, element) {
+  const folderId = getFolderIdFromLinks(projectCode, folderType, stage, element);
+  if (!folderId) return null;
+
+  try {
+    return DriveApp.getFolderById(folderId);
+  } catch (error) {
+    console.error('خطأ في الوصول للفولدر:', error);
+    return null;
+  }
+}
+
+/**
+ * الحصول على جميع روابط فولدرات مشروع
+ */
+function getProjectFolderLinks(projectCode) {
+  const sheet = getSheet(SHEETS.FOLDER_LINKS);
+  if (!sheet) return [];
+
+  const lastRow = getLastRowInColumn(sheet, FOLDER_LINKS_COLS.PROJECT_CODE);
+  if (lastRow <= 1) return [];
+
+  const data = sheet.getRange(2, 1, lastRow - 1, FOLDER_LINKS_COLS.CREATED_DATE).getValues();
+  const links = [];
+
+  for (const row of data) {
+    if (row[FOLDER_LINKS_COLS.PROJECT_CODE - 1] === projectCode) {
+      links.push({
+        projectCode: row[FOLDER_LINKS_COLS.PROJECT_CODE - 1],
+        projectName: row[FOLDER_LINKS_COLS.PROJECT_NAME - 1],
+        folderType: row[FOLDER_LINKS_COLS.FOLDER_TYPE - 1],
+        stage: row[FOLDER_LINKS_COLS.STAGE - 1],
+        element: row[FOLDER_LINKS_COLS.ELEMENT - 1],
+        folderId: row[FOLDER_LINKS_COLS.FOLDER_ID - 1],
+        folderUrl: row[FOLDER_LINKS_COLS.FOLDER_URL - 1],
+        createdDate: row[FOLDER_LINKS_COLS.CREATED_DATE - 1]
+      });
+    }
+  }
+
+  return links;
+}
+
 /**
  * الحصول على فولدر الإنتاج الرئيسي من الإعدادات
  */
@@ -89,6 +245,7 @@ function testMainFolder() {
 
 /**
  * إنشاء هيكل فولدرات لمشروع جديد
+ * يحفظ جميع الروابط في شيت روابط الفولدرات
  */
 function createProjectFolderStructure(projectName, projectCode) {
   const mainFolder = getMainProductionFolder();
@@ -102,16 +259,45 @@ function createProjectFolderStructure(projectName, projectCode) {
     // إنشاء فولدر المشروع الرئيسي
     const projectFolderName = projectCode + ' - ' + projectName;
     let projectFolder = findFolderByName(mainFolder, projectFolderName);
+    let isNewProject = false;
 
     if (!projectFolder) {
       projectFolder = mainFolder.createFolder(projectFolderName);
+      isNewProject = true;
     }
 
-    // إنشاء الفولدرات الفرعية
+    // حفظ رابط الفولدر الرئيسي للمشروع
+    saveFolderLink(
+      projectCode,
+      projectName,
+      FOLDER_TYPES.MAIN,
+      '',
+      '',
+      projectFolder.getId(),
+      projectFolder.getUrl()
+    );
+
+    // إنشاء الفولدرات الفرعية وحفظ روابطها
     for (const subfolderName of FOLDER_STRUCTURE) {
-      if (!findFolderByName(projectFolder, subfolderName)) {
-        projectFolder.createFolder(subfolderName);
+      let subfolder = findFolderByName(projectFolder, subfolderName);
+
+      if (!subfolder) {
+        subfolder = projectFolder.createFolder(subfolderName);
       }
+
+      // تحديد اسم المرحلة من اسم الفولدر
+      const stageName = getStageNameFromFolderName(subfolderName);
+
+      // حفظ رابط فولدر المرحلة
+      saveFolderLink(
+        projectCode,
+        projectName,
+        FOLDER_TYPES.STAGE,
+        stageName,
+        '',
+        subfolder.getId(),
+        subfolder.getUrl()
+      );
     }
 
     return projectFolder.getUrl();
@@ -124,19 +310,28 @@ function createProjectFolderStructure(projectName, projectCode) {
 }
 
 /**
+ * استخراج اسم المرحلة من اسم الفولدر
+ */
+function getStageNameFromFolderName(folderName) {
+  const mapping = {
+    'Research': 'الأوراق',
+    'Shooting': 'التصوير',
+    'Sound': 'الصوت',
+    'Animation': 'أنيميشن',
+    'Editing': 'المونتاج'
+  };
+
+  return mapping[folderName] || folderName;
+}
+
+/**
  * إنشاء فولدر لعنصر - اسم الفولدر = العنصر (بالإنجليزية)
  * يُوضع في الفولدر الصحيح حسب المرحلة
+ * يستخدم شيت الروابط للوصول للفولدرات بدلاً من البحث بالاسم
  */
 function createShootingFolder(projectName, subtype, movementRow, elementName) {
-  const mainFolder = getMainProductionFolder();
-
-  if (!mainFolder) {
-    console.log('فولدر الإنتاج الرئيسي غير محدد');
-    return null;
-  }
-
   try {
-    // البحث عن فولدر المشروع
+    // البحث عن بيانات المشروع
     const projectsSheet = getSheet(SHEETS.PROJECTS);
     const projectRow = findRowByValue(projectsSheet, PROJECT_COLS.NAME, projectName);
 
@@ -146,27 +341,52 @@ function createShootingFolder(projectName, subtype, movementRow, elementName) {
     }
 
     const projectCode = projectsSheet.getRange(projectRow, PROJECT_COLS.CODE).getValue();
-    const projectFolderName = projectCode + ' - ' + projectName;
-
-    let projectFolder = findFolderByName(mainFolder, projectFolderName);
-
-    if (!projectFolder) {
-      // إنشاء فولدر المشروع إذا لم يكن موجوداً
-      const folderUrl = createProjectFolderStructure(projectName, projectCode);
-      if (!folderUrl) return null;
-
-      projectFolder = findFolderByName(mainFolder, projectFolderName);
-    }
 
     // قراءة المرحلة من شيت الحركة
-    let stageName = 'تصوير'; // افتراضي
+    let stageName = 'التصوير'; // افتراضي
     if (movementRow) {
       const movementSheet = getSheet(SHEETS.MOVEMENT);
       stageName = movementSheet.getRange(movementRow, MOVEMENT_COLS.STAGE).getValue();
     }
 
-    // البحث عن فولدر المرحلة الصحيح
-    const stageFolder = findStageFolderByName(projectFolder, stageName);
+    // محاولة الحصول على فولدر المرحلة من شيت الروابط أولاً
+    let stageFolder = getFolderFromLinks(projectCode, FOLDER_TYPES.STAGE, stageName, '');
+
+    // إذا لم يكن موجوداً في الروابط، نبحث بالطريقة القديمة ونحفظ الرابط
+    if (!stageFolder) {
+      const mainFolder = getMainProductionFolder();
+      if (!mainFolder) {
+        console.log('فولدر الإنتاج الرئيسي غير محدد');
+        return null;
+      }
+
+      const projectFolderName = projectCode + ' - ' + projectName;
+      let projectFolder = findFolderByName(mainFolder, projectFolderName);
+
+      if (!projectFolder) {
+        // إنشاء فولدر المشروع إذا لم يكن موجوداً
+        const folderUrl = createProjectFolderStructure(projectName, projectCode);
+        if (!folderUrl) return null;
+
+        projectFolder = findFolderByName(mainFolder, projectFolderName);
+      }
+
+      // البحث عن فولدر المرحلة
+      stageFolder = findStageFolderByName(projectFolder, stageName);
+
+      if (stageFolder) {
+        // حفظ الرابط للمرات القادمة
+        saveFolderLink(
+          projectCode,
+          projectName,
+          FOLDER_TYPES.STAGE,
+          stageName,
+          '',
+          stageFolder.getId(),
+          stageFolder.getUrl()
+        );
+      }
+    }
 
     if (!stageFolder) {
       console.log('فولدر المرحلة غير موجود: ' + stageName);
@@ -182,10 +402,37 @@ function createShootingFolder(projectName, subtype, movementRow, elementName) {
       return null;
     }
 
-    let newFolder = findFolderByName(stageFolder, folderName);
+    // التحقق إذا كان الفولدر موجوداً بالفعل في شيت الروابط
+    let existingFolderId = getElementFolderId(projectCode, stageName, folderName);
+    let newFolder;
+
+    if (existingFolderId) {
+      try {
+        newFolder = DriveApp.getFolderById(existingFolderId);
+      } catch (e) {
+        // الفولدر المحفوظ غير موجود، نبحث أو ننشئ جديد
+        existingFolderId = null;
+      }
+    }
 
     if (!newFolder) {
-      newFolder = stageFolder.createFolder(folderName);
+      // البحث أو إنشاء الفولدر
+      newFolder = findFolderByName(stageFolder, folderName);
+
+      if (!newFolder) {
+        newFolder = stageFolder.createFolder(folderName);
+      }
+
+      // حفظ رابط الفولدر الجديد
+      saveFolderLink(
+        projectCode,
+        projectName,
+        FOLDER_TYPES.ELEMENT,
+        stageName,
+        folderName,
+        newFolder.getId(),
+        newFolder.getUrl()
+      );
     }
 
     const folderUrl = newFolder.getUrl();
@@ -215,39 +462,39 @@ function findStageFolderByName(projectFolder, stageName) {
   // قائمة الأسماء المحتملة للبحث
   const possibleNames = [];
 
-  // البحث في STAGE_TO_FOLDER
+  // البحث في STAGE_TO_FOLDER أولاً
   if (STAGE_TO_FOLDER[cleanStageName]) {
     possibleNames.push(STAGE_TO_FOLDER[cleanStageName]);
   }
 
   // إضافة أسماء بديلة للتصوير
   if (cleanStageName === 'تصوير' || cleanStageName === 'التصوير') {
-    possibleNames.push('03-التصوير', '03-تصوير', '03-Shooting', 'التصوير', 'تصوير');
+    possibleNames.push('Shooting');
   }
 
   // إضافة أسماء بديلة للأوراق
   if (cleanStageName === 'الأوراق' || cleanStageName === 'أوراق') {
-    possibleNames.push('01-الأوراق والأبحاث', '01-الأوراق', 'الأوراق والأبحاث', 'الأوراق');
+    possibleNames.push('Research');
   }
 
   // إضافة أسماء بديلة للصوت
   if (cleanStageName === 'الصوت' || cleanStageName === 'صوت') {
-    possibleNames.push('04-الصوت', 'الصوت', '04-Sound');
+    possibleNames.push('Sound');
   }
 
   // إضافة أسماء بديلة للأنيميشن
   if (cleanStageName === 'أنيميشن' || cleanStageName === 'انيميشن') {
-    possibleNames.push('05-الأنيميشن', '05-أنيميشن', 'أنيميشن', '05-Animation');
+    possibleNames.push('Animation');
   }
 
   // إضافة أسماء بديلة للمونتاج
   if (cleanStageName === 'المونتاج' || cleanStageName === 'مونتاج') {
-    possibleNames.push('07-المونتاج', 'المونتاج', '07-Editing');
+    possibleNames.push('Editing');
   }
 
   // إضافة أسماء بديلة للتسليم
   if (cleanStageName === 'التسليم' || cleanStageName === 'تسليم') {
-    possibleNames.push('08-التسليم النهائي', '08-التسليم', 'التسليم', '08-Delivery');
+    possibleNames.push('Editing');
   }
 
   // البحث في كل الأسماء المحتملة
@@ -335,59 +582,87 @@ function createFolderForMovement() {
 
 /**
  * إنشاء فولدر عام لعنصر
+ * يستخدم شيت الروابط للوصول للفولدرات
  */
 function createGenericFolder(projectName, stageName, elementName, movementRow) {
-  const mainFolder = getMainProductionFolder();
-
-  if (!mainFolder) {
-    return null;
-  }
-
   try {
-    // البحث عن فولدر المشروع
+    // البحث عن بيانات المشروع
     const projectsSheet = getSheet(SHEETS.PROJECTS);
     const projectRow = findRowByValue(projectsSheet, PROJECT_COLS.NAME, projectName);
 
     if (projectRow === -1) return null;
 
     const projectCode = projectsSheet.getRange(projectRow, PROJECT_COLS.CODE).getValue();
-    const projectFolderName = projectCode + ' - ' + projectName;
 
-    let projectFolder = findFolderByName(mainFolder, projectFolderName);
-    if (!projectFolder) {
-      createProjectFolderStructure(projectName, projectCode);
-      projectFolder = findFolderByName(mainFolder, projectFolderName);
+    // محاولة الحصول على فولدر المرحلة من شيت الروابط أولاً
+    let stageFolder = getFolderFromLinks(projectCode, FOLDER_TYPES.STAGE, stageName, '');
+
+    // إذا لم يكن موجوداً في الروابط، نبحث بالطريقة القديمة
+    if (!stageFolder) {
+      const mainFolder = getMainProductionFolder();
+      if (!mainFolder) return null;
+
+      const projectFolderName = projectCode + ' - ' + projectName;
+      let projectFolder = findFolderByName(mainFolder, projectFolderName);
+
+      if (!projectFolder) {
+        createProjectFolderStructure(projectName, projectCode);
+        projectFolder = findFolderByName(mainFolder, projectFolderName);
+      }
+
+      if (!projectFolder) return null;
+
+      // البحث عن فولدر المرحلة
+      stageFolder = findStageFolderByName(projectFolder, stageName);
+
+      if (stageFolder) {
+        // حفظ الرابط للمرات القادمة
+        saveFolderLink(
+          projectCode,
+          projectName,
+          FOLDER_TYPES.STAGE,
+          stageName,
+          '',
+          stageFolder.getId(),
+          stageFolder.getUrl()
+        );
+      }
     }
 
-    if (!projectFolder) return null;
-
-    // تحديد الفولدر الفرعي حسب المرحلة
-    let targetFolderName = '01-الأوراق والأبحاث'; // الافتراضي
-
-    const stageToFolder = {
-      'الأوراق': '01-الأوراق والأبحاث',
-      'التصوير': '03-التصوير',
-      'الصوت': '04-الصوت',
-      'أنيميشن': '05-الأنيميشن',
-      'المونتاج': '07-المونتاج',
-      'التسليم': '08-التسليم النهائي'
-    };
-
-    if (stageToFolder[stageName]) {
-      targetFolderName = stageToFolder[stageName];
-    }
-
-    let targetFolder = findFolderByName(projectFolder, targetFolderName);
-    if (!targetFolder) {
-      targetFolder = projectFolder.createFolder(targetFolderName);
-    }
+    if (!stageFolder) return null;
 
     // إنشاء فولدر العنصر
     const elementFolderName = cleanText(elementName);
-    let elementFolder = findFolderByName(targetFolder, elementFolderName);
+
+    // التحقق من وجود الفولدر في شيت الروابط
+    let existingFolderId = getElementFolderId(projectCode, stageName, elementFolderName);
+    let elementFolder;
+
+    if (existingFolderId) {
+      try {
+        elementFolder = DriveApp.getFolderById(existingFolderId);
+      } catch (e) {
+        existingFolderId = null;
+      }
+    }
 
     if (!elementFolder) {
-      elementFolder = targetFolder.createFolder(elementFolderName);
+      elementFolder = findFolderByName(stageFolder, elementFolderName);
+
+      if (!elementFolder) {
+        elementFolder = stageFolder.createFolder(elementFolderName);
+      }
+
+      // حفظ رابط الفولدر الجديد
+      saveFolderLink(
+        projectCode,
+        projectName,
+        FOLDER_TYPES.ELEMENT,
+        stageName,
+        elementFolderName,
+        elementFolder.getId(),
+        elementFolder.getUrl()
+      );
     }
 
     const folderUrl = elementFolder.getUrl();

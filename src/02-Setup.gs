@@ -36,6 +36,7 @@ function initializeSystem() {
     createMovementSheet(ss);
     createDashboardSheet(ss);
     createSettingsSheet(ss);
+    createFolderLinksSheet(ss);
 
     // حذف الشيت الافتراضي إن وجد
     deleteDefaultSheet(ss);
@@ -479,4 +480,76 @@ function fixMovementSheet() {
   updateMovementDropdowns();
 
   SpreadsheetApp.getActiveSpreadsheet().toast('تم إصلاح شيت الحركة بنجاح!', 'نجاح', 3);
+}
+
+/**
+ * إنشاء شيت روابط الفولدرات (مخفي افتراضياً)
+ */
+function createFolderLinksSheet(ss) {
+  let sheet = ss.getSheetByName(SHEETS.FOLDER_LINKS);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.FOLDER_LINKS);
+  }
+
+  // تعيين الهيدرات
+  const headerRange = sheet.getRange(1, 1, 1, FOLDER_LINKS_HEADERS.length);
+  headerRange.setValues([FOLDER_LINKS_HEADERS]);
+
+  // تنسيق الهيدر
+  formatHeader(headerRange);
+
+  // تعيين عرض الأعمدة
+  sheet.setColumnWidth(FOLDER_LINKS_COLS.PROJECT_CODE, 100);
+  sheet.setColumnWidth(FOLDER_LINKS_COLS.PROJECT_NAME, 150);
+  sheet.setColumnWidth(FOLDER_LINKS_COLS.FOLDER_TYPE, 80);
+  sheet.setColumnWidth(FOLDER_LINKS_COLS.STAGE, 100);
+  sheet.setColumnWidth(FOLDER_LINKS_COLS.ELEMENT, 150);
+  sheet.setColumnWidth(FOLDER_LINKS_COLS.FOLDER_ID, 280);
+  sheet.setColumnWidth(FOLDER_LINKS_COLS.FOLDER_URL, 300);
+  sheet.setColumnWidth(FOLDER_LINKS_COLS.CREATED_DATE, 110);
+
+  // تجميد الصف الأول
+  sheet.setFrozenRows(1);
+
+  // إخفاء الشيت افتراضياً
+  sheet.hideSheet();
+
+  return sheet;
+}
+
+/**
+ * إظهار شيت روابط الفولدرات
+ */
+function showFolderLinksSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.FOLDER_LINKS);
+
+  if (sheet) {
+    sheet.showSheet();
+    ss.setActiveSheet(sheet);
+    showSuccess('تم إظهار شيت روابط الفولدرات');
+  } else {
+    // إنشاء الشيت إذا لم يكن موجوداً
+    createFolderLinksSheet(ss);
+    const newSheet = ss.getSheetByName(SHEETS.FOLDER_LINKS);
+    if (newSheet) {
+      newSheet.showSheet();
+      ss.setActiveSheet(newSheet);
+      showSuccess('تم إنشاء وإظهار شيت روابط الفولدرات');
+    }
+  }
+}
+
+/**
+ * إخفاء شيت روابط الفولدرات
+ */
+function hideFolderLinksSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.FOLDER_LINKS);
+
+  if (sheet) {
+    sheet.hideSheet();
+    showSuccess('تم إخفاء شيت روابط الفولدرات');
+  }
 }
