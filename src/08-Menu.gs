@@ -106,8 +106,13 @@ function onProjectEdit(e) {
       const newCode = generateProjectCode();
       sheet.getRange(row, PROJECT_COLS.CODE).setValue(newCode);
 
-      // إنشاء فولدرات المشروع
-      onProjectAdd(e.value, newCode, row);
+      // ملاحظة: لا يمكن إنشاء الفولدرات من onEdit بسبب صلاحيات محدودة
+      // استخدم القائمة: المشاريع > إنشاء فولدرات المشروع
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        'تم إنشاء الكود. لإنشاء فولدرات المشروع، استخدم القائمة: المشاريع > إنشاء فولدرات المشروع',
+        'تنبيه',
+        5
+      );
     }
   }
 }
