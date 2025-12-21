@@ -124,7 +124,8 @@ function createProjectFolderStructure(projectName, projectCode) {
 }
 
 /**
- * إنشاء فولدر تصوير - اسم الفولدر = العنصر (بالإنجليزية)
+ * إنشاء فولدر لعنصر - اسم الفولدر = العنصر (بالإنجليزية)
+ * يُوضع في الفولدر الصحيح حسب المرحلة
  */
 function createShootingFolder(projectName, subtype, movementRow, elementName) {
   const mainFolder = getMainProductionFolder();
@@ -157,19 +158,23 @@ function createShootingFolder(projectName, subtype, movementRow, elementName) {
       projectFolder = findFolderByName(mainFolder, projectFolderName);
     }
 
-    // البحث عن فولدر التصوير (بالإنجليزية أو العربية)
-    let shootingFolder = findFolderByName(projectFolder, '03-Shooting');
-    if (!shootingFolder) {
-      shootingFolder = findFolderByName(projectFolder, '03-التصوير');
+    // قراءة المرحلة من شيت الحركة
+    let stageName = 'تصوير'; // افتراضي
+    if (movementRow) {
+      const movementSheet = getSheet(SHEETS.MOVEMENT);
+      stageName = movementSheet.getRange(movementRow, MOVEMENT_COLS.STAGE).getValue();
     }
-    if (!shootingFolder) {
-      console.log('فولدر التصوير غير موجود');
+
+    // البحث عن فولدر المرحلة الصحيح
+    const stageFolder = findStageFolderByName(projectFolder, stageName);
+
+    if (!stageFolder) {
+      console.log('فولدر المرحلة غير موجود: ' + stageName);
+      showError('فولدر المرحلة غير موجود: ' + stageName);
       return null;
     }
 
-    // تحديد اسم الفولدر الجديد
-    // إذا وُجد العنصر (element) يُستخدم كاسم الفولدر
-    // وإلا يُستخدم اسم المرحلة الفرعية
+    // تحديد اسم الفولدر الجديد = العنصر
     const folderName = elementName || subtype;
 
     if (!folderName) {
@@ -177,10 +182,10 @@ function createShootingFolder(projectName, subtype, movementRow, elementName) {
       return null;
     }
 
-    let newFolder = findFolderByName(shootingFolder, folderName);
+    let newFolder = findFolderByName(stageFolder, folderName);
 
     if (!newFolder) {
-      newFolder = shootingFolder.createFolder(folderName);
+      newFolder = stageFolder.createFolder(folderName);
     }
 
     const folderUrl = newFolder.getUrl();
@@ -194,9 +199,76 @@ function createShootingFolder(projectName, subtype, movementRow, elementName) {
     return folderUrl;
 
   } catch (error) {
-    console.error('خطأ في إنشاء فولدر التصوير:', error);
+    console.error('خطأ في إنشاء الفولدر:', error);
     return null;
   }
+}
+
+/**
+ * البحث عن فولدر المرحلة داخل فولدر المشروع
+ * يبحث بعدة أسماء محتملة
+ */
+function findStageFolderByName(projectFolder, stageName) {
+  // تنظيف اسم المرحلة من المسافات الزائدة
+  const cleanStageName = stageName.trim();
+
+  // قائمة الأسماء المحتملة للبحث
+  const possibleNames = [];
+
+  // البحث في STAGE_TO_FOLDER
+  if (STAGE_TO_FOLDER[cleanStageName]) {
+    possibleNames.push(STAGE_TO_FOLDER[cleanStageName]);
+  }
+
+  // إضافة أسماء بديلة للتصوير
+  if (cleanStageName === 'تصوير' || cleanStageName === 'التصوير') {
+    possibleNames.push('03-التصوير', '03-تصوير', '03-Shooting', 'التصوير', 'تصوير');
+  }
+
+  // إضافة أسماء بديلة للأوراق
+  if (cleanStageName === 'الأوراق' || cleanStageName === 'أوراق') {
+    possibleNames.push('01-الأوراق والأبحاث', '01-الأوراق', 'الأوراق والأبحاث', 'الأوراق');
+  }
+
+  // إضافة أسماء بديلة للصوت
+  if (cleanStageName === 'الصوت' || cleanStageName === 'صوت') {
+    possibleNames.push('04-الصوت', 'الصوت', '04-Sound');
+  }
+
+  // إضافة أسماء بديلة للأنيميشن
+  if (cleanStageName === 'أنيميشن' || cleanStageName === 'انيميشن') {
+    possibleNames.push('05-الأنيميشن', '05-أنيميشن', 'أنيميشن', '05-Animation');
+  }
+
+  // إضافة أسماء بديلة للمونتاج
+  if (cleanStageName === 'المونتاج' || cleanStageName === 'مونتاج') {
+    possibleNames.push('07-المونتاج', 'المونتاج', '07-Editing');
+  }
+
+  // إضافة أسماء بديلة للتسليم
+  if (cleanStageName === 'التسليم' || cleanStageName === 'تسليم') {
+    possibleNames.push('08-التسليم النهائي', '08-التسليم', 'التسليم', '08-Delivery');
+  }
+
+  // البحث في كل الأسماء المحتملة
+  for (const name of possibleNames) {
+    const folder = findFolderByName(projectFolder, name);
+    if (folder) {
+      return folder;
+    }
+  }
+
+  // محاولة أخيرة: البحث عن أي فولدر يحتوي على اسم المرحلة
+  const folders = projectFolder.getFolders();
+  while (folders.hasNext()) {
+    const folder = folders.next();
+    const folderName = folder.getName().toLowerCase();
+    if (folderName.includes(cleanStageName.toLowerCase())) {
+      return folder;
+    }
+  }
+
+  return null;
 }
 
 /**
