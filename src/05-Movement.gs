@@ -209,6 +209,24 @@ function onMovementEdit(e) {
   const row = e.range.getRow();
   const col = e.range.getColumn();
 
+  // ملء التاريخ والرقم تلقائياً عند إدخال بيانات جديدة
+  if (row > 1 && col > MOVEMENT_COLS.DATE) {
+    const numberCell = sheet.getRange(row, MOVEMENT_COLS.NUMBER);
+    const dateCell = sheet.getRange(row, MOVEMENT_COLS.DATE);
+
+    // ملء الرقم إذا كان فارغاً
+    if (!numberCell.getValue()) {
+      const lastRow = getLastRowInColumn(sheet, MOVEMENT_COLS.PROJECT);
+      const newNumber = Math.max(row - 1, lastRow > 1 ? lastRow : 1);
+      numberCell.setValue(newNumber);
+    }
+
+    // ملء التاريخ إذا كان فارغاً
+    if (!dateCell.getValue()) {
+      dateCell.setValue(getCurrentDate());
+    }
+  }
+
   // تلوين الصف عند تغيير الحالة
   if (col === MOVEMENT_COLS.STATUS && row > 1) {
     colorRowByStatus(sheet, row, e.value);

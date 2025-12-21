@@ -152,8 +152,8 @@ function createMovementSheet(ss) {
   sheet.setColumnWidth(MOVEMENT_COLS.ASSIGNED_TO, 120);
   sheet.setColumnWidth(MOVEMENT_COLS.STATUS, 100);
   sheet.setColumnWidth(MOVEMENT_COLS.DUE_DATE, 110);
-  sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
   sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
+  sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
 
   // تجميد الصف الأول
   sheet.setFrozenRows(1);
@@ -461,8 +461,8 @@ function fixMovementSheet() {
   sheet.setColumnWidth(MOVEMENT_COLS.ASSIGNED_TO, 120);
   sheet.setColumnWidth(MOVEMENT_COLS.STATUS, 100);
   sheet.setColumnWidth(MOVEMENT_COLS.DUE_DATE, 110);
-  sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
   sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
+  sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
 
   // إضافة القوائم المنسدلة (من شيت الإعدادات)
   const stagesForFix = getStagesFromSettings();
