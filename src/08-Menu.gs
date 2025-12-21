@@ -44,13 +44,12 @@ function onOpen() {
     // الإعدادات
     .addSubMenu(ui.createMenu('⚙️ الإعدادات')
       .addItem('التحقق من فولدر الإنتاج', 'checkMainFolderSettings')
-      .addItem('تتبع مشكلة الفولدر', 'traceMainFolder')
-      .addItem('🧪 اختبار الدالة الفعلية', 'testGetMainFolder')
-      .addItem('🧪 اختبار إنشاء فولدر', 'testCreateProjectFolder')
-      .addSeparator()
       .addItem('تحديث القوائم المنسدلة', 'updateAllDropdowns')
-      .addItem('🔧 تشخيص النظام', 'debugSettings')
-      .addItem('🔄 تهيئة النظام', 'initializeSystem'))
+      .addSeparator()
+      .addItem('🔌 تفعيل إنشاء الفولدر التلقائي', 'installEditTrigger')
+      .addItem('🔄 تهيئة النظام', 'initializeSystem')
+      .addSeparator()
+      .addItem('🔧 تشخيص النظام', 'debugSettings'))
 
     .addToUi();
 
@@ -106,8 +105,13 @@ function onProjectEdit(e) {
       const newCode = generateProjectCode();
       sheet.getRange(row, PROJECT_COLS.CODE).setValue(newCode);
 
-      // إنشاء فولدرات المشروع
-      onProjectAdd(e.value, newCode, row);
+      // ملاحظة: لا يمكن إنشاء الفولدرات من onEdit بسبب صلاحيات محدودة
+      // استخدم القائمة: المشاريع > إنشاء فولدرات المشروع
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        'تم إنشاء الكود. لإنشاء فولدرات المشروع، استخدم القائمة: المشاريع > إنشاء فولدرات المشروع',
+        'تنبيه',
+        5
+      );
     }
   }
 }
