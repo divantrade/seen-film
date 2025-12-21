@@ -249,10 +249,10 @@ function createSettingsSheet(ss) {
       existingFolderLink = '';
     }
 
-    // حفظ بيانات المراحل والأنواع الفرعية (أعمدة E, F)
+    // حفظ بيانات المراحل والأنواع الفرعية (أعمدة E, F, G, H)
     const lastRow = sheet.getLastRow();
     if (lastRow >= 6) {
-      existingStageData = sheet.getRange(6, 5, lastRow - 5, 2).getValues()
+      existingStageData = sheet.getRange(6, 5, lastRow - 5, 4).getValues()
         .filter(row => row[0] && row[1]); // فقط الصفوف التي تحتوي على بيانات
     }
   }
@@ -297,11 +297,15 @@ function createSettingsSheet(ss) {
     sheet.getRange(6 + i, 3).setValue(statusList[i]);
   }
 
-  // قسم المراحل والمراحل الفرعية (أعمدة E, F)
+  // قسم المراحل والمراحل الفرعية (أعمدة E, F, G, H)
   sheet.getRange('E5').setValue('المرحلة');
   sheet.getRange('E5').setBackground(COLORS.INFO).setFontWeight('bold');
   sheet.getRange('F5').setValue('المرحلة الفرعية');
   sheet.getRange('F5').setBackground(COLORS.INFO).setFontWeight('bold');
+  sheet.getRange('G5').setValue('Stage');
+  sheet.getRange('G5').setBackground(COLORS.INFO).setFontWeight('bold');
+  sheet.getRange('H5').setValue('Subtype');
+  sheet.getRange('H5').setBackground(COLORS.INFO).setFontWeight('bold');
 
   // إضافة بيانات المراحل والمراحل الفرعية
   let stageRow = 6;
@@ -309,8 +313,10 @@ function createSettingsSheet(ss) {
   // استخدام البيانات الموجودة إذا كانت متاحة
   if (existingStageData.length > 0) {
     for (const row of existingStageData) {
-      sheet.getRange(stageRow, 5).setValue(row[0]);
-      sheet.getRange(stageRow, 6).setValue(row[1]);
+      sheet.getRange(stageRow, 5).setValue(row[0]); // المرحلة
+      sheet.getRange(stageRow, 6).setValue(row[1]); // المرحلة الفرعية
+      sheet.getRange(stageRow, 7).setValue(row[2] || ''); // Stage
+      sheet.getRange(stageRow, 8).setValue(row[3] || ''); // Subtype
       stageRow++;
     }
   } else {
@@ -321,6 +327,9 @@ function createSettingsSheet(ss) {
         for (const subtype of stage.subtypes) {
           sheet.getRange(stageRow, 5).setValue(stage.name);
           sheet.getRange(stageRow, 6).setValue(subtype);
+          // الترجمة الافتراضية (فارغة - يملأها المستخدم)
+          sheet.getRange(stageRow, 7).setValue('');
+          sheet.getRange(stageRow, 8).setValue('');
           stageRow++;
         }
       }
@@ -333,6 +342,8 @@ function createSettingsSheet(ss) {
   sheet.setColumnWidth(3, 150);
   sheet.setColumnWidth(5, 120);
   sheet.setColumnWidth(6, 150);
+  sheet.setColumnWidth(7, 120);
+  sheet.setColumnWidth(8, 150);
 
   return sheet;
 }

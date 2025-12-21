@@ -379,6 +379,48 @@ function getStagesFromSettings() {
 }
 
 /**
+ * الحصول على الترجمة الإنجليزية للمرحلة
+ */
+function getStageTranslation(arabicStage) {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  if (!sheet) return arabicStage;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 6) return arabicStage;
+
+  const data = sheet.getRange(6, 5, lastRow - 5, 3).getValues(); // E, F, G
+
+  for (const row of data) {
+    if (row[0] === arabicStage && row[2]) {
+      return row[2]; // العمود G - Stage
+    }
+  }
+
+  return arabicStage; // إرجاع الاسم العربي إذا لم توجد ترجمة
+}
+
+/**
+ * الحصول على الترجمة الإنجليزية للمرحلة الفرعية
+ */
+function getSubtypeTranslation(arabicStage, arabicSubtype) {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  if (!sheet) return arabicSubtype;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 6) return arabicSubtype;
+
+  const data = sheet.getRange(6, 5, lastRow - 5, 4).getValues(); // E, F, G, H
+
+  for (const row of data) {
+    if (row[0] === arabicStage && row[1] === arabicSubtype && row[3]) {
+      return row[3]; // العمود H - Subtype
+    }
+  }
+
+  return arabicSubtype; // إرجاع الاسم العربي إذا لم توجد ترجمة
+}
+
+/**
  * عرض رسالة نجاح
  */
 function showSuccess(message) {
