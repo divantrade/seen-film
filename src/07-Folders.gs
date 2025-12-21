@@ -593,3 +593,96 @@ function testCreateProjectFolder() {
     ui.alert('خطأ!', 'حدث خطأ:\n\n' + e.message + '\n\nStack: ' + e.stack, ui.ButtonSet.OK);
   }
 }
+
+/**
+ * معالج Installable Trigger للتعامل مع Checkbox
+ * هذا يعمل بصلاحيات كاملة على عكس onEdit العادي
+ */
+function onEditInstallable(e) {
+  if (!e || !e.range) return;
+
+  const sheet = e.range.getSheet();
+  const sheetName = sheet.getName();
+
+  // التعامل مع checkbox في شيت الحركة
+  if (sheetName === SHEETS.MOVEMENT) {
+    const row = e.range.getRow();
+    const col = e.range.getColumn();
+
+    // تحقق من أنه checkbox إنشاء الفولدر
+    if (col === MOVEMENT_COLS.CREATE_FOLDER && row > 1) {
+      const isChecked = e.range.getValue();
+
+      if (isChecked === true) {
+        // إنشاء الفولدر
+        const project = sheet.getRange(row, MOVEMENT_COLS.PROJECT).getValue();
+        const stage = sheet.getRange(row, MOVEMENT_COLS.STAGE).getValue();
+        const subtype = sheet.getRange(row, MOVEMENT_COLS.SUBTYPE).getValue();
+        const element = sheet.getRange(row, MOVEMENT_COLS.ELEMENT).getValue();
+        const existingLink = sheet.getRange(row, MOVEMENT_COLS.LINK).getValue();
+
+        if (existingLink) {
+          // فولدر موجود بالفعل، إلغاء التحديد
+          e.range.setValue(false);
+          SpreadsheetApp.getActiveSpreadsheet().toast('يوجد رابط فولدر بالفعل', 'تنبيه', 3);
+          return;
+        }
+
+        if (!project) {
+          e.range.setValue(false);
+          SpreadsheetApp.getActiveSpreadsheet().toast('يجب تحديد المشروع أولاً', 'خطأ', 3);
+          return;
+        }
+
+        let folderUrl = null;
+        const folderName = subtype || element || stage;
+
+        if (stage === 'التصوير' && subtype) {
+          folderUrl = createShootingFolder(project, subtype, row);
+        } else if (folderName) {
+          folderUrl = createGenericFolder(project, stage, folderName, row);
+        }
+
+        if (folderUrl) {
+          e.range.setValue(false); // إلغاء التحديد بعد الإنشاء
+          SpreadsheetApp.getActiveSpreadsheet().toast('تم إنشاء الفولدر بنجاح!', 'نجاح', 3);
+        } else {
+          e.range.setValue(false);
+          SpreadsheetApp.getActiveSpreadsheet().toast('فشل في إنشاء الفولدر', 'خطأ', 3);
+        }
+      }
+    }
+  }
+
+  // التعامل مع checkbox في شيت المشاريع (لإنشاء فولدر المشروع)
+  if (sheetName === SHEETS.PROJECTS) {
+    const row = e.range.getRow();
+    const col = e.range.getColumn();
+
+    // يمكن إضافة checkbox لشيت المشاريع لاحقاً إذا أردت
+  }
+}
+
+/**
+ * تثبيت Installable Trigger
+ * يجب تشغيل هذه الدالة مرة واحدة فقط
+ */
+function installEditTrigger() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // حذف الـ triggers القديمة من نفس النوع
+  const triggers = ScriptApp.getProjectTriggers();
+  for (const trigger of triggers) {
+    if (trigger.getHandlerFunction() === 'onEditInstallable') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  }
+
+  // إنشاء trigger جديد
+  ScriptApp.newTrigger('onEditInstallable')
+    .forSpreadsheet(ss)
+    .onEdit()
+    .create();
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('تم تثبيت الـ Trigger بنجاح! الآن يمكنك استخدام ☑ لإنشاء الفولدرات', 'نجاح', 5);
+}

@@ -44,13 +44,12 @@ function onOpen() {
     // الإعدادات
     .addSubMenu(ui.createMenu('⚙️ الإعدادات')
       .addItem('التحقق من فولدر الإنتاج', 'checkMainFolderSettings')
-      .addItem('تتبع مشكلة الفولدر', 'traceMainFolder')
-      .addItem('🧪 اختبار الدالة الفعلية', 'testGetMainFolder')
-      .addItem('🧪 اختبار إنشاء فولدر', 'testCreateProjectFolder')
-      .addSeparator()
       .addItem('تحديث القوائم المنسدلة', 'updateAllDropdowns')
-      .addItem('🔧 تشخيص النظام', 'debugSettings')
-      .addItem('🔄 تهيئة النظام', 'initializeSystem'))
+      .addSeparator()
+      .addItem('🔌 تفعيل إنشاء الفولدر التلقائي', 'installEditTrigger')
+      .addItem('🔄 تهيئة النظام', 'initializeSystem')
+      .addSeparator()
+      .addItem('🔧 تشخيص النظام', 'debugSettings'))
 
     .addToUi();
 
