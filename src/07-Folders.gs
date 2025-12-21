@@ -314,14 +314,11 @@ function createProjectFolderStructure(projectName, projectCode) {
  */
 function getStageNameFromFolderName(folderName) {
   const mapping = {
-    '01-الأوراق والأبحاث': 'الأوراق',
-    '02-الأسئلة والضيوف': 'الأوراق',
-    '03-التصوير': 'التصوير',
-    '04-الصوت': 'الصوت',
-    '05-الأنيميشن': 'أنيميشن',
-    '06-الأرشيف': 'الأوراق',
-    '07-المونتاج': 'المونتاج',
-    '08-التسليم النهائي': 'التسليم'
+    'Research': 'الأوراق',
+    'Shooting': 'التصوير',
+    'Sound': 'الصوت',
+    'Animation': 'أنيميشن',
+    'Editing': 'المونتاج'
   };
 
   return mapping[folderName] || folderName;
@@ -465,39 +462,39 @@ function findStageFolderByName(projectFolder, stageName) {
   // قائمة الأسماء المحتملة للبحث
   const possibleNames = [];
 
-  // البحث في STAGE_TO_FOLDER
+  // البحث في STAGE_TO_FOLDER أولاً
   if (STAGE_TO_FOLDER[cleanStageName]) {
     possibleNames.push(STAGE_TO_FOLDER[cleanStageName]);
   }
 
   // إضافة أسماء بديلة للتصوير
   if (cleanStageName === 'تصوير' || cleanStageName === 'التصوير') {
-    possibleNames.push('03-التصوير', '03-تصوير', '03-Shooting', 'التصوير', 'تصوير');
+    possibleNames.push('Shooting');
   }
 
   // إضافة أسماء بديلة للأوراق
   if (cleanStageName === 'الأوراق' || cleanStageName === 'أوراق') {
-    possibleNames.push('01-الأوراق والأبحاث', '01-الأوراق', 'الأوراق والأبحاث', 'الأوراق');
+    possibleNames.push('Research');
   }
 
   // إضافة أسماء بديلة للصوت
   if (cleanStageName === 'الصوت' || cleanStageName === 'صوت') {
-    possibleNames.push('04-الصوت', 'الصوت', '04-Sound');
+    possibleNames.push('Sound');
   }
 
   // إضافة أسماء بديلة للأنيميشن
   if (cleanStageName === 'أنيميشن' || cleanStageName === 'انيميشن') {
-    possibleNames.push('05-الأنيميشن', '05-أنيميشن', 'أنيميشن', '05-Animation');
+    possibleNames.push('Animation');
   }
 
   // إضافة أسماء بديلة للمونتاج
   if (cleanStageName === 'المونتاج' || cleanStageName === 'مونتاج') {
-    possibleNames.push('07-المونتاج', 'المونتاج', '07-Editing');
+    possibleNames.push('Editing');
   }
 
   // إضافة أسماء بديلة للتسليم
   if (cleanStageName === 'التسليم' || cleanStageName === 'تسليم') {
-    possibleNames.push('08-التسليم النهائي', '08-التسليم', 'التسليم', '08-Delivery');
+    possibleNames.push('Editing');
   }
 
   // البحث في كل الأسماء المحتملة
