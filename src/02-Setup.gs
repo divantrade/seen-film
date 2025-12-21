@@ -152,7 +152,6 @@ function createMovementSheet(ss) {
   sheet.setColumnWidth(MOVEMENT_COLS.ASSIGNED_TO, 120);
   sheet.setColumnWidth(MOVEMENT_COLS.STATUS, 100);
   sheet.setColumnWidth(MOVEMENT_COLS.DUE_DATE, 110);
-  sheet.setColumnWidth(MOVEMENT_COLS.CREATE_FOLDER, 40);
   sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
   sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
 
@@ -164,10 +163,6 @@ function createMovementSheet(ss) {
 
   // إضافة القوائم المنسدلة للحالات
   setDropdown(sheet, 2, MOVEMENT_COLS.STATUS, 500, STATUS_WITH_ICONS);
-
-  // إضافة checkbox لإنشاء الفولدر
-  const checkboxRange = sheet.getRange(2, MOVEMENT_COLS.CREATE_FOLDER, 500, 1);
-  checkboxRange.insertCheckboxes();
 
   return sheet;
 }
@@ -352,45 +347,4 @@ function resetSystem() {
   if (temp) {
     ss.deleteSheet(temp);
   }
-}
-
-/**
- * إضافة عمود الـ checkbox لشيت الحركة الموجود
- */
-function addCheckboxToMovementSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.MOVEMENT);
-
-  if (!sheet) {
-    SpreadsheetApp.getUi().alert('شيت الحركة غير موجود!');
-    return;
-  }
-
-  // التحقق من عدد الأعمدة الحالي
-  const currentCols = sheet.getLastColumn();
-
-  // إذا كان عدد الأعمدة أقل من المطلوب، نضيف الأعمدة الناقصة
-  if (currentCols < MOVEMENT_HEADERS.length) {
-    // تحديث الهيدرات
-    const headerRange = sheet.getRange(1, 1, 1, MOVEMENT_HEADERS.length);
-    headerRange.setValues([MOVEMENT_HEADERS]);
-
-    // تنسيق الهيدر
-    headerRange.setBackground('#1565C0')
-      .setFontColor('#FFFFFF')
-      .setFontWeight('bold')
-      .setHorizontalAlignment('center');
-  }
-
-  // إضافة checkbox
-  const lastRow = Math.max(sheet.getLastRow(), 2);
-  const checkboxRange = sheet.getRange(2, MOVEMENT_COLS.CREATE_FOLDER, Math.max(lastRow - 1, 500), 1);
-  checkboxRange.insertCheckboxes();
-
-  // تعيين عرض العمود
-  sheet.setColumnWidth(MOVEMENT_COLS.CREATE_FOLDER, 40);
-  sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
-  sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
-
-  SpreadsheetApp.getActiveSpreadsheet().toast('تم إضافة عمود الـ checkbox بنجاح!', 'نجاح', 3);
 }

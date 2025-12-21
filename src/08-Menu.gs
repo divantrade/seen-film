@@ -46,9 +46,6 @@ function onOpen() {
       .addItem('التحقق من فولدر الإنتاج', 'checkMainFolderSettings')
       .addItem('تحديث القوائم المنسدلة', 'updateAllDropdowns')
       .addSeparator()
-      .addItem('📁 إضافة عمود الفولدر للحركة', 'addCheckboxToMovementSheet')
-      .addItem('🔌 تفعيل إنشاء الفولدر التلقائي', 'installEditTrigger')
-      .addSeparator()
       .addItem('🔄 تهيئة النظام', 'initializeSystem')
       .addItem('🔧 تشخيص النظام', 'debugSettings'))
 
