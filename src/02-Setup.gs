@@ -224,9 +224,30 @@ function createDashboardSheet(ss) {
  */
 function createSettingsSheet(ss) {
   let sheet = ss.getSheetByName(SHEETS.SETTINGS);
+  let isNewSheet = false;
 
   if (!sheet) {
     sheet = ss.insertSheet(SHEETS.SETTINGS);
+    isNewSheet = true;
+  }
+
+  // حفظ البيانات الموجودة قبل التنظيف
+  let existingFolderLink = '';
+  let existingStageData = [];
+
+  if (!isNewSheet) {
+    // حفظ رابط الفولدر
+    existingFolderLink = sheet.getRange('B3').getValue();
+    if (existingFolderLink === '(أدخل رابط الفولدر هنا)') {
+      existingFolderLink = '';
+    }
+
+    // حفظ بيانات المراحل والأنواع الفرعية (أعمدة E, F)
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 6) {
+      existingStageData = sheet.getRange(6, 5, lastRow - 5, 2).getValues()
+        .filter(row => row[0] && row[1]); // فقط الصفوف التي تحتوي على بيانات
+    }
   }
 
   // تنظيف الشيت
@@ -241,7 +262,7 @@ function createSettingsSheet(ss) {
 
   // رابط فولدر الإنتاج الرئيسي
   sheet.getRange('A3').setValue('فولدر الإنتاج الرئيسي:');
-  sheet.getRange('B3').setValue('(أدخل رابط الفولدر هنا)');
+  sheet.getRange('B3').setValue(existingFolderLink || '(أدخل رابط الفولدر هنا)');
   sheet.getRange('A3').setFontWeight('bold');
 
   // قسم أنواع المشاريع
@@ -269,21 +290,32 @@ function createSettingsSheet(ss) {
     sheet.getRange(6 + i, 3).setValue(statusList[i]);
   }
 
-  // قسم المراحل والأنواع الفرعية (أعمدة E, F)
+  // قسم المراحل والمراحل الفرعية (أعمدة E, F)
   sheet.getRange('E5').setValue('المرحلة');
   sheet.getRange('E5').setBackground(COLORS.INFO).setFontWeight('bold');
-  sheet.getRange('F5').setValue('النوع الفرعي');
+  sheet.getRange('F5').setValue('المرحلة الفرعية');
   sheet.getRange('F5').setBackground(COLORS.INFO).setFontWeight('bold');
 
-  // إضافة بيانات المراحل والأنواع الفرعية
+  // إضافة بيانات المراحل والمراحل الفرعية
   let stageRow = 6;
-  for (const key in STAGES) {
-    const stage = STAGES[key];
-    if (stage.subtypes && stage.subtypes.length > 0) {
-      for (const subtype of stage.subtypes) {
-        sheet.getRange(stageRow, 5).setValue(stage.name);
-        sheet.getRange(stageRow, 6).setValue(subtype);
-        stageRow++;
+
+  // استخدام البيانات الموجودة إذا كانت متاحة
+  if (existingStageData.length > 0) {
+    for (const row of existingStageData) {
+      sheet.getRange(stageRow, 5).setValue(row[0]);
+      sheet.getRange(stageRow, 6).setValue(row[1]);
+      stageRow++;
+    }
+  } else {
+    // استخدام البيانات الافتراضية
+    for (const key in STAGES) {
+      const stage = STAGES[key];
+      if (stage.subtypes && stage.subtypes.length > 0) {
+        for (const subtype of stage.subtypes) {
+          sheet.getRange(stageRow, 5).setValue(stage.name);
+          sheet.getRange(stageRow, 6).setValue(subtype);
+          stageRow++;
+        }
       }
     }
   }
