@@ -348,3 +348,50 @@ function resetSystem() {
     ss.deleteSheet(temp);
   }
 }
+
+/**
+ * إصلاح شيت الحركة - حذف العمود الزائد وتحديث الهيدرات
+ */
+function fixMovementSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.MOVEMENT);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('شيت الحركة غير موجود!');
+    return;
+  }
+
+  const currentCols = sheet.getLastColumn();
+
+  // إذا كان عدد الأعمدة أكثر من المطلوب (13 بدلاً من 12)
+  if (currentCols > MOVEMENT_HEADERS.length) {
+    // حذف العمود 11 (عمود الـ checkbox القديم)
+    sheet.deleteColumn(11);
+  }
+
+  // تحديث الهيدرات
+  const headerRange = sheet.getRange(1, 1, 1, MOVEMENT_HEADERS.length);
+  headerRange.setValues([MOVEMENT_HEADERS]);
+
+  // تنسيق الهيدر
+  headerRange.setBackground('#1565C0')
+    .setFontColor('#FFFFFF')
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
+
+  // تعيين عرض الأعمدة
+  sheet.setColumnWidth(MOVEMENT_COLS.NUMBER, 50);
+  sheet.setColumnWidth(MOVEMENT_COLS.DATE, 100);
+  sheet.setColumnWidth(MOVEMENT_COLS.PROJECT, 150);
+  sheet.setColumnWidth(MOVEMENT_COLS.STAGE, 100);
+  sheet.setColumnWidth(MOVEMENT_COLS.SUBTYPE, 120);
+  sheet.setColumnWidth(MOVEMENT_COLS.ELEMENT, 150);
+  sheet.setColumnWidth(MOVEMENT_COLS.DETAILS, 200);
+  sheet.setColumnWidth(MOVEMENT_COLS.ASSIGNED_TO, 120);
+  sheet.setColumnWidth(MOVEMENT_COLS.STATUS, 100);
+  sheet.setColumnWidth(MOVEMENT_COLS.DUE_DATE, 110);
+  sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
+  sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('تم إصلاح شيت الحركة بنجاح!', 'نجاح', 3);
+}
