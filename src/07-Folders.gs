@@ -533,6 +533,7 @@ function findFolderByName(parentFolder, folderName) {
  * إنشاء فولدر لعنصر في الحركة
  */
 function createFolderForMovement() {
+  const ui = SpreadsheetApp.getUi();
   const sheet = SpreadsheetApp.getActiveSheet();
 
   if (sheet.getName() !== SHEETS.MOVEMENT) {
@@ -562,21 +563,45 @@ function createFolderForMovement() {
     return;
   }
 
-  let folderUrl = null;
-
-  // التحقق من مرحلة التصوير (بالعربية أو كما في الإعدادات)
+  // التحقق من مرحلة التصوير
   const isShootingStage = stage === 'التصوير' || stage === 'تصوير' || stage.toLowerCase() === 'shooting';
 
+  let folderName = '';
+  let folderUrl = null;
+
   if (isShootingStage) {
-    // اسم الفولدر = العنصر (element) إذا وُجد، وإلا المرحلة الفرعية
+    // مرحلة التصوير: العنصر مطلوب إجبارياً
+    if (!element) {
+      showError('مرحلة التصوير تتطلب إدخال اسم العنصر (العمود F)');
+      return;
+    }
+    folderName = element;
     folderUrl = createShootingFolder(project, subtype, row, element);
   } else {
-    // إنشاء فولدر عام للعنصر
-    folderUrl = createGenericFolder(project, stage, element, row);
+    // باقي المراحل: يمكن استخدام المرحلة الفرعية إذا كان العنصر فارغاً
+    if (!element) {
+      if (!subtype) {
+        showError('يجب إدخال اسم العنصر أو المرحلة الفرعية');
+        return;
+      }
+      // تأكيد من المستخدم
+      const result = ui.alert(
+        'تأكيد إنشاء الفولدر',
+        'العنصر فارغ، سيتم تسمية الفولدر:\n\n' + subtype + '\n\nهل تريد المتابعة؟',
+        ui.ButtonSet.YES_NO
+      );
+      if (result !== ui.Button.YES) {
+        return;
+      }
+      folderName = subtype;
+    } else {
+      folderName = element;
+    }
+    folderUrl = createGenericFolder(project, stage, element || subtype, row);
   }
 
   if (folderUrl) {
-    showSuccess('تم إنشاء الفولدر بنجاح');
+    ui.alert('تم بنجاح', 'تم إنشاء الفولدر:\n\n' + folderName, ui.ButtonSet.OK);
   }
 }
 
