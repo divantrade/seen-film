@@ -379,3 +379,66 @@ function checkMainFolderSettings() {
     showError('يرجى تحديد فولدر الإنتاج الرئيسي في شيت الإعدادات');
   }
 }
+
+/**
+ * تعيين فولدر الإنتاج الرئيسي مباشرة
+ * استخدم هذه الدالة إذا كانت هناك مشكلة في الإعدادات
+ */
+function setMainFolderDirectly() {
+  // ضع ID الفولدر هنا مباشرة
+  const FOLDER_ID = '17BJ5ZPRX7NaqgVxo4bJBHfva1_UFerVb';
+
+  try {
+    const folder = DriveApp.getFolderById(FOLDER_ID);
+    showSuccess('تم الاتصال بالفولدر: ' + folder.getName());
+
+    // حفظ في الإعدادات
+    const sheet = getSheet(SHEETS.SETTINGS);
+    if (sheet) {
+      sheet.getRange('B3').setValue('https://drive.google.com/drive/folders/' + FOLDER_ID);
+      showSuccess('تم حفظ الرابط في الإعدادات');
+    }
+  } catch (e) {
+    showError('خطأ: ' + e.message);
+  }
+}
+
+/**
+ * تشخيص مشكلة الفولدر
+ */
+function diagnoseFolderIssue() {
+  const ui = SpreadsheetApp.getUi();
+  const sheet = getSheet(SHEETS.SETTINGS);
+
+  if (!sheet) {
+    ui.alert('خطأ', 'شيت الإعدادات غير موجود!\n\nشغّل initializeSystem أولاً.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const cellA3 = sheet.getRange('A3').getValue();
+  const cellB3 = sheet.getRange('B3').getValue();
+
+  let message = 'تشخيص شيت الإعدادات:\n\n';
+  message += 'A3: ' + cellA3 + '\n';
+  message += 'B3: ' + cellB3 + '\n\n';
+
+  if (!cellB3 || cellB3 === '(أدخل رابط الفولدر هنا)') {
+    message += 'المشكلة: لم يتم إدخال رابط الفولدر في B3';
+  } else {
+    const folderId = extractFolderIdFromUrl(cellB3);
+    message += 'ID المستخرج: ' + folderId + '\n\n';
+
+    if (folderId) {
+      try {
+        const folder = DriveApp.getFolderById(folderId);
+        message += 'نجاح! اسم الفولدر: ' + folder.getName();
+      } catch (e) {
+        message += 'خطأ في الوصول: ' + e.message;
+      }
+    } else {
+      message += 'المشكلة: لم يتم استخراج ID من الرابط';
+    }
+  }
+
+  ui.alert('تشخيص', message, ui.ButtonSet.OK);
+}
