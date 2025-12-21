@@ -44,8 +44,10 @@ function onOpen() {
     // الإعدادات
     .addSubMenu(ui.createMenu('⚙️ الإعدادات')
       .addItem('التحقق من فولدر الإنتاج', 'checkMainFolderSettings')
+      .addItem('تتبع مشكلة الفولدر', 'traceMainFolder')
       .addItem('تحديث القوائم المنسدلة', 'updateAllDropdowns')
       .addSeparator()
+      .addItem('🔧 تشخيص النظام', 'debugSettings')
       .addItem('🔄 تهيئة النظام', 'initializeSystem'))
 
     .addToUi();

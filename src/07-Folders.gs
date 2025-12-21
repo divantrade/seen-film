@@ -442,3 +442,93 @@ function diagnoseFolderIssue() {
 
   ui.alert('تشخيص', message, ui.ButtonSet.OK);
 }
+
+/**
+ * تشخيص شامل للنظام
+ */
+function debugSettings() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const sheets = ss.getSheets();
+
+  let msg = 'الشيتات الموجودة:\n';
+  sheets.forEach(s => msg += '- "' + s.getName() + '"\n');
+
+  msg += '\n--- البحث عن شيت الإعدادات ---\n';
+  msg += 'الاسم المطلوب: "' + SHEETS.SETTINGS + '"\n\n';
+
+  const settingsSheet = ss.getSheetByName(SHEETS.SETTINGS);
+  if (settingsSheet) {
+    msg += 'شيت الإعدادات موجود!\n';
+    msg += 'A3 = "' + settingsSheet.getRange('A3').getValue() + '"\n';
+    msg += 'B3 = "' + settingsSheet.getRange('B3').getValue() + '"';
+  } else {
+    msg += 'شيت الإعدادات غير موجود!';
+  }
+
+  ui.alert('تشخيص النظام', msg, ui.ButtonSet.OK);
+}
+
+/**
+ * تتبع خطوات الحصول على الفولدر الرئيسي
+ * هذه الدالة تشرح بالتفصيل أين تفشل العملية
+ */
+function traceMainFolder() {
+  const ui = SpreadsheetApp.getUi();
+  let trace = '=== تتبع خطوات الفولدر الرئيسي ===\n\n';
+
+  // الخطوة 1: البحث عن شيت الإعدادات
+  trace += '1️⃣ البحث عن شيت الإعدادات...\n';
+  const sheet = getSheet(SHEETS.SETTINGS);
+
+  if (!sheet) {
+    trace += '❌ فشل: شيت الإعدادات غير موجود!\n';
+    trace += 'الاسم المطلوب: "' + SHEETS.SETTINGS + '"\n';
+    ui.alert('نتيجة التتبع', trace, ui.ButtonSet.OK);
+    return;
+  }
+  trace += '✅ نجاح: وجدت شيت "' + sheet.getName() + '"\n\n';
+
+  // الخطوة 2: قراءة B3
+  trace += '2️⃣ قراءة الخلية B3...\n';
+  const folderUrl = sheet.getRange('B3').getValue();
+  trace += 'القيمة: "' + folderUrl + '"\n';
+
+  if (!folderUrl) {
+    trace += '❌ فشل: الخلية B3 فارغة!\n';
+    ui.alert('نتيجة التتبع', trace, ui.ButtonSet.OK);
+    return;
+  }
+
+  if (folderUrl === '(أدخل رابط الفولدر هنا)') {
+    trace += '❌ فشل: لا يزال النص الافتراضي موجوداً!\n';
+    ui.alert('نتيجة التتبع', trace, ui.ButtonSet.OK);
+    return;
+  }
+  trace += '✅ نجاح: الرابط موجود\n\n';
+
+  // الخطوة 3: استخراج ID
+  trace += '3️⃣ استخراج ID الفولدر...\n';
+  const folderId = extractFolderIdFromUrl(folderUrl);
+
+  if (!folderId) {
+    trace += '❌ فشل: لم يتم استخراج ID من الرابط!\n';
+    ui.alert('نتيجة التتبع', trace, ui.ButtonSet.OK);
+    return;
+  }
+  trace += '✅ نجاح: ID = "' + folderId + '"\n\n';
+
+  // الخطوة 4: الوصول للفولدر
+  trace += '4️⃣ محاولة الوصول للفولدر...\n';
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    trace += '✅ نجاح التام! اسم الفولدر: "' + folder.getName() + '"\n\n';
+    trace += '🎉 كل شيء يعمل بشكل صحيح!\n';
+    trace += 'إذا كانت المشكلة مستمرة، جرب إعادة تحميل الصفحة.';
+  } catch (e) {
+    trace += '❌ فشل: خطأ في الوصول للفولدر!\n';
+    trace += 'الخطأ: ' + e.message + '\n';
+  }
+
+  ui.alert('نتيجة التتبع', trace, ui.ButtonSet.OK);
+}
