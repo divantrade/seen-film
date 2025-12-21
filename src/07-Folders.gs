@@ -576,6 +576,17 @@ function createFolderForMovement() {
       return;
     }
     folderName = element;
+
+    // تأكيد قبل الإنشاء
+    const result = ui.alert(
+      'تأكيد إنشاء الفولدر',
+      'سيتم إنشاء فولدر باسم:\n\n' + folderName + '\n\nهل تريد المتابعة؟',
+      ui.ButtonSet.YES_NO
+    );
+    if (result !== ui.Button.YES) {
+      return;
+    }
+
     folderUrl = createShootingFolder(project, subtype, row, element);
   } else {
     // باقي المراحل: يمكن استخدام المرحلة الفرعية إذا كان العنصر فارغاً
@@ -584,20 +595,32 @@ function createFolderForMovement() {
         showError('يجب إدخال اسم العنصر أو المرحلة الفرعية');
         return;
       }
-      // تأكيد من المستخدم
+      // جلب الترجمة الإنجليزية من العمود H
+      folderName = getSubtypeTranslation(stage, subtype);
+
+      // تأكيد من المستخدم مع عرض الاسم الإنجليزي
       const result = ui.alert(
         'تأكيد إنشاء الفولدر',
-        'العنصر فارغ، سيتم تسمية الفولدر:\n\n' + subtype + '\n\nهل تريد المتابعة؟',
+        'العنصر فارغ، سيتم تسمية الفولدر:\n\n' + folderName + '\n\nهل تريد المتابعة؟',
         ui.ButtonSet.YES_NO
       );
       if (result !== ui.Button.YES) {
         return;
       }
-      folderName = subtype;
     } else {
       folderName = element;
+
+      // تأكيد قبل الإنشاء
+      const result = ui.alert(
+        'تأكيد إنشاء الفولدر',
+        'سيتم إنشاء فولدر باسم:\n\n' + folderName + '\n\nهل تريد المتابعة؟',
+        ui.ButtonSet.YES_NO
+      );
+      if (result !== ui.Button.YES) {
+        return;
+      }
     }
-    folderUrl = createGenericFolder(project, stage, element || subtype, row);
+    folderUrl = createGenericFolder(project, stage, folderName, row);
   }
 
   if (folderUrl) {
