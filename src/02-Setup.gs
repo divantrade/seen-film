@@ -269,10 +269,31 @@ function createSettingsSheet(ss) {
     sheet.getRange(6 + i, 3).setValue(statusList[i]);
   }
 
+  // قسم المراحل والأنواع الفرعية (أعمدة E, F)
+  sheet.getRange('E5').setValue('المرحلة');
+  sheet.getRange('E5').setBackground(COLORS.INFO).setFontWeight('bold');
+  sheet.getRange('F5').setValue('النوع الفرعي');
+  sheet.getRange('F5').setBackground(COLORS.INFO).setFontWeight('bold');
+
+  // إضافة بيانات المراحل والأنواع الفرعية
+  let stageRow = 6;
+  for (const key in STAGES) {
+    const stage = STAGES[key];
+    if (stage.subtypes && stage.subtypes.length > 0) {
+      for (const subtype of stage.subtypes) {
+        sheet.getRange(stageRow, 5).setValue(stage.name);
+        sheet.getRange(stageRow, 6).setValue(subtype);
+        stageRow++;
+      }
+    }
+  }
+
   // تعيين عرض الأعمدة
   sheet.setColumnWidth(1, 200);
   sheet.setColumnWidth(2, 150);
   sheet.setColumnWidth(3, 150);
+  sheet.setColumnWidth(5, 120);
+  sheet.setColumnWidth(6, 150);
 
   return sheet;
 }
