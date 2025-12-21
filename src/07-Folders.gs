@@ -124,9 +124,9 @@ function createProjectFolderStructure(projectName, projectCode) {
 }
 
 /**
- * إنشاء فولدر تصوير لمدينة معينة
+ * إنشاء فولدر تصوير - اسم الفولدر = العنصر (بالإنجليزية)
  */
-function createShootingFolder(projectName, cityName, movementRow) {
+function createShootingFolder(projectName, subtype, movementRow, elementName) {
   const mainFolder = getMainProductionFolder();
 
   if (!mainFolder) {
@@ -157,22 +157,33 @@ function createShootingFolder(projectName, cityName, movementRow) {
       projectFolder = findFolderByName(mainFolder, projectFolderName);
     }
 
-    // البحث عن فولدر التصوير
-    const shootingFolder = findFolderByName(projectFolder, '03-التصوير');
+    // البحث عن فولدر التصوير (بالإنجليزية أو العربية)
+    let shootingFolder = findFolderByName(projectFolder, '03-Shooting');
+    if (!shootingFolder) {
+      shootingFolder = findFolderByName(projectFolder, '03-التصوير');
+    }
     if (!shootingFolder) {
       console.log('فولدر التصوير غير موجود');
       return null;
     }
 
-    // إنشاء فولدر المدينة
-    const cityFolderName = 'تصوير ' + cityName;
-    let cityFolder = findFolderByName(shootingFolder, cityFolderName);
+    // تحديد اسم الفولدر الجديد
+    // إذا وُجد العنصر (element) يُستخدم كاسم الفولدر
+    // وإلا يُستخدم اسم المرحلة الفرعية
+    const folderName = elementName || subtype;
 
-    if (!cityFolder) {
-      cityFolder = shootingFolder.createFolder(cityFolderName);
+    if (!folderName) {
+      console.log('لم يتم تحديد اسم الفولدر');
+      return null;
     }
 
-    const folderUrl = cityFolder.getUrl();
+    let newFolder = findFolderByName(shootingFolder, folderName);
+
+    if (!newFolder) {
+      newFolder = shootingFolder.createFolder(folderName);
+    }
+
+    const folderUrl = newFolder.getUrl();
 
     // تحديث رابط الفولدر في شيت الحركة
     if (movementRow) {
@@ -234,8 +245,12 @@ function createFolderForMovement() {
 
   let folderUrl = null;
 
-  if (stage === 'التصوير' && subtype) {
-    folderUrl = createShootingFolder(project, subtype, row);
+  // التحقق من مرحلة التصوير (بالعربية أو كما في الإعدادات)
+  const isShootingStage = stage === 'التصوير' || stage === 'تصوير' || stage.toLowerCase() === 'shooting';
+
+  if (isShootingStage) {
+    // اسم الفولدر = العنصر (element) إذا وُجد، وإلا المرحلة الفرعية
+    folderUrl = createShootingFolder(project, subtype, row, element);
   } else {
     // إنشاء فولدر عام للعنصر
     folderUrl = createGenericFolder(project, stage, element, row);

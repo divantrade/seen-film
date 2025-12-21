@@ -146,8 +146,9 @@ function addMovement(data) {
   sheet.getRange(newRow, MOVEMENT_COLS.NOTES).setValue(data.notes || '');
 
   // إنشاء فولدر تلقائي إذا كانت المرحلة "التصوير"
-  if (data.stage === 'التصوير' && data.subtype) {
-    createShootingFolder(data.project, data.subtype, newRow);
+  const isShootingStage = data.stage === 'التصوير' || data.stage === 'تصوير' || (data.stage && data.stage.toLowerCase() === 'shooting');
+  if (isShootingStage && data.element) {
+    createShootingFolder(data.project, data.subtype, newRow, data.element);
   }
 
   showSuccess('تم إضافة الحركة بنجاح');
@@ -208,6 +209,24 @@ function onMovementEdit(e) {
   const row = e.range.getRow();
   const col = e.range.getColumn();
 
+  // ملء التاريخ والرقم تلقائياً عند إدخال بيانات جديدة
+  if (row > 1 && col > MOVEMENT_COLS.DATE) {
+    const numberCell = sheet.getRange(row, MOVEMENT_COLS.NUMBER);
+    const dateCell = sheet.getRange(row, MOVEMENT_COLS.DATE);
+
+    // ملء الرقم إذا كان فارغاً
+    if (!numberCell.getValue()) {
+      const lastRow = getLastRowInColumn(sheet, MOVEMENT_COLS.PROJECT);
+      const newNumber = Math.max(row - 1, lastRow > 1 ? lastRow : 1);
+      numberCell.setValue(newNumber);
+    }
+
+    // ملء التاريخ إذا كان فارغاً
+    if (!dateCell.getValue()) {
+      dateCell.setValue(getCurrentDate());
+    }
+  }
+
   // تلوين الصف عند تغيير الحالة
   if (col === MOVEMENT_COLS.STATUS && row > 1) {
     colorRowByStatus(sheet, row, e.value);
@@ -232,15 +251,18 @@ function onMovementEdit(e) {
     }
   }
 
-  // إنشاء فولدر تلقائي للتصوير
-  if (col === MOVEMENT_COLS.SUBTYPE && row > 1) {
+  // إنشاء فولدر تلقائي للتصوير عند إدخال العنصر
+  if (col === MOVEMENT_COLS.ELEMENT && row > 1) {
     const stage = sheet.getRange(row, MOVEMENT_COLS.STAGE).getValue();
-    if (stage === 'التصوير' && e.value) {
+    const isShootingStage = stage === 'التصوير' || stage === 'تصوير' || (stage && stage.toLowerCase() === 'shooting');
+
+    if (isShootingStage && e.value) {
       const project = sheet.getRange(row, MOVEMENT_COLS.PROJECT).getValue();
+      const subtype = sheet.getRange(row, MOVEMENT_COLS.SUBTYPE).getValue();
       const existingLink = sheet.getRange(row, MOVEMENT_COLS.LINK).getValue();
 
       if (!existingLink && project) {
-        createShootingFolder(project, e.value, row);
+        createShootingFolder(project, subtype, row, e.value);
       }
     }
   }
