@@ -121,6 +121,8 @@ function generateTeamCode(role) {
  */
 function getActiveProjects() {
   const sheet = getSheet(SHEETS.PROJECTS);
+  if (!sheet) return [];
+
   const lastRow = getLastRowInColumn(sheet, PROJECT_COLS.NAME);
 
   if (lastRow <= 1) {
@@ -131,10 +133,43 @@ function getActiveProjects() {
   const projects = [];
 
   for (const row of data) {
-    if (row[PROJECT_COLS.STATUS - 1] === 'نشط') {
+    const status = row[PROJECT_COLS.STATUS - 1];
+    const name = row[PROJECT_COLS.NAME - 1];
+
+    // إضافة المشروع إذا كان نشطاً أو لم تُحدد حالته
+    if (name && (status === 'نشط' || status === '' || !status)) {
       projects.push({
         code: row[PROJECT_COLS.CODE - 1],
-        name: row[PROJECT_COLS.NAME - 1]
+        name: name
+      });
+    }
+  }
+
+  return projects;
+}
+
+/**
+ * الحصول على قائمة جميع المشاريع (بغض النظر عن الحالة)
+ */
+function getAllProjects() {
+  const sheet = getSheet(SHEETS.PROJECTS);
+  if (!sheet) return [];
+
+  const lastRow = getLastRowInColumn(sheet, PROJECT_COLS.NAME);
+
+  if (lastRow <= 1) {
+    return [];
+  }
+
+  const data = sheet.getRange(2, 1, lastRow - 1, PROJECT_COLS.NOTES).getValues();
+  const projects = [];
+
+  for (const row of data) {
+    const name = row[PROJECT_COLS.NAME - 1];
+    if (name) {
+      projects.push({
+        code: row[PROJECT_COLS.CODE - 1],
+        name: name
       });
     }
   }
@@ -146,7 +181,14 @@ function getActiveProjects() {
  * الحصول على قائمة أسماء المشاريع النشطة
  */
 function getActiveProjectNames() {
-  return getActiveProjects().map(p => p.name);
+  const activeProjects = getActiveProjects();
+
+  // إذا لم توجد مشاريع نشطة، أرجع كل المشاريع
+  if (activeProjects.length === 0) {
+    return getAllProjects().map(p => p.name);
+  }
+
+  return activeProjects.map(p => p.name);
 }
 
 /**
