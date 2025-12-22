@@ -37,6 +37,7 @@ function onOpen() {
     // التقارير
     .addSubMenu(ui.createMenu('📊 التقارير')
       .addItem('تقرير حالة فيلم (Timeline)', 'showFilmTimelineReport')
+      .addItem('📥 إنشاء تقرير تفصيلي (Sheet)', 'createDetailedFilmReport')
       .addItem('تقارير الشركة المجمعة', 'showCompanyReport')
       .addSeparator()
       .addItem('تحديث لوحة التحكم', 'refreshDashboard')
