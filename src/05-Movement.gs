@@ -252,6 +252,16 @@ function onMovementEdit(e) {
        sheet.getRange(row, MOVEMENT_COLS.SUBTYPE).clearDataValidations();
     }
   }
+  
+  // [NEW] Trigger Smart Automation (Shortcuts & Folder Logic)
+  const project = sheet.getRange(row, MOVEMENT_COLS.PROJECT).getValue();
+  if (project && stage) {
+      try {
+        onProjectStageChange(project, stage);
+      } catch (err) {
+        console.error('خطأ في الأتمتة:', err);
+      }
+  }
 }
 
   // إنشاء فولدر تلقائي للتصوير (الإنتاج) عند إدخال العنصر
