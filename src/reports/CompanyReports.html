@@ -5,14 +5,16 @@
     <base target="_top">
     <style>
         :root {
-            --primary: #006064;
-            /* Cyan 900 */
-            --secondary: #0097A7;
-            /* Cyan 700 */
-            --accent: #FFAB00;
-            /* Amber A700 */
-            --bg: #FAFAFA;
-            --card: #FFFFFF;
+            --primary: #0D47A1;
+            /* Blue 900 */
+            --secondary: #1976D2;
+            /* Blue 700 */
+            --accent: #FF6F00;
+            /* Amber 900 */
+            --bg: #F5F7FA;
+            --sidebar-bg: #FFFFFF;
+            --text: #37474F;
+            --border: #CFD8DC;
         }
 
         body {
@@ -20,62 +22,95 @@
             background-color: var(--bg);
             direction: rtl;
             margin: 0;
-            padding: 20px;
-        }
-
-        /* Tabs */
-        .tabs {
+            padding: 0;
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 10px;
+            height: 100vh;
+            color: var(--text);
+            overflow: hidden;
         }
 
-        .tab {
-            padding: 10px 20px;
-            background: #eee;
-            border-radius: 8px;
-            cursor: pointer;
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.05);
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .brand {
+            padding: 0 20px 20px 20px;
+            font-size: 1.2em;
             font-weight: bold;
-            color: #555;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-category {
+            padding: 15px 20px 5px 20px;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            color: #90A4AE;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .menu-item {
+            padding: 12px 20px;
+            cursor: pointer;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            border-right: 3px solid transparent;
         }
 
-        .tab.active {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        .menu-item:hover {
+            background: #ECEFF1;
         }
 
-        /* Content Views */
-        .view-section {
-            display: none;
-            animation: fadeIn 0.3s;
+        .menu-item.active {
+            background: #E3F2FD;
+            color: var(--primary);
+            border-right-color: var(--primary);
+            font-weight: bold;
         }
 
-        .view-section.active {
-            display: block;
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .header {
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        /* Tables */
+        .header h2 {
+            margin: 0;
+            color: var(--primary);
+        }
+
+        /* Elements */
         table {
             width: 100%;
             border-collapse: collapse;
-            background: var(--card);
+            background: white;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -90,212 +125,421 @@
         }
 
         th {
-            background: #f1f1f1;
-            font-weight: bold;
-            color: #333;
+            background: #f8f9fa;
+            color: #455A64;
+            font-weight: 600;
         }
 
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* City Cards */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .city-card {
-            background: var(--card);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            border-top: 5px solid var(--secondary);
-        }
-
-        .city-name {
-            font-size: 1.4em;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: var(--primary);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .date-badge {
-            font-size: 0.7em;
-            background: #E0F7FA;
-            color: #006064;
+        .status-badge {
             padding: 4px 8px;
             border-radius: 12px;
-        }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 0.9em;
-            color: #666;
-        }
-
-        .project-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 15px;
-        }
-
-        .chip {
-            background: #eee;
-            padding: 4px 8px;
-            border-radius: 4px;
             font-size: 0.8em;
+            font-weight: bold;
         }
 
-        /* Section Headers */
-        h3 {
-            border-right: 4px solid var(--accent);
-            padding-right: 10px;
-            margin-top: 30px;
+        .status-done {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .status-pending {
+            background: #FFF3E0;
+            color: #EF6C00;
+        }
+
+        .status-delayed {
+            background: #FFEBEE;
+            color: #C62828;
+        }
+
+        /* City Sub-Cards */
+        .city-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-top: 4px solid var(--secondary);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Loading */
+        .loader {
+            text-align: center;
+            padding: 40px;
+            color: #90A4AE;
+        }
+
+        /* Team Selector */
+        .team-select {
+            padding: 10px;
+            width: 100%;
+            font-size: 1em;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--secondary);
+        }
+
+        /* Sections */
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('research')">📚 الأبحاث</div>
-        <div class="tab" onclick="switchTab('fixing')">🛠️ الفكسز والتصاريح</div>
-        <div class="tab" onclick="switchTab('filming')">🎬 لوجستيات التصوير</div>
-    </div>
-
-    <!-- Research View -->
-    <div id="view-research" class="view-section active">
-        <div id="research-content">جاري التحميل...</div>
-    </div>
-
-    <!-- Fixing View -->
-    <div id="view-fixing" class="view-section">
-        <div id="fixing-content">جاري التحميل...</div>
-    </div>
-
-    <!-- Filming View -->
-    <div id="view-filming" class="view-section">
-        <div id="filming-grid" class="grid-container">
-            جاري التحميل...
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="brand">
+            <span>📹</span>
+            <span>لوحة التحكم الموحدة</span>
         </div>
+
+        <div class="menu-category">وحدات الإنتاج</div>
+        <div class="menu-item active" onclick="nav('research')"><span>📚</span> الأبحاث والتطوير</div>
+        <div class="menu-item" onclick="nav('fixing')"><span>🛠️</span> الفكسز والتصاريح</div>
+        <div class="menu-item" onclick="nav('production')"><span>🎬</span> الإنتاج والتصوير</div>
+
+        <div class="menu-category">ما بعد التصوير</div>
+        <div class="menu-item" onclick="nav('post-sound')"><span>🎙️</span> الصوت</div>
+        <div class="menu-item" onclick="nav('post-graphics')"><span>�</span> الجرافيك</div>
+        <div class="menu-item" onclick="nav('post-editing')"><span>✂️</span> المونتاج</div>
+        <div class="menu-item" onclick="nav('delivery')"><span>📦</span> التسليم والأرشيف</div>
+
+        <div class="menu-category">الفريق</div>
+        <div class="menu-item" onclick="nav('team')"><span>👤</span> مهام الفريق (Workload)</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+        <!-- Research -->
+        <div id="view-research" class="view-section active">
+            <div class="header">
+                <h2>تقرير الأبحاث والتطوير</h2>
+            </div>
+            <div id="content-research" class="loader">جاري التحميل...</div>
+        </div>
+
+        <!-- Fixing -->
+        <div id="view-fixing" class="view-section">
+            <div class="header">
+                <h2>تقرير الفكسز والتصاريح</h2>
+            </div>
+            <div id="content-fixing" class="loader">جاري التحميل...</div>
+        </div>
+
+        <!-- Production (City Matrix) -->
+        <div id="view-production" class="view-section">
+            <div class="header">
+                <h2>لوجستيات التصوير (Global Matrix)</h2>
+                <span class="status-badge status-pending">Matrix View</span>
+            </div>
+            <div id="content-production" class="loader">جاري التحميل...</div>
+        </div>
+
+        <!-- Sound -->
+        <div id="view-post-sound" class="view-section">
+            <div class="header">
+                <h2>وحدة الصوت</h2>
+            </div>
+            <div id="content-post-sound" class="loader">جاري التحميل...</div>
+        </div>
+
+        <!-- Graphics -->
+        <div id="view-post-graphics" class="view-section">
+            <div class="header">
+                <h2>وحدة الجرافيك</h2>
+            </div>
+            <div id="content-post-graphics" class="loader">جاري التحميل...</div>
+        </div>
+
+        <!-- Editing -->
+        <div id="view-post-editing" class="view-section">
+            <div class="header">
+                <h2>وحدة المونتاج</h2>
+            </div>
+            <div id="content-post-editing" class="loader">جاري التحميل...</div>
+        </div>
+
+        <!-- Delivery -->
+        <div id="view-delivery" class="view-section">
+            <div class="header">
+                <h2>التسليم والأرشيف</h2>
+            </div>
+            <div id="content-delivery" class="loader">جاري التحميل...</div>
+        </div>
+
+        <!-- Team Workload -->
+        <div id="view-team" class="view-section">
+            <div class="header">
+                <h2>مهام الفريق (Workload)</h2>
+                <button id="btn-export" class="action-btn" onclick="exportSheet()" style="display:none;">
+                    <span>🖨️</span> استخراج شيت للطباعة
+                </button>
+            </div>
+
+            <select id="team-selector" class="team-select" onchange="loadMemberData()">
+                <option value="">-- اختر عضواً --</option>
+            </select>
+
+            <div id="content-team">
+                <p style="text-align:center; color:#999; margin-top:50px;">الرجاء اختيار اسم لعرض المهام.</p>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        window.onload = function () {
-            // تحميل البيانات عند الفتح
-            google.script.run
-                .withSuccessHandler(renderResearchAndFixing)
-                .getResearchAndFixingData();
+        // Store selected member
+        let currentMember = '';
 
-            google.script.run
-                .withSuccessHandler(renderFilmingLogistics)
-                .getFilmingLogisticsData();
+        window.onload = function () {
+            // Load Initial Data (Research & Fixing)
+            google.script.run.withSuccessHandler(renderResearch).getResearchAndFixingData();
+            google.script.run.withSuccessHandler(renderFixing).getResearchAndFixingData();
+
+            // Load All Other Data in background
+            google.script.run.withSuccessHandler(renderProduction).getFilmingLogisticsData();
+            google.script.run.withSuccessHandler(renderPost).getPostProductionData();
+            google.script.run.withSuccessHandler(renderDelivery).getDeliveryData();
+
+            // Load Team List
+            google.script.run.withSuccessHandler(populateTeamList).getAllTeamMembers();
         };
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        function nav(id) {
+            // Update Menu
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
 
-            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
-            document.getElementById('view-' + tabName).classList.add('active');
+            // Update View
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + id).classList.add('active');
         }
 
-        function renderResearchAndFixing(data) {
-            // 1. Research
-            let rHtml = '';
-            if (Object.keys(data.research).length === 0) {
-                rHtml = '<p>لا توجد مهام أبحاث حالياً.</p>';
-            } else {
-                for (const person in data.research) {
-                    rHtml += `<h3>👤 ${person || 'غير معين'}</h3>`;
-                    rHtml += `<table><thead><tr><th>الفيلم</th><th>المهمة</th><th>الحالة</th><th>تاريخ الاستحقاق</th></tr></thead><tbody>`;
-                    data.research[person].forEach(task => {
-                        rHtml += `<tr>
-              <td>${task.project}</td>
-              <td>${task.element}</td>
-              <td>${task.status}</td>
-              <td>${formatDate(task.dueDate)}</td>
-            </tr>`;
-                    });
-                    rHtml += `</tbody></table>`;
-                }
-            }
-            document.getElementById('research-content').innerHTML = rHtml;
+        // --- Renderers ---
 
-            // 2. Fixing
-            let fHtml = '';
-            if (data.fixing.length === 0) {
-                fHtml = '<p>لا توجد مهام فكسز أو تصاريح.</p>';
-            } else {
-                fHtml += `<table><thead><tr><th>الفيلم</th><th>نوع التصريح/المهمة</th><th>التفاصيل</th><th>المسؤول</th><th>الحالة</th></tr></thead><tbody>`;
-                data.fixing.forEach(task => {
-                    fHtml += `<tr>
-            <td>${task.project}</td>
-            <td>${task.subtype || task.element}</td>
-            <td>${task.details || '-'}</td>
-            <td>${task.assignedTo || '-'}</td>
-            <td>${task.status}</td>
-          </tr>`;
-                });
-                fHtml += `</tbody></table>`;
-            }
-            document.getElementById('fixing-content').innerHTML = fHtml;
+        function renderResearch(data) {
+            renderGeneralTable('content-research', data.research, 'الباحث');
         }
 
-        function renderFilmingLogistics(data) {
-            if (!data || data.length === 0) {
-                document.getElementById('filming-grid').innerHTML = '<p>لا توجد جداول تصوير حالية.</p>';
+        function renderFixing(data) {
+            // Fixing comes as an array, not grouped by person in the updated logic, let's fix that
+            // Wait, getResearchAndFixingData returns {research: {person: []}, fixing: [array]}
+            // Let's render the fixing array directly
+            if (!data.fixing || data.fixing.length === 0) {
+                document.getElementById('content-fixing').innerHTML = '<p>لا توجد بيانات.</p>';
                 return;
             }
+            let html = '<table><thead><tr><th>الفيلم</th><th>المهمة</th><th>التفاصيل</th><th>المسؤول</th><th>الحالة</th></tr></thead><tbody>';
+            data.fixing.forEach(t => {
+                html += `<tr><td>${t.project}</td><td>${t.subtype || t.element}</td><td>${t.details || '-'}</td><td>${t.assignedTo}</td>
+                        <td>${statusBadge(t.status)}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('content-fixing').innerHTML = html;
+        }
 
-            let html = '';
+        function renderProduction(data) {
+            // Reuse the Matrix Logic we built earlier
+            if (!data || data.length === 0) {
+                document.getElementById('content-production').innerHTML = '<p>لا توجد جداول تصوير.</p>';
+                return;
+            }
+            let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">';
             data.forEach(city => {
-                // Group tasks by project for display
+                // Group tasks by project
                 const tasksByProject = {};
-                city.tasks.forEach(t => {
-                    const p = t.project;
-                    if (!tasksByProject[p]) tasksByProject[p] = [];
-                    tasksByProject[p].push(t);
-                });
+                city.tasks.forEach(t => { const p = t.project; if (!tasksByProject[p]) tasksByProject[p] = []; tasksByProject[p].push(t); });
 
                 let tasksHtml = '';
                 for (const [project, tasks] of Object.entries(tasksByProject)) {
-                    tasksHtml += `<div style="margin-top:10px; background:#f9f9f9; padding:8px; border-radius:4px; border-right:3px solid var(--secondary);">
-                        <div style="font-weight:bold; font-size:0.9em; margin-bottom:4px;">🎥 ${project}</div>
-                        <ul style="margin:0; padding-right:15px; font-size:0.85em; color:#444;">`;
+                    tasksHtml += `<div style="margin-top:10px; background:#f9f9f9; padding:10px; border-radius:4px; border-right:3px solid var(--secondary);">
+                        <div style="font-weight:bold; font-size:0.9em; margin-bottom:5px;">🎥 ${project}</div>
+                        <ul style="margin:0; padding-right:20px; font-size:0.85em; color:#444;">`;
                     tasks.forEach(t => {
-                        tasksHtml += `<li>${t.subtype.replace('تصوير', '')}: ${t.element} (${t.assignedTo || 'غير معين'}) - <span style="font-size:0.8em; color:#888">${t.status}</span></li>`;
+                        tasksHtml += `<li>${t.subtype.replace('تصوير', '')}: ${t.element} (${t.assignedTo || '?'})</li>`;
                     });
                     tasksHtml += `</ul></div>`;
                 }
 
                 html += `
-          <div class="city-card">
-            <div class="city-name">
-              <span>📍 ${city.city}</span>
-              <span class="date-badge">${city.startDate} ➡ ${city.endDate}</span>
-            </div>
-            
-            <div class="stat-row">
-              <span>عدد الأفلام: ${city.projectCount}</span>
-              <span>إجمالي المهام: ${city.tasksCount}</span>
-            </div>
-
-            <div style="max-height: 250px; overflow-y: auto; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                ${tasksHtml}
-            </div>
-          </div>
-        `;
+                <div class="city-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span style="font-size:1.3em; font-weight:bold; color:var(--primary);">📍 ${city.city}</span>
+                        <span style="font-size:0.8em; background:#E0F7FA; color:#006064; padding:3px 8px; border-radius:10px;">${city.startDate}</span>
+                    </div>
+                    <div>${tasksHtml}</div>
+                </div>`;
             });
-            document.getElementById('filming-grid').innerHTML = html;
+            html += '</div>';
+            document.getElementById('content-production').innerHTML = html;
+        }
+
+        function renderPost(data) {
+            // data = {sound: {}, graphics: {}, editing: {}} (Grouped by Project)
+            renderGroupedTable('content-post-sound', data.sound, 'المهمة الصوتية');
+            renderGroupedTable('content-post-graphics', data.graphics, 'مهمة الجرافيك');
+            renderGroupedTable('content-post-editing', data.editing, 'نسخة المونتاج');
+        }
+
+        function renderDelivery(data) {
+            // data = {archive: [], delivery: {}}
+
+            // Render Archive (Array)
+            let htmlArchive = '<h3>📼 الأرشيف</h3>';
+            if (data.archive.length === 0) htmlArchive += '<p>لا توجد بيانات أرشيف.</p>';
+            else {
+                htmlArchive += '<table><thead><tr><th>الفيلم</th><th>العنصر</th><th>المسؤول</th><th>الحالة</th></tr></thead><tbody>';
+                data.archive.forEach(t => {
+                    htmlArchive += `<tr><td>${t.project}</td><td>${t.element}</td><td>${t.assignedTo}</td><td>${statusBadge(t.status)}</td></tr>`;
+                });
+                htmlArchive += '</tbody></table>';
+            }
+
+            // Render Deliverables (Grouped)
+            let htmlDelivery = '<h3>📦 التسليمات للعميل</h3>';
+            htmlDelivery += renderGroupedTableHTML(data.delivery, 'عنصر التسليم');
+
+            document.getElementById('content-delivery').innerHTML = htmlArchive + '<br>' + htmlDelivery;
+        }
+
+        // --- Team Workload ---
+
+        function populateTeamList(names) {
+            const sel = document.getElementById('team-selector');
+            names.forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n;
+                opt.text = n;
+                sel.add(opt);
+            });
+        }
+
+        function loadMemberData() {
+            const member = document.getElementById('team-selector').value;
+            currentMember = member;
+            const btn = document.getElementById('btn-export');
+            const content = document.getElementById('content-team');
+
+            if (!member) {
+                content.innerHTML = '<p style="text-align:center;">اختر اسماً.</p>';
+                btn.style.display = 'none';
+                return;
+            }
+
+            content.innerHTML = '<div class="loader">جاري جلب المهام...</div>';
+            btn.style.display = 'none';
+
+            google.script.run.withSuccessHandler(tasks => {
+                if (!tasks || tasks.length === 0) {
+                    content.innerHTML = '<p style="text-align:center;">✅ لا توجد مهام نشطة (Open) لهذا العضو.</p>';
+                    return;
+                }
+
+                // Enable button
+                btn.style.display = 'flex';
+
+                let html = `<table><thead><tr><th>الفيلم</th><th>المهمة</th><th>الموعد</th><th>الحالة</th></tr></thead><tbody>`;
+                tasks.forEach(t => {
+                    const subtitle = t.subtype ? `[${t.subtype}] ` : '';
+                    html += `<tr>
+                     <td>${t.project}</td>
+                     <td>${subtitle}${t.element}</td>
+                     <td>${formatDate(t.dueDate)}</td>
+                     <td>${statusBadge(t.status)}</td>
+                   </tr>`;
+                });
+                html += '</tbody></table>';
+                content.innerHTML = html;
+
+            }).getMemberWorkloadData(member);
+        }
+
+        function exportSheet() {
+            if (!currentMember) return;
+            const btn = document.getElementById('btn-export');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'جاري الإنشاء...';
+            btn.disabled = true;
+
+            google.script.run.withSuccessHandler(url => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                window.open(url, '_blank');
+            }).createPrintableWorkloadSheet(currentMember);
+        }
+
+        // --- Helpers ---
+
+        function renderGeneralTable(divId, groupedData, secondColTitle) {
+            renderGroupedTable(divId, groupedData, secondColTitle);
+        }
+
+        function renderGroupedTable(divId, groupedData, taskLabel) {
+            document.getElementById(divId).innerHTML = renderGroupedTableHTML(groupedData, taskLabel);
+        }
+
+        function renderGroupedTableHTML(groupedData, taskLabel) {
+            if (!groupedData || Object.keys(groupedData).length === 0) return '<p>لا توجد بيانات.</p>';
+            let html = '';
+            for (const groupKey in groupedData) {
+                html += `<h3 style="margin-top:20px; font-size:1em; color:#555;">🎞️ ${groupKey}</h3>`;
+                html += `<table><thead><tr><th>${taskLabel}</th><th>المسؤول</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>`;
+                groupedData[groupKey].forEach(t => {
+                    html += `<tr>
+                        <td>${t.element}</td>
+                        <td>${t.assignedTo || '-'}</td>
+                        <td>${statusBadge(t.status)}</td>
+                        <td>${formatDate(t.dueDate)}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+            return html;
+        }
+
+        function statusBadge(status) {
+            let cls = 'status-pending';
+            if (status.includes('تم')) cls = 'status-done';
+            if (status.includes('متأخر')) cls = 'status-delayed';
+            return `<span class="status-badge ${cls}">${status}</span>`;
         }
 
         function formatDate(d) {

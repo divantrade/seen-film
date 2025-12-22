@@ -408,3 +408,134 @@ function getFilmingLogisticsData() {
   
   return reportData;
 }
+
+/**
+ * جلب بيانات مراحل ما بعد الإنتاج (الصوت، الجرافيك، المونتاج)
+ */
+function getPostProductionData() {
+  const allData = getAllMovements();
+  
+  // Sound: Stage 'عناصر ما بعد الإنتاج' & Subtype 'الصوت'
+  const soundData = allData.filter(m => 
+    m.stage === 'عناصر ما بعد الإنتاج' && m.subtype.includes('الصوت')
+  );
+
+  // Graphics: Stage 'عناصر ما بعد الإنتاج' & Subtype 'جرافيك'
+  const graphicsData = allData.filter(m => 
+    m.stage === 'عناصر ما بعد الإنتاج' && m.subtype.includes('جرافيك')
+  );
+
+  // Editing: Stage 'المونتاج'
+  const editingData = allData.filter(m => 
+    m.stage === 'المونتاج'
+  );
+
+  return {
+    sound: groupBy(soundData, 'project'),
+    graphics: groupBy(graphicsData, 'project'),
+    editing: groupBy(editingData, 'project')
+  };
+}
+
+/**
+ * جلب بيانات التسليم والأرشيف
+ */
+function getDeliveryData() {
+  const allData = getAllMovements();
+  
+  // Archive: Stage 'ما بعد التصوير' & Subtype 'تجهيز الأرشيف'
+  const archiveData = allData.filter(m => 
+    m.stage === 'ما بعد التصوير' && m.subtype.includes('أرشيف')
+  );
+
+  // Delivery: Stage 'التسليم'
+  const deliveryData = allData.filter(m => 
+    m.stage === 'التسليم'
+  );
+
+  return {
+    archive: archiveData,
+    delivery: groupBy(deliveryData, 'project')
+  };
+}
+
+/**
+ * جلب قائمة أعضاء الفريق (للأزرار)
+ */
+function getAllTeamMembers() {
+   const sheet = getSheet(SHEETS.TEAM);
+   const lastRow = getLastRowInColumn(sheet, TEAM_COLS.NAME);
+   if (lastRow <= 1) return [];
+   
+   const names = sheet.getRange(2, TEAM_COLS.NAME, lastRow - 1, 1).getValues().flat();
+   return names.filter(n => n); // Remove empty
+}
+
+/**
+ * جلب بيانات عضو محدد (Workload)
+ */
+function getMemberWorkloadData(memberName) {
+  if(!memberName) return [];
+  const allData = getAllMovements();
+  // Filter by assignedTo
+  const tasks = allData.filter(m => m.assignedTo === memberName && !m.status.includes('تم') && !m.status.includes('ملغي'));
+  
+  // Sort by date/deadline
+  tasks.sort((a,b) => {
+     const dateA = a.dueDate ? new Date(a.dueDate) : (a.date ? new Date(a.date) : new Date(8640000000000000));
+     const dateB = b.dueDate ? new Date(b.dueDate) : (b.date ? new Date(b.date) : new Date(8640000000000000));
+     return dateA - dateB;
+  });
+  
+  return tasks;
+}
+
+/**
+ * إنشاء شيت للطباعة (Export Printable Sheet)
+ */
+function createPrintableWorkloadSheet(memberName) {
+  const tasks = getMemberWorkloadData(memberName);
+  const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE || 'GMT', 'yyyy-MM-dd');
+  
+  // Create spreadsheet
+  const ss = SpreadsheetApp.create(`مهام - ${memberName} - ${dateStr}`);
+  const sheet = ss.getActiveSheet();
+  sheet.setRightToLeft(true);
+  
+  // Header
+  sheet.getRange('A1:E1').merge().setValue(`تقرير مهام: ${memberName}`)
+       .setBackground('#1565C0').setFontColor('white').setFontSize(14).setFontWeight('bold').setHorizontalAlignment('center');
+  
+  sheet.getRange('A2:E2').merge().setValue(`تاريخ الاستخراج: ${dateStr}`)
+       .setHorizontalAlignment('center').setBackground('#E3F2FD');
+
+  // Table Headers
+  const headers = ['المشروع', 'المهمة / العنصر', 'التاريخ / الموعد', 'الحالة', 'ملاحظات'];
+  sheet.getRange('A4:E4').setValues([headers])
+       .setBackground('#EEEEEE').setFontWeight('bold').setBorder(true, true, true, true, true, true);
+  
+  // Data
+  if (tasks.length > 0) {
+    const rows = tasks.map(t => [
+      t.project,
+      `[${t.stage} > ${t.subtype}] ${t.element}`,
+      t.dueDate ? formatDate(t.dueDate) : formatDate(t.date),
+      t.status,
+      t.details || ''
+    ]);
+    
+    sheet.getRange(5, 1, rows.length, 5).setValues(rows);
+    sheet.getRange(5, 1, rows.length, 5).setBorder(true, true, true, true, true, true);
+  } else {
+    sheet.getRange('A5:E5').merge().setValue('لا توجد مهام نشطة حالياً.').setHorizontalAlignment('center');
+  }
+
+  // Formatting
+  sheet.setColumnWidth(1, 150); // Project
+  sheet.setColumnWidth(2, 300); // Task
+  sheet.setColumnWidth(3, 100); // Date
+  sheet.setColumnWidth(4, 100); // Status
+  sheet.setColumnWidth(5, 200); // Notes
+  
+  return ss.getUrl();
+}
