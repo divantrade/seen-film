@@ -283,6 +283,8 @@ function createProjectFolderStructure(projectName, projectCode) {
 
       if (!subfolder) {
         subfolder = projectFolder.createFolder(subfolderName);
+        // [NEW] إضافة الفولدرات الفرعية القياسية فوراً
+        createStandardSubFolders(subfolder, subfolderName);
       }
 
       // تحديد اسم المرحلة من اسم الفولدر
@@ -310,18 +312,35 @@ function createProjectFolderStructure(projectName, projectCode) {
 }
 
 /**
+ * إنشاء الفولدرات الفرعية القياسية داخل مجلد المرحلة
+ */
+function createStandardSubFolders(parentFolder, folderName) {
+  let subs = [];
+  
+  if (folderName === '05-Post-Elements') {
+    subs = ['Graphics', 'Sound', 'VoiceOver', 'Music'];
+  } else if (folderName === '06-Editing') {
+    subs = ['Drafts', 'Project Files', 'Footage'];
+  } else if (folderName === '08-Final-Delivery') {
+    subs = ['Masters', 'Clean', 'Web'];
+  }
+
+  subs.forEach(name => {
+    if (!findFolderByName(parentFolder, name)) {
+      parentFolder.createFolder(name);
+    }
+  });
+}
+
+/**
  * استخراج اسم المرحلة من اسم الفولدر
  */
 function getStageNameFromFolderName(folderName) {
-  const mapping = {
-    'Research': 'الأوراق',
-    'Shooting': 'التصوير',
-    'Sound': 'الصوت',
-    'Animation': 'أنيميشن',
-    'Editing': 'المونتاج'
-  };
-
-  return mapping[folderName] || folderName;
+  // البحث العكسي في STAGE_TO_FOLDER
+  for (const [stage, folder] of Object.entries(STAGE_TO_FOLDER)) {
+    if (folder === folderName) return stage;
+  }
+  return folderName;
 }
 
 /**
