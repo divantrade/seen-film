@@ -34,10 +34,13 @@ function onOpen() {
       .addItem('📁 إنشاء فولدر', 'createFolderForMovement')
       .addItem('🔄 تحديث المهام المتأخرة', 'updateDelayedTasks'))
 
-    // الداشبورد
+    // التقارير
     .addSubMenu(ui.createMenu('📊 التقارير')
+      .addItem('تقرير حالة فيلم (Timeline)', 'showFilmTimelineReport')
+      .addItem('تقارير الشركة المجمعة', 'showCompanyReport')
+      .addSeparator()
       .addItem('تحديث لوحة التحكم', 'refreshDashboard')
-      .addItem('عرض تقرير المشروع', 'showProjectReport'))
+      .addItem('تقرير نصي سريع', 'showProjectReport'))
 
     .addSeparator()
 

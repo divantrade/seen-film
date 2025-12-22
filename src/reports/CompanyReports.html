@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <style>
+        :root {
+            --primary: #006064;
+            /* Cyan 900 */
+            --secondary: #0097A7;
+            /* Cyan 700 */
+            --accent: #FFAB00;
+            /* Amber A700 */
+            --bg: #FAFAFA;
+            --card: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            direction: rtl;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #555;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Content Views */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f1f1f1;
+            font-weight: bold;
+            color: #333;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* City Cards */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .city-card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-top: 5px solid var(--secondary);
+        }
+
+        .city-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .date-badge {
+            font-size: 0.7em;
+            background: #E0F7FA;
+            color: #006064;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .project-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 15px;
+        }
+
+        .chip {
+            background: #eee;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+
+        /* Section Headers */
+        h3 {
+            border-right: 4px solid var(--accent);
+            padding-right: 10px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('research')">📚 الأبحاث</div>
+        <div class="tab" onclick="switchTab('fixing')">🛠️ الفكسز والتصاريح</div>
+        <div class="tab" onclick="switchTab('filming')">🎬 لوجستيات التصوير</div>
+    </div>
+
+    <!-- Research View -->
+    <div id="view-research" class="view-section active">
+        <div id="research-content">جاري التحميل...</div>
+    </div>
+
+    <!-- Fixing View -->
+    <div id="view-fixing" class="view-section">
+        <div id="fixing-content">جاري التحميل...</div>
+    </div>
+
+    <!-- Filming View -->
+    <div id="view-filming" class="view-section">
+        <div id="filming-grid" class="grid-container">
+            جاري التحميل...
+        </div>
+    </div>
+
+    <script>
+        window.onload = function () {
+            // تحميل البيانات عند الفتح
+            google.script.run
+                .withSuccessHandler(renderResearchAndFixing)
+                .getResearchAndFixingData();
+
+            google.script.run
+                .withSuccessHandler(renderFilmingLogistics)
+                .getFilmingLogisticsData();
+        };
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById('view-' + tabName).classList.add('active');
+        }
+
+        function renderResearchAndFixing(data) {
+            // 1. Research
+            let rHtml = '';
+            if (Object.keys(data.research).length === 0) {
+                rHtml = '<p>لا توجد مهام أبحاث حالياً.</p>';
+            } else {
+                for (const person in data.research) {
+                    rHtml += `<h3>👤 ${person || 'غير معين'}</h3>`;
+                    rHtml += `<table><thead><tr><th>الفيلم</th><th>المهمة</th><th>الحالة</th><th>تاريخ الاستحقاق</th></tr></thead><tbody>`;
+                    data.research[person].forEach(task => {
+                        rHtml += `<tr>
+              <td>${task.project}</td>
+              <td>${task.element}</td>
+              <td>${task.status}</td>
+              <td>${formatDate(task.dueDate)}</td>
+            </tr>`;
+                    });
+                    rHtml += `</tbody></table>`;
+                }
+            }
+            document.getElementById('research-content').innerHTML = rHtml;
+
+            // 2. Fixing
+            let fHtml = '';
+            if (data.fixing.length === 0) {
+                fHtml = '<p>لا توجد مهام فكسز أو تصاريح.</p>';
+            } else {
+                fHtml += `<table><thead><tr><th>الفيلم</th><th>نوع التصريح/المهمة</th><th>التفاصيل</th><th>المسؤول</th><th>الحالة</th></tr></thead><tbody>`;
+                data.fixing.forEach(task => {
+                    fHtml += `<tr>
+            <td>${task.project}</td>
+            <td>${task.subtype || task.element}</td>
+            <td>${task.details || '-'}</td>
+            <td>${task.assignedTo || '-'}</td>
+            <td>${task.status}</td>
+          </tr>`;
+                });
+                fHtml += `</tbody></table>`;
+            }
+            document.getElementById('fixing-content').innerHTML = fHtml;
+        }
+
+        function renderFilmingLogistics(data) {
+            if (!data || data.length === 0) {
+                document.getElementById('filming-grid').innerHTML = '<p>لا توجد جداول تصوير حالية.</p>';
+                return;
+            }
+
+            let html = '';
+            data.forEach(city => {
+                const projectList = city.projectNames.split(', ').map(p => `<span class="chip">${p}</span>`).join('');
+
+                html += `
+          <div class="city-card">
+            <div class="city-name">
+              <span>📍 ${city.city}</span>
+            </div>
+            <div class="stat-row">
+              <span>📅 البداية: ${city.startDate}</span>
+              <span>النهاية: ${city.endDate}</span>
+            </div>
+            <div class="stat-row">
+              <span>عدد الأفلام: ${city.projectCount}</span>
+              <span>المهام: ${city.tasksCount}</span>
+            </div>
+            <div style="margin-top:10px; font-weight:bold; font-size:0.9em;">الأفلام الموجودة:</div>
+            <div class="project-chips">
+              ${projectList}
+            </div>
+          </div>
+        `;
+            });
+            document.getElementById('filming-grid').innerHTML = html;
+        }
+
+        function formatDate(d) {
+            if (!d) return '-';
+            return new Date(d).toLocaleDateString('ar-EG');
+        }
+    </script>
+</body>
+
+</html>
