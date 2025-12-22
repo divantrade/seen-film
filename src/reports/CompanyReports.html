@@ -258,24 +258,39 @@
 
             let html = '';
             data.forEach(city => {
-                const projectList = city.projectNames.split(', ').map(p => `<span class="chip">${p}</span>`).join('');
+                // Group tasks by project for display
+                const tasksByProject = {};
+                city.tasks.forEach(t => {
+                    const p = t.project;
+                    if (!tasksByProject[p]) tasksByProject[p] = [];
+                    tasksByProject[p].push(t);
+                });
+
+                let tasksHtml = '';
+                for (const [project, tasks] of Object.entries(tasksByProject)) {
+                    tasksHtml += `<div style="margin-top:10px; background:#f9f9f9; padding:8px; border-radius:4px; border-right:3px solid var(--secondary);">
+                        <div style="font-weight:bold; font-size:0.9em; margin-bottom:4px;">🎥 ${project}</div>
+                        <ul style="margin:0; padding-right:15px; font-size:0.85em; color:#444;">`;
+                    tasks.forEach(t => {
+                        tasksHtml += `<li>${t.subtype.replace('تصوير', '')}: ${t.element} (${t.assignedTo || 'غير معين'}) - <span style="font-size:0.8em; color:#888">${t.status}</span></li>`;
+                    });
+                    tasksHtml += `</ul></div>`;
+                }
 
                 html += `
           <div class="city-card">
             <div class="city-name">
               <span>📍 ${city.city}</span>
+              <span class="date-badge">${city.startDate} ➡ ${city.endDate}</span>
             </div>
-            <div class="stat-row">
-              <span>📅 البداية: ${city.startDate}</span>
-              <span>النهاية: ${city.endDate}</span>
-            </div>
+            
             <div class="stat-row">
               <span>عدد الأفلام: ${city.projectCount}</span>
-              <span>المهام: ${city.tasksCount}</span>
+              <span>إجمالي المهام: ${city.tasksCount}</span>
             </div>
-            <div style="margin-top:10px; font-weight:bold; font-size:0.9em;">الأفلام الموجودة:</div>
-            <div class="project-chips">
-              ${projectList}
+
+            <div style="max-height: 250px; overflow-y: auto; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                ${tasksHtml}
             </div>
           </div>
         `;
