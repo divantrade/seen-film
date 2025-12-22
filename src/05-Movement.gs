@@ -246,15 +246,19 @@ function onMovementEdit(e) {
         .build();
       subtypeCell.setDataValidation(rule);
     } else {
-      // إزالة التحقق للتصوير (يُدخل اسم المدينة يدوياً)
-      sheet.getRange(row, MOVEMENT_COLS.SUBTYPE).clearDataValidations();
+    // إزالة التحقق للتصوير (الإنتاج) إذا كان يتطلب إدخال يدوي
+    const stageKey = Object.keys(STAGES).find(key => STAGES[key].name === stage);
+    if(stageKey === 'PRODUCTION' || stageKey === 'SHOOTING') {
+       sheet.getRange(row, MOVEMENT_COLS.SUBTYPE).clearDataValidations();
     }
   }
+}
 
-  // إنشاء فولدر تلقائي للتصوير عند إدخال العنصر
+  // إنشاء فولدر تلقائي للتصوير (الإنتاج) عند إدخال العنصر
   if (col === MOVEMENT_COLS.ELEMENT && row > 1) {
     const stage = sheet.getRange(row, MOVEMENT_COLS.STAGE).getValue();
-    const isShootingStage = stage === 'التصوير' || stage === 'تصوير' || (stage && stage.toLowerCase() === 'shooting');
+    // التحقق من مرحلة الإنتاج أو التصوير
+    const isShootingStage = stage === 'الإنتاج' || stage === 'التصوير';
 
     if (isShootingStage && e.value) {
       const project = sheet.getRange(row, MOVEMENT_COLS.PROJECT).getValue();
