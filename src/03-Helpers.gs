@@ -400,6 +400,22 @@ function getTeamRolesFromSettings() {
 }
 
 /**
+ * الحصول على المدن من شيت الإعدادات (العمود D)
+ */
+function getCitiesFromSettings() {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  if (!sheet) return CONFIG.DEFAULT_CITIES;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 6) return CONFIG.DEFAULT_CITIES;
+
+  const data = sheet.getRange(6, 4, lastRow - 5, 1).getValues();
+  const cities = data.map(row => row[0]).filter(Boolean);
+
+  return cities.length > 0 ? cities : CONFIG.DEFAULT_CITIES;
+}
+
+/**
  * الحصول على الحالات من شيت الإعدادات (العمود C)
  */
 function getStatusesFromSettings() {

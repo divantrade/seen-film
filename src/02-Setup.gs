@@ -109,6 +109,7 @@ function createTeamSheet(ss) {
   sheet.setColumnWidth(TEAM_COLS.CODE, 100);
   sheet.setColumnWidth(TEAM_COLS.NAME, 150);
   sheet.setColumnWidth(TEAM_COLS.ROLE, 120);
+  sheet.setColumnWidth(TEAM_COLS.CITY, 120);
   sheet.setColumnWidth(TEAM_COLS.EMAIL, 200);
   sheet.setColumnWidth(TEAM_COLS.PHONE, 130);
   sheet.setColumnWidth(TEAM_COLS.STATUS, 100);
@@ -120,6 +121,7 @@ function createTeamSheet(ss) {
 
   // إضافة القوائم المنسدلة
   setDropdown(sheet, 2, TEAM_COLS.ROLE, 500, getTeamRolesFromSettings());
+  setDropdown(sheet, 2, TEAM_COLS.CITY, 500, getCitiesFromSettings());
   setDropdown(sheet, 2, TEAM_COLS.STATUS, 500, TEAM_STATUS);
 
   return sheet;
@@ -289,6 +291,15 @@ function createSettingsSheet(ss) {
   const statusList = STATUS_WITH_ICONS;
   for (let i = 0; i < statusList.length; i++) {
     sheet.getRange(6 + i, 3).setValue(statusList[i]);
+  }
+
+  // قسم المدن (عمود D)
+  sheet.getRange('D5').setValue('المدن');
+  sheet.getRange('D5').setBackground(COLORS.INFO).setFontWeight('bold');
+
+  const cityList = CONFIG.DEFAULT_CITIES;
+  for (let i = 0; i < cityList.length; i++) {
+    sheet.getRange(6 + i, 4).setValue(cityList[i]);
   }
 
   // قسم المراحل والمراحل الفرعية (أعمدة E, F, G, H)

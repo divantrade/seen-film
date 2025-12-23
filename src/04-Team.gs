@@ -32,6 +32,13 @@ function showAddTeamMemberForm() {
         </select>
       </div>
       <div class="form-group">
+        <label>المدينة *</label>
+        <select id="city" required>
+          <option value="">اختر المدينة</option>
+          ${getCitiesFromSettings().map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
         <label>البريد الإلكتروني</label>
         <input type="email" id="email">
       </div>
@@ -52,6 +59,7 @@ function showAddTeamMemberForm() {
         const data = {
           name: document.getElementById('name').value,
           role: document.getElementById('role').value,
+          city: document.getElementById('city').value,
           email: document.getElementById('email').value,
           phone: document.getElementById('phone').value,
           notes: document.getElementById('notes').value
@@ -83,6 +91,7 @@ function addTeamMember(data) {
   sheet.getRange(newRow, TEAM_COLS.CODE).setValue(code);
   sheet.getRange(newRow, TEAM_COLS.NAME).setValue(cleanText(data.name));
   sheet.getRange(newRow, TEAM_COLS.ROLE).setValue(data.role);
+  sheet.getRange(newRow, TEAM_COLS.CITY).setValue(data.city || '');
   sheet.getRange(newRow, TEAM_COLS.EMAIL).setValue(data.email || '');
   sheet.getRange(newRow, TEAM_COLS.PHONE).setValue(data.phone || '');
   sheet.getRange(newRow, TEAM_COLS.STATUS).setValue('نشط');
@@ -132,10 +141,17 @@ function updateMovementDropdowns() {
 
   if (!movementSheet) return;
 
-  // تحديث قائمة المسؤولين
+  // تحديث قائمة المسؤولين والمدن
   const teamNames = getActiveTeamNames();
+  const cities = getCitiesFromSettings();
   if (teamNames.length > 0) {
     setDropdown(movementSheet, 2, MOVEMENT_COLS.ASSIGNED_TO, 500, teamNames);
+  }
+
+  // تحديث قائمة المدن في شيت الفريق
+  const teamSheet = getSheet(SHEETS.TEAM);
+  if (teamSheet && cities.length > 0) {
+    setDropdown(teamSheet, 2, TEAM_COLS.CITY, 500, cities);
   }
 
   // تحديث قائمة المشاريع
@@ -201,6 +217,7 @@ function findTeamMemberByName(name) {
     code: data[TEAM_COLS.CODE - 1],
     name: data[TEAM_COLS.NAME - 1],
     role: data[TEAM_COLS.ROLE - 1],
+    city: data[TEAM_COLS.CITY - 1],
     email: data[TEAM_COLS.EMAIL - 1],
     phone: data[TEAM_COLS.PHONE - 1],
     status: data[TEAM_COLS.STATUS - 1]
