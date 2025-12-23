@@ -242,80 +242,51 @@ function createSettingsSheet(ss) {
     isNewSheet = true;
   }
 
-  // حفظ البيانات الموجودة قبل التنظيف
-  let existingFolderLink = '';
-
-  if (!isNewSheet) {
-    // حفظ رابط الفولدر
-    existingFolderLink = sheet.getRange('B3').getValue();
-    if (existingFolderLink === '(أدخل رابط الفولدر هنا)') {
-      existingFolderLink = '';
-    }
-  }
-
-  // تنظيف الشيت
-  sheet.clear();
-
-  // العنوان
+  // 1. العنوان وتنسيق الهيدر العلوي
   sheet.getRange('A1').setValue('إعدادات النظام');
   sheet.getRange('A1:C1').merge()
     .setBackground(COLORS.HEADER)
     .setFontColor(COLORS.HEADER_TEXT)
     .setFontWeight('bold');
 
-  // رابط فولدر الإنتاج الرئيسي
-  sheet.getRange('A3').setValue('فولدر الإنتاج الرئيسي:');
-  sheet.getRange('B3').setValue(existingFolderLink || '(أدخل رابط الفولدر هنا)');
-  sheet.getRange('A3').setFontWeight('bold');
-
-  // قسم أنواع المشاريع
-  sheet.getRange('A5').setValue('أنواع المشاريع');
-  sheet.getRange('A5').setBackground(COLORS.INFO).setFontWeight('bold');
-
-  for (let i = 0; i < PROJECT_TYPES.length; i++) {
-    sheet.getRange(6 + i, 1).setValue(PROJECT_TYPES[i]);
+  // 2. تحديث رابط المجلد (فقط إذا برز أو جديد)
+  const folderLinkRange = sheet.getRange('B3');
+  const folderLinkValue = folderLinkRange.getValue();
+  if (isNewSheet || !folderLinkValue || folderLinkValue === '(أدخل رابط الفولدر هنا)') {
+    sheet.getRange('A3').setValue('فولدر الإنتاج الرئيسي:').setFontWeight('bold');
+    folderLinkRange.setValue('(أدخل رابط الفولدر هنا)');
   }
 
-  // قسم الأدوار
-  sheet.getRange('B5').setValue('أدوار الفريق');
-  sheet.getRange('B5').setBackground(COLORS.INFO).setFontWeight('bold');
+  // دالة مساعدة لملء القوائم إذا كانت فارغة
+  const fillIfEmpty = (col, header, defaultList) => {
+    sheet.getRange(5, col).setValue(header).setBackground(COLORS.INFO).setFontWeight('bold');
+    const firstCell = sheet.getRange(6, col);
+    if (isNewSheet || !firstCell.getValue()) {
+      for (let i = 0; i < defaultList.length; i++) {
+        sheet.getRange(6 + i, col).setValue(defaultList[i]);
+      }
+    }
+  };
 
-  for (let i = 0; i < TEAM_ROLES.length; i++) {
-    sheet.getRange(6 + i, 2).setValue(TEAM_ROLES[i]);
+  // 3. ملء القوائم الأساسية (A, B, C, D) مع الحفاظ على التعديلات اليدوية
+  fillIfEmpty(1, 'أنواع المشاريع', PROJECT_TYPES);
+  fillIfEmpty(2, 'أدوار الفريق', TEAM_ROLES);
+  fillIfEmpty(3, 'الحالات', STATUS_WITH_ICONS);
+  fillIfEmpty(4, 'المدن', CONFIG.DEFAULT_CITIES);
+
+  // 4. تحديث المراحل والمراحل الفرعية (E, F, G, H) - يتم التحديث دائماً لضمان المزامنة
+  sheet.getRange('E5').setValue('المرحلة').setBackground(COLORS.INFO).setFontWeight('bold');
+  sheet.getRange('F5').setValue('المرحلة الفرعية').setBackground(COLORS.INFO).setFontWeight('bold');
+  sheet.getRange('G5').setValue('Stage').setBackground(COLORS.INFO).setFontWeight('bold');
+  sheet.getRange('H5').setValue('Subtype').setBackground(COLORS.INFO).setFontWeight('bold');
+
+  // مسح البيانات القديمة للمراحل فقط قبل إعادة الكتابة (بداية من الصف 6 في الأعمدة E-H)
+  const maxRows = sheet.getMaxRows();
+  if (maxRows >= 6) {
+    sheet.getRange(6, 5, maxRows - 5, 4).clearContent();
   }
 
-  // قسم الحالات
-  sheet.getRange('C5').setValue('الحالات');
-  sheet.getRange('C5').setBackground(COLORS.INFO).setFontWeight('bold');
-
-  const statusList = STATUS_WITH_ICONS;
-  for (let i = 0; i < statusList.length; i++) {
-    sheet.getRange(6 + i, 3).setValue(statusList[i]);
-  }
-
-  // قسم المدن (عمود D)
-  sheet.getRange('D5').setValue('المدن');
-  sheet.getRange('D5').setBackground(COLORS.INFO).setFontWeight('bold');
-
-  const cityList = CONFIG.DEFAULT_CITIES;
-  for (let i = 0; i < cityList.length; i++) {
-    sheet.getRange(6 + i, 4).setValue(cityList[i]);
-  }
-
-  // قسم المراحل والمراحل الفرعية (أعمدة E, F, G, H)
-  sheet.getRange('E5').setValue('المرحلة');
-  sheet.getRange('E5').setBackground(COLORS.INFO).setFontWeight('bold');
-  sheet.getRange('F5').setValue('المرحلة الفرعية');
-  sheet.getRange('F5').setBackground(COLORS.INFO).setFontWeight('bold');
-  sheet.getRange('G5').setValue('Stage');
-  sheet.getRange('G5').setBackground(COLORS.INFO).setFontWeight('bold');
-  sheet.getRange('H5').setValue('Subtype');
-  sheet.getRange('H5').setBackground(COLORS.INFO).setFontWeight('bold');
-
-  // إضافة بيانات المراحل والمراحل الفرعية
   let stageRow = 6;
-
-  // استخدام البيانات الافتراضية دائماً لتحديث الشيت
   for (const key in STAGES) {
     const stage = STAGES[key];
     if (stage.subtypes && stage.subtypes.length > 0) {
@@ -333,9 +304,10 @@ function createSettingsSheet(ss) {
   }
 
   // تعيين عرض الأعمدة
-  sheet.setColumnWidth(1, 200);
+  sheet.setColumnWidth(1, 150);
   sheet.setColumnWidth(2, 150);
   sheet.setColumnWidth(3, 150);
+  sheet.setColumnWidth(4, 150);
   sheet.setColumnWidth(5, 120);
   sheet.setColumnWidth(6, 150);
   sheet.setColumnWidth(7, 120);
