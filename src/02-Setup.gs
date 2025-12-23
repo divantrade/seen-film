@@ -548,3 +548,34 @@ function hideFolderLinksSheet() {
     showSuccess('تم إخفاء شيت روابط الفولدرات');
   }
 }
+
+/**
+ * تحديث هيكل النظام لإضافة حقل المدينة
+ * يقوم بإدراج عمود جديد في شيت الفريق وتحديث الإعدادات
+ */
+function migrateSystemForCity() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const teamSheet = ss.getSheetByName(SHEETS.TEAM);
+  
+  if (teamSheet) {
+    // 1. التأكد من أن العمود الرابع ليس هو "المدينة" بالفعل
+    const currentHeader = teamSheet.getRange(1, 4).getValue();
+    if (currentHeader !== 'المدينة') {
+      // إدراج عمود جديد في المكان الرابع (بعد العمود 3)
+      teamSheet.insertColumnAfter(3);
+      teamSheet.getRange(1, 4).setValue('المدينة');
+      console.log('تم إدراج عمود المدينة في شيت الفريق');
+    }
+  }
+  
+  // 2. تحديث شيت الإعدادات لإضافة عمود المدن
+  createSettingsSheet(ss);
+  
+  // 3. تحديث الهيدرات وتنسيق شيت الفريق بالكامل
+  createTeamSheet(ss);
+  
+  // 4. تحديث القوائم المنسدلة في النظام
+  updateMovementDropdowns();
+  
+  SpreadsheetApp.getUi().alert('تم التحديث بنجاح!', 'تم إضافة حقل المدينة وتحديث الإعدادات بنجاح.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
