@@ -82,8 +82,8 @@ function createProjectsSheet(ss) {
   sheet.setFrozenRows(1);
 
   // إضافة القوائم المنسدلة
-  setDropdown(sheet, 2, PROJECT_COLS.TYPE, 100, PROJECT_TYPES);
-  setDropdown(sheet, 2, PROJECT_COLS.STATUS, 100, PROJECT_STATUS);
+  setDropdown(sheet, 2, PROJECT_COLS.TYPE, 500, getProjectTypesFromSettings());
+  setDropdown(sheet, 2, PROJECT_COLS.STATUS, 500, getStatusesFromSettings());
 
   return sheet;
 }
@@ -119,8 +119,8 @@ function createTeamSheet(ss) {
   sheet.setFrozenRows(1);
 
   // إضافة القوائم المنسدلة
-  setDropdown(sheet, 2, TEAM_COLS.ROLE, 100, TEAM_ROLES);
-  setDropdown(sheet, 2, TEAM_COLS.STATUS, 100, TEAM_STATUS);
+  setDropdown(sheet, 2, TEAM_COLS.ROLE, 500, getTeamRolesFromSettings());
+  setDropdown(sheet, 2, TEAM_COLS.STATUS, 500, TEAM_STATUS);
 
   return sheet;
 }

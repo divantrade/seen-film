@@ -356,26 +356,63 @@ function getSubtypesFromSettings(stageName) {
  */
 function getStagesFromSettings() {
   const sheet = getSheet(SHEETS.SETTINGS);
-  if (!sheet) return STAGE_NAMES; // fallback للقيم الافتراضية
+  if (!sheet) return STAGE_NAMES;
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 6) return STAGE_NAMES;
 
   const data = sheet.getRange(6, 5, lastRow - 5, 1).getValues();
-  const stages = new Set();
+  const stages = [...new Set(data.map(row => row[0]).filter(Boolean))];
 
-  for (const row of data) {
-    if (row[0]) {
-      stages.add(row[0]);
-    }
-  }
+  return stages.length > 0 ? stages : STAGE_NAMES;
+}
 
-  // إرجاع المراحل من الإعدادات فقط إذا وجدت
-  if (stages.size > 0) {
-    return Array.from(stages);
-  }
+/**
+ * الحصول على أنواع المشاريع من شيت الإعدادات (العمود A)
+ */
+function getProjectTypesFromSettings() {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  if (!sheet) return PROJECT_TYPES;
 
-  return STAGE_NAMES;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 6) return PROJECT_TYPES;
+
+  const data = sheet.getRange(6, 1, lastRow - 5, 1).getValues();
+  const types = data.map(row => row[0]).filter(Boolean);
+
+  return types.length > 0 ? types : PROJECT_TYPES;
+}
+
+/**
+ * الحصول على أدوار الفريق من شيت الإعدادات (العمود B)
+ */
+function getTeamRolesFromSettings() {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  if (!sheet) return TEAM_ROLES;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 6) return TEAM_ROLES;
+
+  const data = sheet.getRange(6, 2, lastRow - 5, 1).getValues();
+  const roles = data.map(row => row[0]).filter(Boolean);
+
+  return roles.length > 0 ? roles : TEAM_ROLES;
+}
+
+/**
+ * الحصول على الحالات من شيت الإعدادات (العمود C)
+ */
+function getStatusesFromSettings() {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  if (!sheet) return PROJECT_STATUS;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 6) return PROJECT_STATUS;
+
+  const data = sheet.getRange(6, 3, lastRow - 5, 1).getValues();
+  const statuses = data.map(row => row[0]).filter(Boolean);
+
+  return statuses.length > 0 ? statuses : PROJECT_STATUS;
 }
 
 /**

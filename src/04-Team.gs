@@ -28,7 +28,7 @@ function showAddTeamMemberForm() {
         <label>الدور *</label>
         <select id="role" required>
           <option value="">اختر الدور</option>
-          ${TEAM_ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
+          ${getTeamRolesFromSettings().map(r => `<option value="${r}">${r}</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
@@ -145,9 +145,9 @@ function updateMovementDropdowns() {
   }
 
   // تحديث قائمة المنتجين والمونتيرين في شيت المشاريع
-  if (projectsSheet && teamNames.length > 0) {
-    setDropdown(projectsSheet, 2, PROJECT_COLS.PRODUCER, 100, teamNames);
-    setDropdown(projectsSheet, 2, PROJECT_COLS.EDITOR, 100, teamNames);
+  if (projectsSheet) {
+    setDropdown(projectsSheet, 2, PROJECT_COLS.PRODUCER, 500, teamNames);
+    setDropdown(projectsSheet, 2, PROJECT_COLS.EDITOR, 500, teamNames);
   }
 }
 
@@ -156,26 +156,32 @@ function updateMovementDropdowns() {
  */
 function onTeamEdit(e) {
   const sheet = e.source.getActiveSheet();
-
   if (sheet.getName() !== SHEETS.TEAM) return;
 
-  const row = e.range.getRow();
-  const col = e.range.getColumn();
+  const range = e.range;
+  const startRow = range.getRow();
+  const numRows = range.getNumRows();
+  const col = range.getColumn();
 
-  // إذا تم تعديل الدور، قم بتحديث الكود
-  if (col === TEAM_COLS.ROLE && row > 1) {
-    const newRole = e.value;
-    const currentCode = sheet.getRange(row, TEAM_COLS.CODE).getValue();
+  // معالجة كل صف في النطاق المعدل (لدعم النسخ واللصق)
+  for (let i = 0; i < numRows; i++) {
+    const currentRow = startRow + i;
+    if (currentRow <= 1) continue;
 
-    // فقط إذا كان الكود فارغاً
-    if (!currentCode) {
-      const newCode = generateTeamCode(newRole);
-      sheet.getRange(row, TEAM_COLS.CODE).setValue(newCode);
+    // إذا تم تعديل الدور أو الاسم، تأكد من وجود كود
+    if (col === TEAM_COLS.ROLE || col === TEAM_COLS.NAME) {
+      const role = sheet.getRange(currentRow, TEAM_COLS.ROLE).getValue();
+      const currentCode = sheet.getRange(currentRow, TEAM_COLS.CODE).getValue();
+
+      if (!currentCode && role) {
+        const newCode = generateTeamCode(role);
+        sheet.getRange(currentRow, TEAM_COLS.CODE).setValue(newCode);
+      }
     }
   }
 
-  // إذا تم تعديل الحالة، قم بتحديث القوائم
-  if (col === TEAM_COLS.STATUS) {
+  // إذا تم تعديل الحالة أو الدور أو الاسم، قم بتحديث القوائم المنسدلة
+  if (col === TEAM_COLS.STATUS || col === TEAM_COLS.ROLE || col === TEAM_COLS.NAME) {
     updateMovementDropdowns();
   }
 }

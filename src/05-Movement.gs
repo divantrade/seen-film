@@ -42,7 +42,7 @@ function showAddMovementForm() {
           <label>المرحلة *</label>
           <select id="stage" required onchange="updateSubtypes()">
             <option value="">اختر المرحلة</option>
-            ${STAGE_NAMES.map(s => `<option value="${s}">${s}</option>`).join('')}
+            ${getStagesFromSettings().map(s => `<option value="${s}">${s}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
@@ -203,80 +203,87 @@ function markAsDelayed() {
  */
 function onMovementEdit(e) {
   const sheet = e.source.getActiveSheet();
-
   if (sheet.getName() !== SHEETS.MOVEMENT) return;
 
-  const row = e.range.getRow();
-  const col = e.range.getColumn();
+  const range = e.range;
+  const startRow = range.getRow();
+  const numRows = range.getNumRows();
+  const col = range.getColumn();
 
-  // ملء التاريخ والرقم تلقائياً عند إدخال بيانات جديدة
-  if (row > 1 && col > MOVEMENT_COLS.DATE) {
-    const numberCell = sheet.getRange(row, MOVEMENT_COLS.NUMBER);
-    const dateCell = sheet.getRange(row, MOVEMENT_COLS.DATE);
+  // معالجة كل صف في النطاق المعدللدعم النسخ واللصق
+  for (let i = 0; i < numRows; i++) {
+    const currentRow = startRow + i;
+    if (currentRow <= 1) continue;
 
-    // ملء الرقم إذا كان فارغاً
-    if (!numberCell.getValue()) {
-      const lastRow = getLastRowInColumn(sheet, MOVEMENT_COLS.PROJECT);
-      const newNumber = Math.max(row - 1, lastRow > 1 ? lastRow : 1);
-      numberCell.setValue(newNumber);
-    }
+    // 1. ملء التاريخ والرقم تلقائياً عند إدخال بيانات جديدة (إذا كان المشروع موجوداً)
+    if (col >= MOVEMENT_COLS.PROJECT) {
+      const project = sheet.getRange(currentRow, MOVEMENT_COLS.PROJECT).getValue();
+      if (project) {
+        const numberCell = sheet.getRange(currentRow, MOVEMENT_COLS.NUMBER);
+        const dateCell = sheet.getRange(currentRow, MOVEMENT_COLS.DATE);
 
-    // ملء التاريخ إذا كان فارغاً
-    if (!dateCell.getValue()) {
-      dateCell.setValue(getCurrentDate());
-    }
-  }
-
-  // تلوين الصف عند تغيير الحالة
-  if (col === MOVEMENT_COLS.STATUS && row > 1) {
-    colorRowByStatus(sheet, row, e.value);
-  }
-
-  // تحديث الأنواع الفرعية عند تغيير المرحلة
-  if (col === MOVEMENT_COLS.STAGE && row > 1) {
-    const stage = e.value;
-    // قراءة الأنواع الفرعية من شيت الإعدادات
-    const subtypes = getSubtypesFromSettings(stage);
-
-    if (subtypes && subtypes.length > 0) {
-      const subtypeCell = sheet.getRange(row, MOVEMENT_COLS.SUBTYPE);
-      const rule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(subtypes, true)
-        .setAllowInvalid(true)
-        .build();
-      subtypeCell.setDataValidation(rule);
-    } else {
-    // إزالة التحقق للتصوير (الإنتاج) إذا كان يتطلب إدخال يدوي
-    const stageKey = Object.keys(STAGES).find(key => STAGES[key].name === stage);
-    if(stageKey === 'PRODUCTION' || stageKey === 'SHOOTING') {
-       sheet.getRange(row, MOVEMENT_COLS.SUBTYPE).clearDataValidations();
-    }
-  }
-  
-  // [NEW] Trigger Smart Automation (Shortcuts & Folder Logic)
-  const project = sheet.getRange(row, MOVEMENT_COLS.PROJECT).getValue();
-  if (project && stage) {
-      try {
-        onProjectStageChange(project, stage);
-      } catch (err) {
-        console.error('خطأ في الأتمتة:', err);
+        if (!numberCell.getValue()) {
+          const lastRow = getLastRowInColumn(sheet, MOVEMENT_COLS.PROJECT);
+          // تقدير الرقم التسلسلي
+          numberCell.setValue(currentRow - 1);
+        }
+        if (!dateCell.getValue()) {
+          dateCell.setValue(getCurrentDate());
+        }
       }
-  }
-}
+    }
 
-  // إنشاء فولدر تلقائي للتصوير (الإنتاج) عند إدخال العنصر
-  if (col === MOVEMENT_COLS.ELEMENT && row > 1) {
-    const stage = sheet.getRange(row, MOVEMENT_COLS.STAGE).getValue();
-    // التحقق من مرحلة الإنتاج أو التصوير
-    const isShootingStage = stage === 'الإنتاج' || stage === 'التصوير';
+    // 2. تلوين الصف عند تغيير الحالة
+    if (col === MOVEMENT_COLS.STATUS) {
+      const status = sheet.getRange(currentRow, MOVEMENT_COLS.STATUS).getValue();
+      colorRowByStatus(sheet, currentRow, status);
+    }
 
-    if (isShootingStage && e.value) {
-      const project = sheet.getRange(row, MOVEMENT_COLS.PROJECT).getValue();
-      const subtype = sheet.getRange(row, MOVEMENT_COLS.SUBTYPE).getValue();
-      const existingLink = sheet.getRange(row, MOVEMENT_COLS.LINK).getValue();
+    // 3. تحديث الأنواع الفرعية عند تغيير المرحلة
+    if (col === MOVEMENT_COLS.STAGE) {
+      const stage = sheet.getRange(currentRow, MOVEMENT_COLS.STAGE).getValue();
+      const subtypes = getSubtypesFromSettings(stage);
 
-      if (!existingLink && project) {
-        createShootingFolder(project, subtype, row, e.value);
+      if (subtypes && subtypes.length > 0) {
+        const subtypeCell = sheet.getRange(currentRow, MOVEMENT_COLS.SUBTYPE);
+        const rule = SpreadsheetApp.newDataValidation()
+          .requireValueInList(subtypes, true)
+          .setAllowInvalid(true)
+          .build();
+        subtypeCell.setDataValidation(rule);
+      } else {
+        // إزالة التحقق لبعض المراحل الخاصة
+        const stageKey = Object.keys(STAGES).find(key => STAGES[key].name === stage);
+        if (stageKey === 'PRODUCTION' || stageKey === 'SHOOTING') {
+          sheet.getRange(currentRow, MOVEMENT_COLS.SUBTYPE).clearDataValidations();
+        }
+      }
+      
+      // [NEW] Trigger Smart Automation (Shortcuts & Folder Logic)
+      const project = sheet.getRange(currentRow, MOVEMENT_COLS.PROJECT).getValue();
+      if (project && stage) {
+        try {
+          onProjectStageChange(project, stage);
+        } catch (err) {
+          console.error('خطأ في الأتمتة:', err);
+        }
+      }
+    }
+
+    // 4. إنشاء فولدر تلقائي للتصوير (الإنتاج) عند إدخال العنصر
+    if (col === MOVEMENT_COLS.ELEMENT) {
+      const stage = sheet.getRange(currentRow, MOVEMENT_COLS.STAGE).getValue();
+      const isShootingStage = stage === 'الإنتاج' || stage === 'التصوير';
+      const elementValue = sheet.getRange(currentRow, MOVEMENT_COLS.ELEMENT).getValue();
+
+      if (isShootingStage && elementValue) {
+        const project = sheet.getRange(currentRow, MOVEMENT_COLS.PROJECT).getValue();
+        const subtype = sheet.getRange(currentRow, MOVEMENT_COLS.SUBTYPE).getValue();
+        const existingLink = sheet.getRange(currentRow, MOVEMENT_COLS.LINK).getValue();
+
+        if (!existingLink && project) {
+          createShootingFolder(project, subtype, currentRow, elementValue);
+        }
       }
     }
   }

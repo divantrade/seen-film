@@ -99,26 +99,38 @@ function onEdit(e) {
  */
 function onProjectEdit(e) {
   const sheet = e.source.getActiveSheet();
-  const row = e.range.getRow();
-  const col = e.range.getColumn();
+  if (sheet.getName() !== SHEETS.PROJECTS) return;
 
-  if (row <= 1) return;
+  const range = e.range;
+  const startRow = range.getRow();
+  const numRows = range.getNumRows();
+  const col = range.getColumn();
 
-  // توليد الكود تلقائياً عند إدخال اسم المشروع
-  if (col === PROJECT_COLS.NAME) {
-    const currentCode = sheet.getRange(row, PROJECT_COLS.CODE).getValue();
-    if (!currentCode && e.value) {
-      const newCode = generateProjectCode();
-      sheet.getRange(row, PROJECT_COLS.CODE).setValue(newCode);
+  // معالجة كل صف بدعم للنسخ واللصق
+  for (let i = 0; i < numRows; i++) {
+    const currentRow = startRow + i;
+    if (currentRow <= 1) continue;
 
-      // ملاحظة: لا يمكن إنشاء الفولدرات من onEdit بسبب صلاحيات محدودة
-      // استخدم القائمة: المشاريع > إنشاء فولدرات المشروع
-      SpreadsheetApp.getActiveSpreadsheet().toast(
-        'تم إنشاء الكود. لإنشاء فولدرات المشروع، استخدم القائمة: المشاريع > إنشاء فولدرات المشروع',
-        'تنبيه',
-        5
-      );
+    // توليد الكود تلقائياً عند إدخال اسم المشروع
+    if (col === PROJECT_COLS.NAME) {
+      const name = sheet.getRange(currentRow, PROJECT_COLS.NAME).getValue();
+      const currentCode = sheet.getRange(currentRow, PROJECT_COLS.CODE).getValue();
+      
+      if (!currentCode && name) {
+        const newCode = generateProjectCode();
+        sheet.getRange(currentRow, PROJECT_COLS.CODE).setValue(newCode);
+        
+        SpreadsheetApp.getActiveSpreadsheet().toast(
+          `تم تكويد المشروع: ${name}. اذهب للقائمة لإنشاء الفولدرات.`,
+          'تنبيه'
+        );
+      }
     }
+  }
+
+  // إذا تم تغيير الاسم، نقوم بتحديث قوائم الحركة
+  if (col === PROJECT_COLS.NAME) {
+    updateMovementDropdowns();
   }
 }
 
@@ -157,7 +169,7 @@ function showAddProjectForm() {
         <label>نوع الفيلم *</label>
         <select id="type" required>
           <option value="">اختر النوع</option>
-          ${PROJECT_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+          ${getProjectTypesFromSettings().map(t => `<option value="${t}">${t}</option>`).join('')}
         </select>
       </div>
       <div class="row">
