@@ -231,6 +231,7 @@ function createDashboardSheet(ss) {
  * إنشاء شيت الإعدادات
  */
 function createSettingsSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEETS.SETTINGS);
   let isNewSheet = false;
 
