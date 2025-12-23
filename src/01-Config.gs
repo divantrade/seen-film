@@ -163,43 +163,59 @@ const MOVEMENT_HEADERS = [
 const STAGES = {
   DEVELOPMENT: {
     name: 'التطوير',
+    engName: 'Development',
     icon: '🧠',
-    subtypes: ['الفكرة', 'البحث', 'المعالجة', 'اسكربت أولي', 'قائمة الضيوف']
+    subtypes: ['الفكرة', 'البحث', 'المعالجة', 'اسكربت أولي', 'قائمة الضيوف'],
+    engSubtypes: ['Idea', 'Research', 'Treatment', 'Initial Script', 'Guest List']
   },
   PRE_PRODUCTION: {
     name: 'التحضير',
+    engName: 'Pre-Production',
     icon: '📝',
-    subtypes: ['الفكسز', 'إعداد الأسئلة', 'تنسيق المدن', 'تنسيق الدراما']
+    subtypes: ['الفكسز', 'إعداد الأسئلة', 'تنسيق المدن', 'تنسيق الدراما'],
+    engSubtypes: ['Fixers', 'Questions Prep', 'City Coordination', 'Drama Coordination']
   },
   PRODUCTION: {
     name: 'الإنتاج',
+    engName: 'Production',
     icon: '🎬',
-    subtypes: ['تصوير مدينة', 'تصوير دراما', 'تصوير ميداني', 'انسرتات']
+    subtypes: ['تصوير مدينة', 'تصوير دراما', 'تصوير ميداني', 'انسرتات'],
+    engSubtypes: ['City Shoot', 'Drama Shoot', 'Field Shoot', 'Inserts']
   },
   POST_PAPERWORK: {
     name: 'ما بعد التصوير (ورقيات)',
+    engName: 'Post-Shoot Paperwork',
     icon: '📄',
-    subtypes: ['اسكربت نهائي', 'تفريغ', 'لوج']
+    subtypes: ['اسكربت نهائي', 'تفريغ', 'لوج'],
+    engSubtypes: ['Final Script', 'Transcription', 'Recording Log']
   },
   POST_ELEMENTS: {
     name: 'عناصر ما بعد الإنتاج',
+    engName: 'Post-Elements',
     icon: '🎨',
-    subtypes: ['جرافيك', 'مشاهد دراما', 'الصوت', 'تعليق صوتي']
+    subtypes: ['جرافيك', 'مشاهد دراما', 'الصوت', 'تعليق صوتي'],
+    engSubtypes: ['Graphics', 'Drama Scenes', 'Audio', 'Voice Over']
   },
   EDITING: {
     name: 'المونتاج',
+    engName: 'Editing',
     icon: '✂️',
-    subtypes: ['مونتاج', 'نسخة أولى', 'نسخة تعديلات', 'نسخة نهائية']
+    subtypes: ['مونتاج', 'نسخة أولى', 'نسخة تعديلات', 'نسخة نهائية'],
+    engSubtypes: ['Montage', 'First Cut', 'Revised Cut', 'Final Cut']
   },
   COLOR_GRADING: {
     name: 'التلوين',
+    engName: 'Color Grading',
     icon: '🎨',
-    subtypes: ['تصحيح ألوان', 'تلوين نهائي']
+    subtypes: ['تصحيح ألوان', 'تلوين نهائي'],
+    engSubtypes: ['Color Correction', 'Final Color']
   },
   DELIVERY: {
     name: 'التسليم',
+    engName: 'Delivery',
     icon: '📦',
-    subtypes: ['مراجعة العميل', 'تصدير', 'تسليم نهائي', 'أرشيف']
+    subtypes: ['مراجعة العميل', 'تصدير', 'تسليم نهائي', 'أرشيف'],
+    engSubtypes: ['Client Review', 'Export', 'Final Delivery', 'Archive']
   }
 };
 

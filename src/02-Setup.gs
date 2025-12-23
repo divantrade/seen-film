@@ -325,12 +325,14 @@ function createSettingsSheet(ss) {
     for (const key in STAGES) {
       const stage = STAGES[key];
       if (stage.subtypes && stage.subtypes.length > 0) {
-        for (const subtype of stage.subtypes) {
+        for (let i = 0; i < stage.subtypes.length; i++) {
+          const subtype = stage.subtypes[i];
+          const engSubtype = stage.engSubtypes ? stage.engSubtypes[i] : '';
+          
           sheet.getRange(stageRow, 5).setValue(stage.name);
           sheet.getRange(stageRow, 6).setValue(subtype);
-          // الترجمة الافتراضية (فارغة - يملأها المستخدم)
-          sheet.getRange(stageRow, 7).setValue('');
-          sheet.getRange(stageRow, 8).setValue('');
+          sheet.getRange(stageRow, 7).setValue(stage.engName || '');
+          sheet.getRange(stageRow, 8).setValue(engSubtype || '');
           stageRow++;
         }
       }
