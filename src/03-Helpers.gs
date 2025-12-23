@@ -28,6 +28,16 @@ function getSheet(sheetName) {
 }
 
 /**
+ * الحصول على رقم العمود بناءً على اسم الهيدر
+ */
+function getColumnByHeader(sheet, headerName) {
+  if (!sheet) return -1;
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const index = headers.indexOf(headerName);
+  return index !== -1 ? index + 1 : -1;
+}
+
+/**
  * الحصول على آخر صف يحتوي على بيانات
  */
 function getLastRow(sheet) {
@@ -196,21 +206,32 @@ function getActiveProjectNames() {
  */
 function getActiveTeamMembers() {
   const sheet = getSheet(SHEETS.TEAM);
-  const lastRow = getLastRowInColumn(sheet, TEAM_COLS.NAME);
+  if (!sheet) return [];
+  
+  // تحديد الأعمدة ديناميكياً بناءً على الهيدر
+  const nameCol = getColumnByHeader(sheet, 'الاسم');
+  const statusCol = getColumnByHeader(sheet, 'الحالة');
+  const codeCol = getColumnByHeader(sheet, 'الكود');
+  const roleCol = getColumnByHeader(sheet, 'الدور');
 
-  if (lastRow <= 1) {
+  if (nameCol === -1 || statusCol === -1) {
+    console.error('لم يتم العثور على أعمدة أساسية في شيت الفريق');
     return [];
   }
 
-  const data = sheet.getRange(2, 1, lastRow - 1, TEAM_COLS.NOTES).getValues();
+  const lastRow = getLastRowInColumn(sheet, nameCol);
+  if (lastRow <= 1) return [];
+
+  const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
   const members = [];
 
   for (const row of data) {
-    if (row[TEAM_COLS.STATUS - 1] === 'نشط') {
+    const status = row[statusCol - 1];
+    if (status === 'نشط') {
       members.push({
-        code: row[TEAM_COLS.CODE - 1],
-        name: row[TEAM_COLS.NAME - 1],
-        role: row[TEAM_COLS.ROLE - 1]
+        code: codeCol !== -1 ? row[codeCol - 1] : '',
+        name: row[nameCol - 1],
+        role: roleCol !== -1 ? row[roleCol - 1] : ''
       });
     }
   }

@@ -138,32 +138,45 @@ function toggleTeamMemberStatus() {
 function updateMovementDropdowns() {
   const movementSheet = getSheet(SHEETS.MOVEMENT);
   const projectsSheet = getSheet(SHEETS.PROJECTS);
+  const teamSheet = getSheet(SHEETS.TEAM);
 
   if (!movementSheet) return;
 
-  // تحديث قائمة المسؤولين والمدن
   const teamNames = getActiveTeamNames();
   const cities = getCitiesFromSettings();
+
+  // 1. تحديث قائمة المسؤولين في شيت الحركة
   if (teamNames.length > 0) {
-    setDropdown(movementSheet, 2, MOVEMENT_COLS.ASSIGNED_TO, 500, teamNames);
+    const assignedToCol = getColumnByHeader(movementSheet, 'المسؤول');
+    if (assignedToCol !== -1) {
+      setDropdown(movementSheet, 2, assignedToCol, 500, teamNames);
+    }
   }
 
-  // تحديث قائمة المدن في شيت الفريق
-  const teamSheet = getSheet(SHEETS.TEAM);
+  // 2. تحديث قائمة المدن في شيت الفريق
   if (teamSheet && cities.length > 0) {
-    setDropdown(teamSheet, 2, TEAM_COLS.CITY, 500, cities);
+    const cityCol = getColumnByHeader(teamSheet, 'المدينة');
+    if (cityCol !== -1) {
+      setDropdown(teamSheet, 2, cityCol, 500, cities);
+    }
   }
 
-  // تحديث قائمة المشاريع
+  // 3. تحديث قائمة المشاريع في شيت الحركة
   const projectNames = getActiveProjectNames();
   if (projectNames.length > 0) {
-    setDropdown(movementSheet, 2, MOVEMENT_COLS.PROJECT, 500, projectNames);
+    const projectCol = getColumnByHeader(movementSheet, 'الفيلم');
+    if (projectCol !== -1) {
+      setDropdown(movementSheet, 2, projectCol, 500, projectNames);
+    }
   }
 
-  // تحديث قائمة المنتجين والمونتيرين في شيت المشاريع
-  if (projectsSheet) {
-    setDropdown(projectsSheet, 2, PROJECT_COLS.PRODUCER, 500, teamNames);
-    setDropdown(projectsSheet, 2, PROJECT_COLS.EDITOR, 500, teamNames);
+  // 4. تحديث قائمة المنتجين والمونتيرين في شيت المشاريع
+  if (projectsSheet && teamNames.length > 0) {
+    const producerCol = getColumnByHeader(projectsSheet, 'المنتج المسؤول');
+    const editorCol = getColumnByHeader(projectsSheet, 'المونتير');
+    
+    if (producerCol !== -1) setDropdown(projectsSheet, 2, producerCol, 500, teamNames);
+    if (editorCol !== -1) setDropdown(projectsSheet, 2, editorCol, 500, teamNames);
   }
 }
 

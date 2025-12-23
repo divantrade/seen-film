@@ -257,11 +257,13 @@ function createSettingsSheet(ss) {
     folderLinkRange.setValue('(أدخل رابط الفولدر هنا)');
   }
 
-  // دالة مساعدة لملء القوائم إذا كانت فارغة
+  // دالة مساعدة لملء القوائم إذا كانت فارغة تماماً فقط
   const fillIfEmpty = (col, header, defaultList) => {
     sheet.getRange(5, col).setValue(header).setBackground(COLORS.INFO).setFontWeight('bold');
-    const firstCell = sheet.getRange(6, col);
-    if (isNewSheet || !firstCell.getValue()) {
+    
+    // التحقق مما إذا كان هناك أي بيانات في العمود تحت الهيدر
+    const lastRowInCol = getLastRowInColumn(sheet, col);
+    if (isNewSheet || lastRowInCol <= 5) {
       for (let i = 0; i < defaultList.length; i++) {
         sheet.getRange(6 + i, col).setValue(defaultList[i]);
       }
