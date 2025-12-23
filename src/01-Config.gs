@@ -165,57 +165,57 @@ const STAGES = {
     name: 'التطوير',
     engName: 'Development',
     icon: '🧠',
-    subtypes: ['الفكرة', 'البحث', 'المعالجة', 'اسكربت أولي', 'قائمة الضيوف'],
+    subtypes: ['فكرة', 'بحث', 'معالجة', 'اسكريبت أولي', 'قائمة الضيوف'],
     engSubtypes: ['Idea', 'Research', 'Treatment', 'Initial Script', 'Guest List']
   },
   PRE_PRODUCTION: {
     name: 'التحضير',
     engName: 'Pre-Production',
     icon: '📝',
-    subtypes: ['الفكسز', 'إعداد الأسئلة', 'تنسيق المدن', 'تنسيق الدراما'],
-    engSubtypes: ['Fixers', 'Questions Prep', 'City Coordination', 'Drama Coordination']
+    subtypes: ['فيكسر', 'أسئلة الضيوف', 'تنسيق المدن', 'تنسيق الدراما'],
+    engSubtypes: ['Fixer', 'Guest Questions', 'City Coordination', 'Drama Coordination']
   },
   PRODUCTION: {
     name: 'الإنتاج',
     engName: 'Production',
     icon: '🎬',
-    subtypes: ['تصوير مدينة', 'تصوير دراما', 'تصوير ميداني', 'انسرتات'],
-    engSubtypes: ['City Shoot', 'Drama Shoot', 'Field Shoot', 'Inserts']
+    subtypes: ['تصوير'],
+    engSubtypes: ['Shooting']
   },
   POST_PAPERWORK: {
-    name: 'ما بعد التصوير (ورقيات)',
-    engName: 'Post-Shoot Paperwork',
+    name: 'ما بعد التصوير',
+    engName: 'Post-Shoot',
     icon: '📄',
-    subtypes: ['اسكربت نهائي', 'تفريغ', 'لوج'],
-    engSubtypes: ['Final Script', 'Transcription', 'Recording Log']
+    subtypes: ['اسكربت نهائي', 'تجهيز الأرشيف'],
+    engSubtypes: ['Final Script', 'Archive Prep']
   },
   POST_ELEMENTS: {
     name: 'عناصر ما بعد الإنتاج',
     engName: 'Post-Elements',
     icon: '🎨',
-    subtypes: ['جرافيك', 'مشاهد دراما', 'الصوت', 'تعليق صوتي'],
-    engSubtypes: ['Graphics', 'Drama Scenes', 'Audio', 'Voice Over']
+    subtypes: ['جرافيك', 'مشاهد دراما', 'الصوت', 'الهندسة الصوتية'],
+    engSubtypes: ['Graphics', 'Drama Scenes', 'Audio', 'Sound Design']
   },
   EDITING: {
     name: 'المونتاج',
     engName: 'Editing',
     icon: '✂️',
-    subtypes: ['مونتاج', 'نسخة أولى', 'نسخة تعديلات', 'نسخة نهائية'],
-    engSubtypes: ['Montage', 'First Cut', 'Revised Cut', 'Final Cut']
+    subtypes: ['المونتاج'],
+    engSubtypes: ['Editing']
   },
-  COLOR_GRADING: {
+  COLORING: {
     name: 'التلوين',
-    engName: 'Color Grading',
+    engName: 'Coloring',
     icon: '🎨',
-    subtypes: ['تصحيح ألوان', 'تلوين نهائي'],
-    engSubtypes: ['Color Correction', 'Final Color']
+    subtypes: ['التلوين'],
+    engSubtypes: ['Coloring']
   },
   DELIVERY: {
     name: 'التسليم',
     engName: 'Delivery',
     icon: '📦',
-    subtypes: ['مراجعة العميل', 'تصدير', 'تسليم نهائي', 'أرشيف'],
-    engSubtypes: ['Client Review', 'Export', 'Final Delivery', 'Archive']
+    subtypes: ['مراجعة داخلية', 'مراجعة العميل', 'تصدير', 'رفع الداتا'],
+    engSubtypes: ['Internal Review', 'Client Review', 'Export', 'Data Upload']
   }
 };
 
