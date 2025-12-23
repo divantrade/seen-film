@@ -55,7 +55,6 @@ function onOpen() {
       .addItem('🙈 إخفاء شيت الروابط', 'hideFolderLinksSheet')
       .addSeparator()
       .addItem('🔄 تهيئة النظام', 'initializeSystem')
-      .addItem('🏙️ تحديث حقل المدينة', 'migrateSystemForCity')
       .addItem('🔧 تشخيص النظام', 'debugSettings'))
 
     .addToUi();
