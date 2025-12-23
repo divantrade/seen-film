@@ -241,20 +241,12 @@ function createSettingsSheet(ss) {
 
   // حفظ البيانات الموجودة قبل التنظيف
   let existingFolderLink = '';
-  let existingStageData = [];
 
   if (!isNewSheet) {
     // حفظ رابط الفولدر
     existingFolderLink = sheet.getRange('B3').getValue();
     if (existingFolderLink === '(أدخل رابط الفولدر هنا)') {
       existingFolderLink = '';
-    }
-
-    // حفظ بيانات المراحل والأنواع الفرعية (أعمدة E, F, G, H)
-    const lastRow = sheet.getLastRow();
-    if (lastRow >= 6) {
-      existingStageData = sheet.getRange(6, 5, lastRow - 5, 4).getValues()
-        .filter(row => row[0] && row[1]); // فقط الصفوف التي تحتوي على بيانات
     }
   }
 
@@ -311,30 +303,19 @@ function createSettingsSheet(ss) {
   // إضافة بيانات المراحل والمراحل الفرعية
   let stageRow = 6;
 
-  // استخدام البيانات الموجودة إذا كانت متاحة
-  if (existingStageData.length > 0) {
-    for (const row of existingStageData) {
-      sheet.getRange(stageRow, 5).setValue(row[0]); // المرحلة
-      sheet.getRange(stageRow, 6).setValue(row[1]); // المرحلة الفرعية
-      sheet.getRange(stageRow, 7).setValue(row[2] || ''); // Stage
-      sheet.getRange(stageRow, 8).setValue(row[3] || ''); // Subtype
-      stageRow++;
-    }
-  } else {
-    // استخدام البيانات الافتراضية
-    for (const key in STAGES) {
-      const stage = STAGES[key];
-      if (stage.subtypes && stage.subtypes.length > 0) {
-        for (let i = 0; i < stage.subtypes.length; i++) {
-          const subtype = stage.subtypes[i];
-          const engSubtype = stage.engSubtypes ? stage.engSubtypes[i] : '';
-          
-          sheet.getRange(stageRow, 5).setValue(stage.name);
-          sheet.getRange(stageRow, 6).setValue(subtype);
-          sheet.getRange(stageRow, 7).setValue(stage.engName || '');
-          sheet.getRange(stageRow, 8).setValue(engSubtype || '');
-          stageRow++;
-        }
+  // استخدام البيانات الافتراضية دائماً لتحديث الشيت
+  for (const key in STAGES) {
+    const stage = STAGES[key];
+    if (stage.subtypes && stage.subtypes.length > 0) {
+      for (let i = 0; i < stage.subtypes.length; i++) {
+        const subtype = stage.subtypes[i];
+        const engSubtype = stage.engSubtypes ? stage.engSubtypes[i] : '';
+
+        sheet.getRange(stageRow, 5).setValue(stage.name);
+        sheet.getRange(stageRow, 6).setValue(subtype);
+        sheet.getRange(stageRow, 7).setValue(stage.engName || '');
+        sheet.getRange(stageRow, 8).setValue(engSubtype || '');
+        stageRow++;
       }
     }
   }
