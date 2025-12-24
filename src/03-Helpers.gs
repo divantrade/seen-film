@@ -20,6 +20,14 @@ function getCurrentDateTime() {
 }
 
 /**
+ * تنظيف النصوص ومطابقتها (تجاهل المسافات وحالة الأحرف)
+ */
+function normalizeString(str) {
+  if (!str) return '';
+  return str.toString().trim().toLowerCase();
+}
+
+/**
  * الحصول على شيت بالاسم
  */
 function getSheet(sheetName) {
@@ -33,10 +41,29 @@ function getSheet(sheetName) {
 function getColumnByHeader(sheet, headerName) {
   if (!sheet) return -1;
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const index = headers.indexOf(headerName);
-  return index !== -1 ? index + 1 : -1;
-}
+  const normalizedSearch = normalizeString(headerName);
+  
+  // قاموس المرادفات الشائعة للهيدرات
+  const synonyms = {
+    'الاسم': ['الاسم', 'اسم', 'إسم', 'الاسم بالكامل', 'الأسم', 'name'],
+    'الحالة': ['الحالة', 'حالة', 'الوضع', 'التوفر', 'status'],
+    'المدينة': ['المدينة', 'مدينه', 'مدينة السكن', 'الموقع', 'city'],
+    'المسؤول': ['المسؤول', 'المسئول', 'assigned to', 'person'],
+    'الكود': ['الكود', 'كود', 'الرقم التعريفى', 'رقم التعريف', 'code'],
+    'الدور': ['الدور', 'دور', 'الوظيفة', 'المهنة', 'role', 'position']
+  };
 
+  const searchList = synonyms[headerName] ? synonyms[headerName].map(normalizeString) : [normalizedSearch];
+
+  for (let i = 0; i < headers.length; i++) {
+    const normalizedHeader = normalizeString(headers[i]);
+    if (searchList.includes(normalizedHeader)) {
+      return i + 1;
+    }
+  }
+  return -1;
+}
+ 
 /**
  * الحصول على آخر صف يحتوي على بيانات
  */
@@ -226,8 +253,9 @@ function getActiveTeamMembers() {
   const members = [];
 
   for (const row of data) {
-    const status = row[statusCol - 1];
-    if (status === 'نشط') {
+    const status = normalizeString(row[statusCol - 1]);
+    // دعم كلمة "نشط" حتى لو معها أيقونات مثل "نشط ✅"
+    if (status.includes('نشط') || status === 'active') {
       members.push({
         code: codeCol !== -1 ? row[codeCol - 1] : '',
         name: row[nameCol - 1],
@@ -424,15 +452,17 @@ function getTeamRolesFromSettings() {
  * الحصول على المدن من شيت الإعدادات (العمود D)
  */
 function getCitiesFromSettings() {
-  const sheet = getSheet(SHEETS.SETTINGS);
-  if (!sheet) return CONFIG.DEFAULT_CITIES;
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 6) return CONFIG.DEFAULT_CITIES;
-
-  const data = sheet.getRange(6, 4, lastRow - 5, 1).getValues();
-  const cities = data.map(row => row[0]).filter(Boolean);
-
+  const settingsSheet = getSheet(SHEETS.SETTINGS);
+  if (!settingsSheet) return CONFIG.DEFAULT_CITIES;
+  
+  const lastRow = getLastRowInColumn(settingsSheet, 4); // Column D
+  
+  // إذا كان العمود فارغاً تماماً (تحت الهيدر) ارجع الافتراضي
+  if (lastRow <= 5) return CONFIG.DEFAULT_CITIES;
+  
+  const values = settingsSheet.getRange(6, 4, lastRow - 5, 1).getValues();
+  const cities = values.map(v => v[0]).filter(v => v);
+  
   return cities.length > 0 ? cities : CONFIG.DEFAULT_CITIES;
 }
 

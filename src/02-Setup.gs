@@ -252,21 +252,25 @@ function createSettingsSheet(ss) {
   // 2. تحديث رابط المجلد (فقط إذا برز أو جديد)
   const folderLinkRange = sheet.getRange('B3');
   const folderLinkValue = folderLinkRange.getValue();
-  if (isNewSheet || !folderLinkValue || folderLinkValue === '(أدخل رابط الفولدر هنا)') {
-    sheet.getRange('A3').setValue('فولدر الإنتاج الرئيسي:').setFontWeight('bold');
-    folderLinkRange.setValue('(أدخل رابط الفولدر هنا)');
-  }
-
-  // دالة مساعدة لملء القوائم إذا كانت فارغة تماماً فقط
+  // دالة مساعدة لملء القوائم إذا كانت فارغة تماماً فقط - حماية فائقة لبيانات المستخدم
   const fillIfEmpty = (col, header, defaultList) => {
-    sheet.getRange(5, col).setValue(header).setBackground(COLORS.INFO).setFontWeight('bold');
+    const headerCell = sheet.getRange(5, col);
+    if (!headerCell.getValue()) {
+      headerCell.setValue(header).setBackground(COLORS.INFO).setFontWeight('bold');
+    }
     
-    // التحقق مما إذا كان هناك أي بيانات في العمود تحت الهيدر
+    // التحقق مما إذا كان هناك أي بيانات في العمود تحت الهيدر (الصف 6 وما بعده)
+    const firstDataCell = sheet.getRange(6, col);
     const lastRowInCol = getLastRowInColumn(sheet, col);
-    if (isNewSheet || lastRowInCol <= 5) {
+    
+    // لن نقوم بالملء إلا إذا كان الشيت جديداً أو أول خلية بيانات فارغة تماماً ولم يتم العثور على بيانات
+    if (isNewSheet || (!firstDataCell.getValue() && lastRowInCol <= 5)) {
       for (let i = 0; i < defaultList.length; i++) {
         sheet.getRange(6 + i, col).setValue(defaultList[i]);
       }
+      console.log('تم ملء القيم الافتراضية للعمود: ' + header);
+    } else {
+      console.log('تم تخطي ملء العمود للحفاظ على بيانات المستخدم: ' + header);
     }
   };
 
