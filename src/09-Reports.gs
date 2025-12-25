@@ -200,33 +200,77 @@ function generateDetailedFilmReport(projectName) {
       if(m.element) plannedCities.add(m.element.trim());
   });
 
-  // 2. Get Executed Cities (From Production > City Shoot)
+  // 2. Get Executed Cities (From Production > City Shoot) with status tracking
   const prodName = normalizeString(STAGES.PRODUCTION.name);
-  const executedCities = new Set();
+  const cityStatus = new Map(); // Map<cityName, status>
+  
   allMovements.filter(m => normalizeString(m.stage) === prodName && normalizeString(m.subtype).includes('تصوير')).forEach(m => {
-      if(m.element) executedCities.add(m.element.trim());
+      if(m.element) {
+        const city = m.element.trim();
+        const status = normalizeString(m.status);
+        
+        // Priority: تم > جاري > لم يبدأ
+        if (!cityStatus.has(city) || status.includes('تم')) {
+          cityStatus.set(city, m.status);
+        } else if (status.includes('جاري') && !normalizeString(cityStatus.get(city)).includes('تم')) {
+          cityStatus.set(city, m.status);
+        }
+      }
   });
 
   // Union of all cities
-  const allCities = new Set([...plannedCities, ...executedCities]);
+  const allCities = new Set([...plannedCities, ...cityStatus.keys()]);
   
   if (allCities.size === 0) {
       sheet.getRange(row, 1, 1, 5).merge().setValue('لا توجد بيانات مدن مسجلة بعد.');
   } else {
       allCities.forEach(city => {
           const isPlanned = plannedCities.has(city);
-          const isExecuted = executedCities.has(city);
+          const executionStatus = cityStatus.get(city);
           
           sheet.getRange(row, 1).setValue(city);
           sheet.getRange(row, 2).setValue(isPlanned ? '✅ موجود' : '❌ غير مخطط');
-          sheet.getRange(row, 3).setValue(isExecuted ? '✅ تم التصوير' : '⏳ لم يتم بعد');
           
+          // Execution status based on actual task status
+          let execText = '⏳ لم يتم بعد';
+          let execColor = 'gray';
+          
+          if (executionStatus) {
+            const normStatus = normalizeString(executionStatus);
+            if (normStatus.includes('تم')) {
+              execText = '✅ تم التصوير';
+              execColor = 'green';
+            } else if (normStatus.includes('جاري')) {
+              execText = '🔄 جاري التصوير';
+              execColor = 'blue';
+            } else if (normStatus.includes('لم يبدأ')) {
+              execText = '⏳ مخطط للتصوير';
+              execColor = 'orange';
+            } else {
+              execText = executionStatus; // Show actual status
+              execColor = 'black';
+            }
+          }
+          
+          sheet.getRange(row, 3).setValue(execText).setFontColor(execColor);
+          
+          // Match status
           let matchStatus = '';
           let matchColor = 'black';
           
-          if (isPlanned && isExecuted) { matchStatus = '✅ متطابق'; matchColor = 'green'; }
-          else if (isPlanned && !isExecuted) { matchStatus = '⚠️ باقي للتنفيذ'; matchColor = '#EF6C00'; } // Orange
-          else if (!isPlanned && isExecuted) { matchStatus = '❓ غير مخطط (Ad-hoc)'; matchColor = 'purple'; }
+          if (isPlanned && executionStatus && normalizeString(executionStatus).includes('تم')) {
+            matchStatus = '✅ متطابق';
+            matchColor = 'green';
+          } else if (isPlanned && executionStatus && normalizeString(executionStatus).includes('جاري')) {
+            matchStatus = '🔄 جاري التنفيذ';
+            matchColor = 'blue';
+          } else if (isPlanned && !executionStatus) {
+            matchStatus = '⚠️ باقي للتنفيذ';
+            matchColor = '#EF6C00';
+          } else if (!isPlanned && executionStatus) {
+            matchStatus = '❓ غير مخطط (Ad-hoc)';
+            matchColor = 'purple';
+          }
           
           sheet.getRange(row, 4).setValue(matchStatus).setFontColor(matchColor);
           row++;
