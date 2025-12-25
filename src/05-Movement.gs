@@ -293,30 +293,8 @@ function onMovementEdit(e) {
  * الحصول على حركات مشروع معين
  */
 function getProjectMovements(projectName) {
-  const sheet = getSheet(SHEETS.MOVEMENT);
-  const lastRow = getLastRowInColumn(sheet, MOVEMENT_COLS.PROJECT);
-
-  if (lastRow <= 1) return [];
-
-  const data = sheet.getRange(2, 1, lastRow - 1, MOVEMENT_COLS.NOTES).getValues();
-  const movements = [];
-
-  for (const row of data) {
-    if (row[MOVEMENT_COLS.PROJECT - 1] === projectName) {
-      movements.push({
-        number: row[MOVEMENT_COLS.NUMBER - 1],
-        date: row[MOVEMENT_COLS.DATE - 1],
-        stage: row[MOVEMENT_COLS.STAGE - 1],
-        subtype: row[MOVEMENT_COLS.SUBTYPE - 1],
-        element: row[MOVEMENT_COLS.ELEMENT - 1],
-        assignedTo: row[MOVEMENT_COLS.ASSIGNED_TO - 1],
-        status: row[MOVEMENT_COLS.STATUS - 1],
-        dueDate: row[MOVEMENT_COLS.DUE_DATE - 1]
-      });
-    }
-  }
-
-  return movements;
+  const movements = getAllMovements();
+  return movements.filter(m => m.project === projectName);
 }
 
 /**
@@ -361,24 +339,45 @@ function getMovementStats(projectName) {
  */
 function getAllMovements() {
   const sheet = getSheet(SHEETS.MOVEMENT);
-  const lastRow = getLastRowInColumn(sheet, MOVEMENT_COLS.PROJECT);
+  if (!sheet) return [];
 
+  const projectCol = getColumnByHeader(sheet, 'الفيلم');
+  if (projectCol === -1) return [];
+
+  const lastRow = getLastRowInColumn(sheet, projectCol);
   if (lastRow <= 1) return [];
 
-  const data = sheet.getRange(2, 1, lastRow - 1, MOVEMENT_COLS.NOTES).getValues();
+  // تحديد الأعمدة ديناميكياً
+  const cols = {
+    number: getColumnByHeader(sheet, '#'),
+    date: getColumnByHeader(sheet, 'التاريخ'),
+    project: projectCol,
+    stage: getColumnByHeader(sheet, 'المرحلة'),
+    subtype: getColumnByHeader(sheet, 'المرحلة الفرعية'),
+    element: getColumnByHeader(sheet, 'العنصر'),
+    details: getColumnByHeader(sheet, 'التفاصيل'),
+    assignedTo: getColumnByHeader(sheet, 'المسؤول'),
+    status: getColumnByHeader(sheet, 'الحالة'),
+    dueDate: getColumnByHeader(sheet, 'تاريخ التسليم'),
+    notes: getColumnByHeader(sheet, 'ملاحظات')
+  };
+
+  const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
   const movements = [];
 
   for (const row of data) {
     movements.push({
-      number: row[MOVEMENT_COLS.NUMBER - 1],
-      date: row[MOVEMENT_COLS.DATE - 1],
-      project: row[MOVEMENT_COLS.PROJECT - 1],
-      stage: row[MOVEMENT_COLS.STAGE - 1],
-      subtype: row[MOVEMENT_COLS.SUBTYPE - 1],
-      element: row[MOVEMENT_COLS.ELEMENT - 1],
-      assignedTo: row[MOVEMENT_COLS.ASSIGNED_TO - 1],
-      status: row[MOVEMENT_COLS.STATUS - 1],
-      dueDate: row[MOVEMENT_COLS.DUE_DATE - 1]
+      number: cols.number !== -1 ? row[cols.number - 1] : '',
+      date: cols.date !== -1 ? row[cols.date - 1] : '',
+      project: row[cols.project - 1],
+      stage: cols.stage !== -1 ? row[cols.stage - 1] : '',
+      subtype: cols.subtype !== -1 ? row[cols.subtype - 1] : '',
+      element: cols.element !== -1 ? row[cols.element - 1] : '',
+      details: cols.details !== -1 ? row[cols.details - 1] : '',
+      assignedTo: cols.assignedTo !== -1 ? row[cols.assignedTo - 1] : '',
+      status: cols.status !== -1 ? row[cols.status - 1] : '',
+      dueDate: cols.dueDate !== -1 ? row[cols.dueDate - 1] : '',
+      notes: cols.notes !== -1 ? row[cols.notes - 1] : ''
     });
   }
 

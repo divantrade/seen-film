@@ -96,24 +96,24 @@ function generateDetailedFilmReport(projectName) {
 
   let row = 5;
   
-  // Define standard workflow order
+  // Define standard workflow order using system definitions
   const workflow = [
-    { phase: 'التطوير', step: 'الفكرة' },
-    { phase: 'التطوير', step: 'البحث' },
-    { phase: 'التطوير', step: 'المعالجة' },
-    { phase: 'التطوير', step: 'اسكربت أولي' },
-    { phase: 'التحضير', step: 'قائمة الضيوف' },
-    { phase: 'التحضير', step: 'الفكسز' },
-    { phase: 'التحضير', step: 'إعداد الأسئلة' },
-    { phase: 'التحضير', step: 'تنسيق المدن' },
-    { phase: 'التحضير', step: 'تنسيق الدراما' },
-    { phase: 'الإنتاج', step: 'التصوير' },
-    { phase: 'ما بعد التصوير', step: 'اسكربت نهائي' },
-    { phase: 'ما بعد التصوير', step: 'تجهيز الأرشيف' },
-    { phase: 'عناصر ما بعد الإنتاج', step: 'جرافيك' },
-    { phase: 'عناصر ما بعد الإنتاج', step: 'مشاهد دراما' },
-    { phase: 'عناصر ما بعد الإنتاج', step: 'الصوت' },
-    { phase: 'المونتاج', step: 'المونتاج' } // Includes versions
+    { phase: STAGES.DEVELOPMENT.name, step: 'الفكرة' },
+    { phase: STAGES.DEVELOPMENT.name, step: 'البحث' },
+    { phase: STAGES.DEVELOPMENT.name, step: 'المعالجة' },
+    { phase: STAGES.DEVELOPMENT.name, step: 'اسكربت أولي' },
+    { phase: STAGES.PRE_PRODUCTION.name, step: 'قائمة الضيوف' },
+    { phase: STAGES.PRE_PRODUCTION.name, step: 'الفكسز' },
+    { phase: STAGES.PRE_PRODUCTION.name, step: 'إعداد الأسئلة' },
+    { phase: STAGES.PRE_PRODUCTION.name, step: 'تنسيق المدن' },
+    { phase: STAGES.PRE_PRODUCTION.name, step: 'تنسيق الدراما' },
+    { phase: STAGES.PRODUCTION.name, step: 'التصوير' },
+    { phase: STAGES.POST_PAPERWORK.name, step: 'اسكربت نهائي' },
+    { phase: STAGES.POST_PAPERWORK.name, step: 'تجهيز الأرشيف' },
+    { phase: STAGES.POST_ELEMENTS.name, step: 'جرافيك' },
+    { phase: STAGES.POST_ELEMENTS.name, step: 'مشاهد دراما' },
+    { phase: STAGES.POST_ELEMENTS.name, step: 'الصوت' },
+    { phase: STAGES.EDITING.name, step: 'المونتاج' }
   ];
   
   // Group movements by Subtype (Step)
@@ -129,11 +129,11 @@ function generateDetailedFilmReport(projectName) {
     // Find matching movements (Subtype == Step OR Stage == Phase if Step is generic)
     const tasks = allMovements.filter(m => {
       // Loose matching for flexibility
-      const matchSubtype = m.subtype.includes(item.step) || (item.step === 'المونتاج' && m.stage === 'المونتاج');
+      const matchSubtype = normalizeString(m.subtype).includes(normalizeString(item.step)) || (normalizeString(item.step).includes('مونتاج') && normalizeString(m.stage).includes('مونتاج'));
       
       // Special check for Production types
-      if (item.phase === 'الإنتاج' && item.step === 'التصوير') {
-          return m.stage === 'الإنتاج'; // Include all production tasks under "Shooting" step in report for now
+      if (normalizeString(item.phase) === normalizeString(STAGES.PRODUCTION.name) && normalizeString(item.step).includes('تصوير')) {
+          return normalizeString(m.stage) === normalizeString(STAGES.PRODUCTION.name);
       }
       return matchSubtype;
     });
@@ -181,9 +181,9 @@ function generateDetailedFilmReport(projectName) {
   row++;
 
   // 1. Get Planned Cities (From Pre-Production > City Coordination)
+  const preProdName = normalizeString(STAGES.PRE_PRODUCTION.name);
   const plannedCities = new Set();
-  allMovements.filter(m => m.stage === 'التحضير' && m.subtype.includes('تنسيق المدن')).forEach(m => {
-      // Assuming Element contains City Name
+  allMovements.filter(m => normalizeString(m.stage) === preProdName && normalizeString(m.subtype).includes('تنسيق المدن')).forEach(m => {
       if(m.element) plannedCities.add(m.element.trim());
   });
 
@@ -241,20 +241,13 @@ function getFilmTimelineData(projectName) {
   
   // تعريف ترتيب المراحل الجديد
   // ترتيب ثابت للمراحل الستة
-  const PHASE_ORDER = [
-    'التطوير',
-    'التحضير',
-    'الإنتاج',
-    'ما بعد التصوير',
-    'عناصر ما بعد الإنتاج',
-    'المونتاج',
-    'التسليم'
-  ];
+  const PHASE_ORDER = Object.values(STAGES).map(s => s.name);
 
   // تجميع البيانات للمخطط الزمني
   const timeline = PHASE_ORDER.map(phaseName => {
+    const normalizedPhase = normalizeString(phaseName);
     // تصفية المهام الخاصة بهذه المرحلة
-    const tasks = allMovements.filter(m => m.stage === phaseName);
+    const tasks = allMovements.filter(m => normalizeString(m.stage) === normalizedPhase);
     
     // إذا لم تكن هناك مهام، نعيد هيكل فارغ ولكن باسم المرحلة للحفاظ على التسلسل
     // أو نتخطاها إذا أردنا إخفاء المراحل الفارغة (حسب رغبة المستخدم)
@@ -322,20 +315,22 @@ function formatDate(date) {
 
 function getResearchAndFixingData() {
   const allData = getAllMovements();
+  const devStage = normalizeString(STAGES.DEVELOPMENT.name);
+  const preProdStage = normalizeString(STAGES.PRE_PRODUCTION.name);
   
-  // Update Filter: Research is now stage 'التطوير' and subtypes 'بحث', 'الأوراق' etc
   const researchData = allData.filter(m => 
-    m.stage === 'التطوير' // New stage name
+    normalizeString(m.stage) === devStage
   );
   
   const researchByPerson = groupBy(researchData, 'assignedTo');
   
-  // Update Filter: Fixing is stage 'التحضير' subtype 'الفكسز' or similar
-  const fixingData = allData.filter(m => 
-    m.stage === 'التحضير' || 
-    m.subtype?.includes('تصريح') || 
-    m.subtype?.includes('موافقة')
-  );
+  const fixingData = allData.filter(m => {
+    const stage = normalizeString(m.stage);
+    const subtype = normalizeString(m.subtype);
+    return stage === preProdStage || 
+           subtype.includes('تصريح') || 
+           subtype.includes('موافقة');
+  });
   
   return {
     research: researchByPerson,
@@ -345,23 +340,17 @@ function getResearchAndFixingData() {
 
 function getFilmingLogisticsData() {
   const allData = getAllMovements();
-  // Filter for Production Stage
-  // We want to capture anything related to shooting
-  const filmingData = allData.filter(m => m.stage === 'الإنتاج');
+  const prodStage = normalizeString(STAGES.PRODUCTION.name);
+  const filmingData = allData.filter(m => normalizeString(m.stage) === prodStage);
   
   const cityGroups = {};
   
   filmingData.forEach(task => {
-    // If subtype is 'تصوير مدينة', the Element IS the city.
-    // If subtype is 'تصوير دراما' or others, user might mention city in details or element.
-    // For Matrix, we primarily look at 'تصوير مدينة' subtype or fallback to 'General' if not specified.
-    
+    const subtype = normalizeString(task.subtype);
     let city = 'غير محدد';
-    if (task.subtype.includes('مدينة') || task.subtype.includes('ميداني')) {
+    if (subtype.includes('مدينة') || subtype.includes('ميداني')) {
        city = task.element || 'غير محدد';
     } else {
-       // For Drama/Inserts, we try to see if it's grouped. 
-       // For now, put them in a separate bucket or 'General'
        city = 'أخرى / دراما / انسرتات';
     }
     
@@ -378,7 +367,6 @@ function getFilmingLogisticsData() {
     cityGroups[city].tasks.push(task);
     cityGroups[city].projects.add(task.project);
     
-    // Date Range Logic
     const dates = [];
     if (task.date) dates.push(new Date(task.date));
     if (task.dueDate) dates.push(new Date(task.dueDate));
@@ -389,7 +377,6 @@ function getFilmingLogisticsData() {
     });
   });
 
-  // Sort by date soonest first
   const reportData = Object.values(cityGroups).map(g => ({
     city: g.name,
     projectCount: g.projects.size,
@@ -414,20 +401,19 @@ function getFilmingLogisticsData() {
  */
 function getPostProductionData() {
   const allData = getAllMovements();
+  const postElementsStage = normalizeString(STAGES.POST_ELEMENTS.name);
+  const editingStage = normalizeString(STAGES.EDITING.name);
   
-  // Sound: Stage 'عناصر ما بعد الإنتاج' & Subtype 'الصوت'
   const soundData = allData.filter(m => 
-    m.stage === 'عناصر ما بعد الإنتاج' && m.subtype.includes('الصوت')
+    normalizeString(m.stage) === postElementsStage && normalizeString(m.subtype).includes('صوت')
   );
 
-  // Graphics: Stage 'عناصر ما بعد الإنتاج' & Subtype 'جرافيك'
   const graphicsData = allData.filter(m => 
-    m.stage === 'عناصر ما بعد الإنتاج' && m.subtype.includes('جرافيك')
+    normalizeString(m.stage) === postElementsStage && normalizeString(m.subtype).includes('جرافيك')
   );
 
-  // Editing: Stage 'المونتاج'
   const editingData = allData.filter(m => 
-    m.stage === 'المونتاج'
+    normalizeString(m.stage) === editingStage
   );
 
   return {
@@ -442,15 +428,15 @@ function getPostProductionData() {
  */
 function getDeliveryData() {
   const allData = getAllMovements();
+  const postPaperworkStage = normalizeString(STAGES.POST_PAPERWORK.name);
+  const deliveryStage = normalizeString(STAGES.DELIVERY.name);
   
-  // Archive: Stage 'ما بعد التصوير' & Subtype 'تجهيز الأرشيف'
   const archiveData = allData.filter(m => 
-    m.stage === 'ما بعد التصوير' && m.subtype.includes('أرشيف')
+    normalizeString(m.stage) === postPaperworkStage && normalizeString(m.subtype).includes('أرشيف')
   );
 
-  // Delivery: Stage 'التسليم'
   const deliveryData = allData.filter(m => 
-    m.stage === 'التسليم'
+    normalizeString(m.stage) === deliveryStage
   );
 
   return {
