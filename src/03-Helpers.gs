@@ -28,6 +28,34 @@ function normalizeString(str) {
 }
 
 /**
+ * تحويل أي تاريخ إلى الصيغة الموحدة DD/MM/YYYY
+ */
+function formatDateToStandard(dateValue) {
+  if (!dateValue) return '';
+  
+  // إذا كان التاريخ بالفعل كائن Date
+  if (dateValue instanceof Date) {
+    return Utilities.formatDate(dateValue, CONFIG.TIMEZONE, CONFIG.DATE_FORMAT);
+  }
+  
+  // إذا كان نص، حاول تحويله
+  const dateStr = dateValue.toString().trim();
+  if (!dateStr) return '';
+  
+  try {
+    // محاولة تحويل النص إلى Date
+    const parsedDate = new Date(dateStr);
+    if (!isNaN(parsedDate.getTime())) {
+      return Utilities.formatDate(parsedDate, CONFIG.TIMEZONE, CONFIG.DATE_FORMAT);
+    }
+  } catch (e) {
+    console.warn('Could not parse date:', dateStr);
+  }
+  
+  return dateStr;
+}
+
+/**
  * الحصول على شيت بالاسم
  */
 function getSheet(sheetName) {

@@ -218,6 +218,7 @@ function onMovementEdit(e) {
   const statusCol = getColumnByHeader(sheet, 'الحالة');
   const numberCol = getColumnByHeader(sheet, '#');
   const dateCol = getColumnByHeader(sheet, 'التاريخ');
+  const dueDateCol = getColumnByHeader(sheet, 'تاريخ التسليم');
   const linkCol = getColumnByHeader(sheet, 'الرابط');
 
   if (projectCol === -1 || stageCol === -1) return;
@@ -226,6 +227,18 @@ function onMovementEdit(e) {
   for (let i = 0; i < numRows; i++) {
     const currentRow = startRow + i;
     if (currentRow <= 1) continue;
+
+    // 0. تنسيق التواريخ تلقائياً إلى DD/MM/YYYY
+    if ((col === dateCol || col === dueDateCol) && col !== -1) {
+      const cell = sheet.getRange(currentRow, col);
+      const value = cell.getValue();
+      if (value) {
+        const formatted = formatDateToStandard(value);
+        if (formatted && formatted !== value) {
+          cell.setValue(formatted);
+        }
+      }
+    }
 
     // 1. ملء التاريخ والرقم تلقائياً عند إدخال بيانات جديدة (إذا كان المشروع موجوداً)
     if (col === projectCol) {

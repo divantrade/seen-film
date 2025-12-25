@@ -14,8 +14,8 @@
 const CONFIG = {
   TIMEZONE: 'Asia/Istanbul',
   LOCALE: 'ar',
-  DATE_FORMAT: 'yyyy-MM-dd',
-  DATETIME_FORMAT: 'yyyy-MM-dd HH:mm',
+  DATE_FORMAT: 'dd/MM/yyyy',
+  DATETIME_FORMAT: 'dd/MM/yyyy HH:mm',
   SYSTEM_NAME: 'نظام إدارة الإنتاج - Seen Film',
   VERSION: '2.0.0',
   DEFAULT_CITIES: ['القاهرة', 'الجيزة', 'الإسكندرية', 'أسوان', 'مرسى مطروح', 'الأقصر']

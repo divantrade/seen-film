@@ -196,11 +196,24 @@ function onTeamEdit(e) {
   const roleCol = getColumnByHeader(sheet, 'الدور');
   const codeCol = getColumnByHeader(sheet, 'الكود');
   const statusCol = getColumnByHeader(sheet, 'الحالة');
+  const joinDateCol = getColumnByHeader(sheet, 'تاريخ الانضمام');
 
   // معالجة كل صف في النطاق المعدل (لدعم النسخ واللصق)
   for (let i = 0; i < numRows; i++) {
     const currentRow = startRow + i;
     if (currentRow <= 1) continue;
+
+    // 0. تنسيق التواريخ تلقائياً إلى DD/MM/YYYY
+    if (col === joinDateCol && joinDateCol !== -1) {
+      const cell = sheet.getRange(currentRow, col);
+      const value = cell.getValue();
+      if (value) {
+        const formatted = formatDateToStandard(value);
+        if (formatted && formatted !== value) {
+          cell.setValue(formatted);
+        }
+      }
+    }
 
     // إذا تم تعديل الدور أو الاسم، تأكد من وجود كود
     if (col === roleCol || col === nameCol) {
