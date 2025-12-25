@@ -351,110 +351,132 @@ function getResearchAndFixingData() {
 }
 
 function getFilmingLogisticsData() {
-  const allData = getAllMovements();
-  const prodStage = normalizeString(STAGES.PRODUCTION.name);
-  const filmingData = allData.filter(m => normalizeString(m.stage) === prodStage);
-  
-  const cityGroups = {};
-  
-  filmingData.forEach(task => {
-    const subtype = normalizeString(task.subtype);
-    let city = 'غير محدد';
-    if (subtype.includes('مدينة') || subtype.includes('ميداني')) {
-       city = task.element || 'غير محدد';
-    } else {
-       city = 'أخرى / دراما / انسرتات';
-    }
+  try {
+    console.log('Fetching Filming Logistics Data...');
+    const allData = getAllMovements();
+    const prodStage = normalizeString(STAGES.PRODUCTION.name);
+    const filmingData = allData.filter(m => normalizeString(m.stage) === prodStage);
     
-    if (!cityGroups[city]) {
-      cityGroups[city] = {
-        name: city,
-        tasks: [],
-        projects: new Set(),
-        startDate: null,
-        endDate: null
-      };
-    }
+    console.log('Filming Movements Found:', filmingData.length);
+    const cityGroups = {};
     
-    cityGroups[city].tasks.push(task);
-    cityGroups[city].projects.add(task.project);
-    
-    const dates = [];
-    if (task.date) dates.push(new Date(task.date));
-    if (task.dueDate) dates.push(new Date(task.dueDate));
-    
-    dates.forEach(d => {
-       if (!cityGroups[city].startDate || d < cityGroups[city].startDate) cityGroups[city].startDate = d;
-       if (!cityGroups[city].endDate || d > cityGroups[city].endDate) cityGroups[city].endDate = d;
+    filmingData.forEach(task => {
+      const subtype = normalizeString(task.subtype);
+      let city = 'غير محدد';
+      if (subtype.includes('مدينة') || subtype.includes('ميداني')) {
+         city = task.element || 'غير محدد';
+      } else {
+         city = 'أخرى / دراما / انسرتات';
+      }
+      
+      if (!cityGroups[city]) {
+        cityGroups[city] = {
+          name: city,
+          tasks: [],
+          projects: new Set(),
+          startDate: null,
+          endDate: null
+        };
+      }
+      
+      cityGroups[city].tasks.push(task);
+      cityGroups[city].projects.add(task.project);
+      
+      const dates = [];
+      if (task.date) dates.push(new Date(task.date));
+      if (task.dueDate) dates.push(new Date(task.dueDate));
+      
+      dates.forEach(d => {
+         if (!cityGroups[city].startDate || d < cityGroups[city].startDate) cityGroups[city].startDate = d;
+         if (!cityGroups[city].endDate || d > cityGroups[city].endDate) cityGroups[city].endDate = d;
+      });
     });
-  });
 
-  const reportData = Object.values(cityGroups).map(g => ({
-    city: g.name,
-    projectCount: g.projects.size,
-    projectNames: Array.from(g.projects).join(', '),
-    tasksCount: g.tasks.length,
-    startDate: g.startDate ? formatDate(g.startDate) : 'غير محدد',
-    endDate: g.endDate ? formatDate(g.endDate) : 'غير محدد',
-    tasks: g.tasks
-  }));
-  
-  reportData.sort((a, b) => {
-     if(a.startDate === 'غير محدد') return 1;
-     if(b.startDate === 'غير محدد') return -1;
-     return new Date(a.startDate) - new Date(b.startDate);
-  });
-  
-  return reportData;
+    const reportData = Object.values(cityGroups).map(g => ({
+      city: g.name,
+      projectCount: g.projects.size,
+      projectNames: Array.from(g.projects).join(', '),
+      tasksCount: g.tasks.length,
+      startDate: g.startDate ? formatDate(g.startDate) : 'غير محدد',
+      endDate: g.endDate ? formatDate(g.endDate) : 'غير محدد',
+      tasks: g.tasks
+    }));
+    
+    reportData.sort((a, b) => {
+       if(a.startDate === 'غير محدد') return 1;
+       if(b.startDate === 'غير محدد') return -1;
+       return new Date(a.startDate) - new Date(b.startDate);
+    });
+    
+    console.log('Finished Filming Logistics. City Groups:', reportData.length);
+    return reportData;
+  } catch (e) {
+    console.error('Error in getFilmingLogisticsData:', e);
+    throw e;
+  }
 }
 
 /**
  * جلب بيانات مراحل ما بعد الإنتاج (الصوت، الجرافيك، المونتاج)
  */
 function getPostProductionData() {
-  const allData = getAllMovements();
-  const postElementsStage = normalizeString(STAGES.POST_ELEMENTS.name);
-  const editingStage = normalizeString(STAGES.EDITING.name);
-  
-  const soundData = allData.filter(m => 
-    normalizeString(m.stage) === postElementsStage && normalizeString(m.subtype).includes('صوت')
-  );
+  try {
+    console.log('Fetching Post-Production Data...');
+    const allData = getAllMovements();
+    const postElementsStage = normalizeString(STAGES.POST_ELEMENTS.name);
+    const editingStage = normalizeString(STAGES.EDITING.name);
+    
+    const soundData = allData.filter(m => 
+      normalizeString(m.stage) === postElementsStage && normalizeString(m.subtype).includes('صوت')
+    );
 
-  const graphicsData = allData.filter(m => 
-    normalizeString(m.stage) === postElementsStage && normalizeString(m.subtype).includes('جرافيك')
-  );
+    const graphicsData = allData.filter(m => 
+      normalizeString(m.stage) === postElementsStage && normalizeString(m.subtype).includes('جرافيك')
+    );
 
-  const editingData = allData.filter(m => 
-    normalizeString(m.stage) === editingStage
-  );
+    const editingData = allData.filter(m => 
+      normalizeString(m.stage) === editingStage
+    );
 
-  return {
-    sound: groupBy(soundData, 'project'),
-    graphics: groupBy(graphicsData, 'project'),
-    editing: groupBy(editingData, 'project')
-  };
+    console.log('Post-Production Found - Sound:', soundData.length, 'Graphics:', graphicsData.length, 'Editing:', editingData.length);
+    return {
+      sound: groupBy(soundData, 'project'),
+      graphics: groupBy(graphicsData, 'project'),
+      editing: groupBy(editingData, 'project')
+    };
+  } catch (e) {
+    console.error('Error in getPostProductionData:', e);
+    throw e;
+  }
 }
 
 /**
  * جلب بيانات التسليم والأرشيف
  */
 function getDeliveryData() {
-  const allData = getAllMovements();
-  const postPaperworkStage = normalizeString(STAGES.POST_PAPERWORK.name);
-  const deliveryStage = normalizeString(STAGES.DELIVERY.name);
-  
-  const archiveData = allData.filter(m => 
-    normalizeString(m.stage) === postPaperworkStage && normalizeString(m.subtype).includes('أرشيف')
-  );
+  try {
+    console.log('Fetching Delivery Data...');
+    const allData = getAllMovements();
+    const postPaperworkStage = normalizeString(STAGES.POST_PAPERWORK.name);
+    const deliveryStage = normalizeString(STAGES.DELIVERY.name);
+    
+    const archiveData = allData.filter(m => 
+      normalizeString(m.stage) === postPaperworkStage && normalizeString(m.subtype).includes('أرشيف')
+    );
 
-  const deliveryData = allData.filter(m => 
-    normalizeString(m.stage) === deliveryStage
-  );
+    const deliveryData = allData.filter(m => 
+      normalizeString(m.stage) === deliveryStage
+    );
 
-  return {
-    archive: archiveData,
-    delivery: groupBy(deliveryData, 'project')
-  };
+    console.log('Delivery Found - Archive:', archiveData.length, 'Delivery:', deliveryData.length);
+    return {
+      archive: archiveData,
+      delivery: groupBy(deliveryData, 'project')
+    };
+  } catch (e) {
+    console.error('Error in getDeliveryData:', e);
+    throw e;
+  }
 }
 
 /**

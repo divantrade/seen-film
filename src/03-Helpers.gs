@@ -241,14 +241,15 @@ function getActiveTeamMembers() {
   const sheet = getSheet(SHEETS.TEAM);
   if (!sheet) return [];
   
-  // تحديد الأعمدة ديناميكياً بناءً على الهيدر
   const nameCol = getColumnByHeader(sheet, 'الاسم');
   const statusCol = getColumnByHeader(sheet, 'الحالة');
   const codeCol = getColumnByHeader(sheet, 'الكود');
   const roleCol = getColumnByHeader(sheet, 'الدور');
 
+  console.log('Fetching Active Team Members. Columns - Name:', nameCol, 'Status:', statusCol);
+
   if (nameCol === -1 || statusCol === -1) {
-    console.error('لم يتم العثور على أعمدة أساسية في شيت الفريق');
+    console.error('Core columns (Name/Status) not found in Team sheet');
     return [];
   }
 
@@ -259,17 +260,21 @@ function getActiveTeamMembers() {
   const members = [];
 
   for (const row of data) {
-    const status = normalizeString(row[statusCol - 1]);
-    // دعم كلمة "نشط" حتى لو معها أيقونات مثل "نشط ✅"
-    if (status.includes('نشط') || status === 'active') {
+    const rawStatus = row[statusCol - 1];
+    const status = normalizeString(rawStatus);
+    const name = row[nameCol - 1];
+    
+    // Include if Name is present AND (Status is active OR Status is blank)
+    if (name && (status.includes('نشط') || status === 'active' || status === '')) {
       members.push({
         code: codeCol !== -1 ? row[codeCol - 1] : '',
-        name: row[nameCol - 1],
+        name: name,
         role: roleCol !== -1 ? row[roleCol - 1] : ''
       });
     }
   }
 
+  console.log('Found Active Members:', members.length);
   return members;
 }
 

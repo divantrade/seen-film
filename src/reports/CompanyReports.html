@@ -384,90 +384,101 @@
         }
 
         // --- Renderers ---
+        function wrapRenderer(id, renderer, data) {
+            try {
+                renderer(data);
+            } catch (e) {
+                console.error(`Error rendering ${id}:`, e);
+                document.getElementById('content-' + id).innerHTML = `
+                    <div class="error-message">
+                        <h4>❌ خطأ في المعالجة</h4>
+                        <p>${e.message}</p>
+                    </div>`;
+            }
+        }
 
         function renderResearch(data) {
-            renderGeneralTable('content-research', data.research, 'الباحث');
+            wrapRenderer('research', (d) => {
+                renderGeneralTable('content-research', d.research, 'الباحث');
+            }, data);
         }
 
         function renderFixing(data) {
-            // Fixing comes as an array, not grouped by person in the updated logic, let's fix that
-            // Wait, getResearchAndFixingData returns {research: {person: []}, fixing: [array]}
-            // Let's render the fixing array directly
-            if (!data.fixing || data.fixing.length === 0) {
-                document.getElementById('content-fixing').innerHTML = '<p>لا توجد بيانات.</p>';
-                return;
-            }
-            let html = '<table><thead><tr><th>الفيلم</th><th>المهمة</th><th>التفاصيل</th><th>المسؤول</th><th>الحالة</th></tr></thead><tbody>';
-            data.fixing.forEach(t => {
-                html += `<tr><td>${t.project}</td><td>${t.subtype || t.element}</td><td>${t.details || '-'}</td><td>${t.assignedTo}</td>
-                        <td>${statusBadge(t.status)}</td></tr>`;
-            });
-            html += '</tbody></table>';
-            document.getElementById('content-fixing').innerHTML = html;
+            wrapRenderer('fixing', (d) => {
+                if (!d.fixing || d.fixing.length === 0) {
+                    document.getElementById('content-fixing').innerHTML = '<p>لا توجد بيانات.</p>';
+                    return;
+                }
+                let html = '<table><thead><tr><th>الفيلم</th><th>المهمة</th><th>التفاصيل</th><th>المسؤول</th><th>الحالة</th></tr></thead><tbody>';
+                d.fixing.forEach(t => {
+                    html += `<tr><td>${t.project}</td><td>${t.subtype || t.element}</td><td>${t.details || '-'}</td><td>${t.assignedTo}</td>
+                            <td>${statusBadge(t.status)}</td></tr>`;
+                });
+                html += '</tbody></table>';
+                document.getElementById('content-fixing').innerHTML = html;
+            }, data);
         }
 
         function renderProduction(data) {
-            // Reuse the Matrix Logic we built earlier
-            if (!data || data.length === 0) {
-                document.getElementById('content-production').innerHTML = '<p>لا توجد جداول تصوير.</p>';
-                return;
-            }
-            let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">';
-            data.forEach(city => {
-                // Group tasks by project
-                const tasksByProject = {};
-                city.tasks.forEach(t => { const p = t.project; if (!tasksByProject[p]) tasksByProject[p] = []; tasksByProject[p].push(t); });
-
-                let tasksHtml = '';
-                for (const [project, tasks] of Object.entries(tasksByProject)) {
-                    tasksHtml += `<div style="margin-top:10px; background:#f9f9f9; padding:10px; border-radius:4px; border-right:3px solid var(--secondary);">
-                        <div style="font-weight:bold; font-size:0.9em; margin-bottom:5px;">🎥 ${project}</div>
-                        <ul style="margin:0; padding-right:20px; font-size:0.85em; color:#444;">`;
-                    tasks.forEach(t => {
-                        tasksHtml += `<li>${t.subtype.replace('تصوير', '')}: ${t.element} (${t.assignedTo || '?'})</li>`;
-                    });
-                    tasksHtml += `</ul></div>`;
+            wrapRenderer('production', (d) => {
+                if (!d || d.length === 0) {
+                    document.getElementById('content-production').innerHTML = '<p>لا توجد جداول تصوير.</p>';
+                    return;
                 }
+                let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">';
+                d.forEach(city => {
+                    const tasksByProject = {};
+                    city.tasks.forEach(t => { const p = t.project; if (!tasksByProject[p]) tasksByProject[p] = []; tasksByProject[p].push(t); });
 
-                html += `
-                <div class="city-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span style="font-size:1.3em; font-weight:bold; color:var(--primary);">📍 ${city.city}</span>
-                        <span style="font-size:0.8em; background:#E0F7FA; color:#006064; padding:3px 8px; border-radius:10px;">${city.startDate}</span>
-                    </div>
-                    <div>${tasksHtml}</div>
-                </div>`;
-            });
-            html += '</div>';
-            document.getElementById('content-production').innerHTML = html;
+                    let tasksHtml = '';
+                    for (const [project, tasks] of Object.entries(tasksByProject)) {
+                        tasksHtml += `<div style="margin-top:10px; background:#f9f9f9; padding:10px; border-radius:4px; border-right:3px solid var(--secondary);">
+                            <div style="font-weight:bold; font-size:0.9em; margin-bottom:5px;">🎥 ${project}</div>
+                            <ul style="margin:0; padding-right:20px; font-size:0.85em; color:#444;">`;
+                        tasks.forEach(t => {
+                            tasksHtml += `<li>${(t.subtype || '').replace('تصوير', '')}: ${t.element} (${t.assignedTo || '?'})</li>`;
+                        });
+                        tasksHtml += `</ul></div>`;
+                    }
+
+                    html += `
+                    <div class="city-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <span style="font-size:1.3em; font-weight:bold; color:var(--primary);">📍 ${city.city}</span>
+                            <span style="font-size:0.8em; background:#E0F7FA; color:#006064; padding:3px 8px; border-radius:10px;">${city.startDate}</span>
+                        </div>
+                        <div>${tasksHtml}</div>
+                    </div>`;
+                });
+                html += '</div>';
+                document.getElementById('content-production').innerHTML = html;
+            }, data);
         }
 
         function renderPost(data) {
-            // data = {sound: {}, graphics: {}, editing: {}} (Grouped by Project)
-            renderGroupedTable('content-post-sound', data.sound, 'المهمة الصوتية');
-            renderGroupedTable('content-post-graphics', data.graphics, 'مهمة الجرافيك');
-            renderGroupedTable('content-post-editing', data.editing, 'نسخة المونتاج');
+            wrapRenderer('post', (d) => {
+                renderGroupedTable('content-post-sound', d.sound, 'المهمة الصوتية');
+                renderGroupedTable('content-post-graphics', d.graphics, 'مهمة الجرافيك');
+                renderGroupedTable('content-post-editing', d.editing, 'نسخة المونتاج');
+            }, data);
         }
 
         function renderDelivery(data) {
-            // data = {archive: [], delivery: {}}
+            wrapRenderer('delivery', (d) => {
+                let htmlArchive = '<h3>📼 الأرشيف</h3>';
+                if (!d.archive || d.archive.length === 0) htmlArchive += '<p>لا توجد بيانات أرشيف.</p>';
+                else {
+                    htmlArchive += '<table><thead><tr><th>الفيلم</th><th>العنصر</th><th>المسؤول</th><th>الحالة</th></tr></thead><tbody>';
+                    d.archive.forEach(t => {
+                        htmlArchive += `<tr><td>${t.project}</td><td>${t.element}</td><td>${t.assignedTo}</td><td>${statusBadge(t.status)}</td></tr>`;
+                    });
+                    htmlArchive += '</tbody></table>';
+                }
 
-            // Render Archive (Array)
-            let htmlArchive = '<h3>📼 الأرشيف</h3>';
-            if (data.archive.length === 0) htmlArchive += '<p>لا توجد بيانات أرشيف.</p>';
-            else {
-                htmlArchive += '<table><thead><tr><th>الفيلم</th><th>العنصر</th><th>المسؤول</th><th>الحالة</th></tr></thead><tbody>';
-                data.archive.forEach(t => {
-                    htmlArchive += `<tr><td>${t.project}</td><td>${t.element}</td><td>${t.assignedTo}</td><td>${statusBadge(t.status)}</td></tr>`;
-                });
-                htmlArchive += '</tbody></table>';
-            }
-
-            // Render Deliverables (Grouped)
-            let htmlDelivery = '<h3>📦 التسليمات للعميل</h3>';
-            htmlDelivery += renderGroupedTableHTML(data.delivery, 'عنصر التسليم');
-
-            document.getElementById('content-delivery').innerHTML = htmlArchive + '<br>' + htmlDelivery;
+                let htmlDelivery = '<h3>📦 التسليمات للعميل</h3>';
+                htmlDelivery += renderGroupedTableHTML(d.delivery, 'عنصر التسليم');
+                document.getElementById('content-delivery').innerHTML = htmlArchive + '<br>' + htmlDelivery;
+            }, data);
         }
 
         // --- Team Workload ---
