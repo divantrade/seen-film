@@ -126,16 +126,28 @@ function generateDetailedFilmReport(projectName) {
     sheet.getRange(row, 1).setValue(item.phase).setFontWeight('bold');
     sheet.getRange(row, 2).setValue(item.step).setFontWeight('bold').setFontColor('#1565C0');
     
-    // Find matching movements (Subtype == Step OR Stage == Phase if Step is generic)
+    // Find matching movements
     const tasks = allMovements.filter(m => {
-      // Loose matching for flexibility
-      const matchSubtype = normalizeString(m.subtype).includes(normalizeString(item.step)) || (normalizeString(item.step).includes('مونتاج') && normalizeString(m.stage).includes('مونتاج'));
+      const mStage = normalizeString(m.stage);
+      const mSubtype = normalizeString(m.subtype);
+      const itemPhase = normalizeString(item.phase);
+      const itemStep = normalizeString(item.step);
       
-      // Special check for Production types
-      if (normalizeString(item.phase) === normalizeString(STAGES.PRODUCTION.name) && normalizeString(item.step).includes('تصوير')) {
-          return normalizeString(m.stage) === normalizeString(STAGES.PRODUCTION.name);
+      // Match by stage first
+      if (mStage !== itemPhase) return false;
+      
+      // For generic stages (like Production), match by stage only
+      if (itemPhase === normalizeString(STAGES.PRODUCTION.name)) {
+        return true;
       }
-      return matchSubtype;
+      
+      // For other stages, try to match by subtype
+      if (mSubtype && itemStep) {
+        return mSubtype.includes(itemStep) || itemStep.includes(mSubtype);
+      }
+      
+      // If no subtype, match by stage
+      return true;
     });
 
     if (tasks.length === 0) {
@@ -188,8 +200,9 @@ function generateDetailedFilmReport(projectName) {
   });
 
   // 2. Get Executed Cities (From Production > City Shoot)
+  const prodName = normalizeString(STAGES.PRODUCTION.name);
   const executedCities = new Set();
-  allMovements.filter(m => m.stage === 'الإنتاج' && m.subtype.includes('تصوير مدينة')).forEach(m => {
+  allMovements.filter(m => normalizeString(m.stage) === prodName && normalizeString(m.subtype).includes('تصوير')).forEach(m => {
       if(m.element) executedCities.add(m.element.trim());
   });
 
