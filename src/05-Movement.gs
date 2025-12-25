@@ -338,38 +338,45 @@ function getMovementStats(projectName) {
  * الحصول على جميع الحركات
  */
 function getAllMovements() {
-  const sheet = getSheet(SHEETS.MOVEMENT);
-  if (!sheet) return [];
+  try {
+    const sheet = getSheet(SHEETS.MOVEMENT);
+    if (!sheet) {
+      console.warn('Movement sheet not found:', SHEETS.MOVEMENT);
+      return [];
+    }
 
-  const projectCol = getColumnByHeader(sheet, 'الفيلم');
-  if (projectCol === -1) return [];
+    const projectCol = getColumnByHeader(sheet, 'الفيلم');
+    if (projectCol === -1) {
+      console.warn('Project column not found in Movement sheet');
+      return [];
+    }
 
-  const lastRow = getLastRowInColumn(sheet, projectCol);
-  if (lastRow <= 1) return [];
+    const lastRow = getLastRowInColumn(sheet, projectCol);
+    if (lastRow <= 1) return [];
 
-  // تحديد الأعمدة ديناميكياً
-  const cols = {
-    number: getColumnByHeader(sheet, '#'),
-    date: getColumnByHeader(sheet, 'التاريخ'),
-    project: projectCol,
-    stage: getColumnByHeader(sheet, 'المرحلة'),
-    subtype: getColumnByHeader(sheet, 'المرحلة الفرعية'),
-    element: getColumnByHeader(sheet, 'العنصر'),
-    details: getColumnByHeader(sheet, 'التفاصيل'),
-    assignedTo: getColumnByHeader(sheet, 'المسؤول'),
-    status: getColumnByHeader(sheet, 'الحالة'),
-    dueDate: getColumnByHeader(sheet, 'تاريخ التسليم'),
-    notes: getColumnByHeader(sheet, 'ملاحظات')
-  };
+    // تحديد الأعمدة ديناميكياً
+    const cols = {
+      number: getColumnByHeader(sheet, '#'),
+      date: getColumnByHeader(sheet, 'التاريخ'),
+      project: projectCol,
+      stage: getColumnByHeader(sheet, 'المرحلة'),
+      subtype: getColumnByHeader(sheet, 'المرحلة الفرعية'),
+      element: getColumnByHeader(sheet, 'العنصر'),
+      details: getColumnByHeader(sheet, 'التفاصيل'),
+      assignedTo: getColumnByHeader(sheet, 'المسؤول'),
+      status: getColumnByHeader(sheet, 'الحالة'),
+      dueDate: getColumnByHeader(sheet, 'تاريخ التسليم'),
+      notes: getColumnByHeader(sheet, 'ملاحظات')
+    };
 
-  const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
-  const movements = [];
+    const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+    const movements = [];
 
-  for (const row of data) {
-    movements.push({
-      number: cols.number !== -1 ? row[cols.number - 1] : '',
-      date: cols.date !== -1 ? row[cols.date - 1] : '',
-      project: row[cols.project - 1],
+    for (const row of data) {
+      movements.push({
+        number: cols.number !== -1 ? row[cols.number - 1] : '',
+        date: cols.date !== -1 ? row[cols.date - 1] : '',
+        project: row[cols.project - 1],
       stage: cols.stage !== -1 ? row[cols.stage - 1] : '',
       subtype: cols.subtype !== -1 ? row[cols.subtype - 1] : '',
       element: cols.element !== -1 ? row[cols.element - 1] : '',
@@ -378,10 +385,13 @@ function getAllMovements() {
       status: cols.status !== -1 ? row[cols.status - 1] : '',
       dueDate: cols.dueDate !== -1 ? row[cols.dueDate - 1] : '',
       notes: cols.notes !== -1 ? row[cols.notes - 1] : ''
-    });
+      });
+    }
+    return movements;
+  } catch (e) {
+    console.error('Error in getAllMovements:', e);
+    return [];
   }
-
-  return movements;
 }
 
 /**

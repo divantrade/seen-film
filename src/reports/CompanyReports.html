@@ -152,6 +152,16 @@
             color: #C62828;
         }
 
+        .error-message {
+            background: #FFEBEE;
+            color: #C62828;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px;
+            border: 1px solid #FFCDD2;
+        }
+
         /* City Sub-Cards */
         .city-card {
             background: white;
@@ -329,18 +339,38 @@
         // Store selected member
         let currentMember = '';
 
+        function handleFailure(err) {
+            console.error('Server Call Failed:', err);
+            // Find all active loaders and replace with error
+            document.querySelectorAll('.view-section').forEach(el => {
+                const loader = el.querySelector('.loader');
+                if (loader) {
+                    el.innerHTML = `<div class="error-message">
+                        <h3>❌ فشل تحميل البيانات</h3>
+                        <p>${err.message || 'حدث خطأ غير معروف'}</p>
+                        <button onclick="location.reload()" style="margin-top:10px; padding:5px 15px; cursor:pointer;">إعادة محاولة</button>
+                    </div>`;
+                }
+            });
+        }
+
         window.onload = function () {
-            // Load Initial Data (Research & Fixing)
-            google.script.run.withSuccessHandler(renderResearch).getResearchAndFixingData();
-            google.script.run.withSuccessHandler(renderFixing).getResearchAndFixingData();
+            // Load Initial Data (Research & Fixing) - Consolidate into ONE call
+            google.script.run
+                .withSuccessHandler(data => {
+                    renderResearch(data);
+                    renderFixing(data);
+                })
+                .withFailureHandler(handleFailure)
+                .getResearchAndFixingData();
 
             // Load All Other Data in background
-            google.script.run.withSuccessHandler(renderProduction).getFilmingLogisticsData();
-            google.script.run.withSuccessHandler(renderPost).getPostProductionData();
-            google.script.run.withSuccessHandler(renderDelivery).getDeliveryData();
+            google.script.run.withSuccessHandler(renderProduction).withFailureHandler(handleFailure).getFilmingLogisticsData();
+            google.script.run.withSuccessHandler(renderPost).withFailureHandler(handleFailure).getPostProductionData();
+            google.script.run.withSuccessHandler(renderDelivery).withFailureHandler(handleFailure).getDeliveryData();
 
             // Load Team List
-            google.script.run.withSuccessHandler(populateTeamList).getAllTeamMembers();
+            google.script.run.withSuccessHandler(populateTeamList).withFailureHandler(handleFailure).getAllTeamMembers();
         };
 
         function nav(id) {

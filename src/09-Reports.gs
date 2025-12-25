@@ -314,28 +314,40 @@ function formatDate(date) {
 // Since we changed Stage Names in Config, we MUST update the filters here too.
 
 function getResearchAndFixingData() {
-  const allData = getAllMovements();
-  const devStage = normalizeString(STAGES.DEVELOPMENT.name);
-  const preProdStage = normalizeString(STAGES.PRE_PRODUCTION.name);
-  
-  const researchData = allData.filter(m => 
-    normalizeString(m.stage) === devStage
-  );
-  
-  const researchByPerson = groupBy(researchData, 'assignedTo');
-  
-  const fixingData = allData.filter(m => {
-    const stage = normalizeString(m.stage);
-    const subtype = normalizeString(m.subtype);
-    return stage === preProdStage || 
-           subtype.includes('تصريح') || 
-           subtype.includes('موافقة');
-  });
-  
-  return {
-    research: researchByPerson,
-    fixing: fixingData
-  };
+  try {
+    console.log('Fetching Research and Fixing Data...');
+    const allData = getAllMovements();
+    if (!allData || allData.length === 0) {
+      console.warn('No movements found for research report.');
+      return { research: {}, fixing: [] };
+    }
+
+    const devStage = normalizeString(STAGES.DEVELOPMENT.name);
+    const preProdStage = normalizeString(STAGES.PRE_PRODUCTION.name);
+    
+    const researchData = allData.filter(m => 
+      normalizeString(m.stage) === devStage
+    );
+    
+    const researchByPerson = groupBy(researchData, 'assignedTo');
+    
+    const fixingData = allData.filter(m => {
+      const stage = normalizeString(m.stage);
+      const subtype = normalizeString(m.subtype);
+      return stage === preProdStage || 
+             subtype.includes('تصريح') || 
+             subtype.includes('موافقة');
+    });
+    
+    console.log('Finished Fetching Research/Fixing. Research Count:', Object.keys(researchByPerson).length, 'Fixing Count:', fixingData.length);
+    return {
+      research: researchByPerson,
+      fixing: fixingData
+    };
+  } catch (e) {
+    console.error('Error in getResearchAndFixingData:', e);
+    throw e;
+  }
 }
 
 function getFilmingLogisticsData() {
