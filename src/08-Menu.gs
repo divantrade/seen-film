@@ -74,6 +74,7 @@ function onOpen() {
       .addItem('👤 صلاحياتي', 'showMyPermissions')
       .addItem('📋 عرض المدراء', 'showAdminsList')
       .addSeparator()
+      .addItem('🔑 تعديل صلاحيات عضو', 'changeTeamMemberPermission')
       .addItem('➕ إضافة مدير', 'addAdmin')
       .addItem('➖ إزالة مدير', 'removeAdmin')
       .addSeparator()

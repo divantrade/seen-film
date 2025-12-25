@@ -296,6 +296,204 @@ function showAdminsList() {
 }
 
 /**
+ * تعديل صلاحيات عضو فريق
+ */
+function changeTeamMemberPermission() {
+  // التحقق من الصلاحية
+  if (!requireAdmin('تعديل صلاحيات الأعضاء')) {
+    return;
+  }
+
+  const ui = SpreadsheetApp.getUi();
+
+  // الحصول على قائمة أعضاء الفريق
+  const teamSheet = getSheet(SHEETS.TEAM);
+  if (!teamSheet) {
+    showError('لم يتم العثور على شيت الفريق');
+    return;
+  }
+
+  const lastRow = getLastRowInColumn(teamSheet, TEAM_COLS.NAME);
+  if (lastRow < 2) {
+    showInfo('لا يوجد أعضاء في الفريق');
+    return;
+  }
+
+  const data = teamSheet.getRange(2, 1, lastRow - 1, 7).getValues();
+  const members = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const name = data[i][TEAM_COLS.NAME - 1];
+    const role = data[i][TEAM_COLS.ROLE - 1];
+    const email = data[i][TEAM_COLS.EMAIL - 1];
+    if (name) {
+      members.push({
+        row: i + 2,
+        name: name,
+        role: role || 'غير محدد',
+        email: email || ''
+      });
+    }
+  }
+
+  if (members.length === 0) {
+    showInfo('لا يوجد أعضاء في الفريق');
+    return;
+  }
+
+  // عرض قائمة الأعضاء
+  let membersList = 'اختر رقم العضو:\n\n';
+  members.forEach((m, i) => {
+    const currentLevel = getTeamMemberLevel(m.email, m.role);
+    membersList += (i + 1) + '. ' + m.name + ' (' + m.role + ') - ' + currentLevel + '\n';
+  });
+
+  const memberResult = ui.prompt(
+    '👥 تعديل صلاحيات عضو',
+    membersList + '\nأدخل رقم العضو:',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (memberResult.getSelectedButton() !== ui.Button.OK) return;
+
+  const memberIndex = parseInt(memberResult.getResponseText()) - 1;
+  if (isNaN(memberIndex) || memberIndex < 0 || memberIndex >= members.length) {
+    showError('رقم غير صالح');
+    return;
+  }
+
+  const selectedMember = members[memberIndex];
+
+  // اختيار الصلاحية الجديدة
+  const permResult = ui.prompt(
+    '🔐 اختر الصلاحية',
+    'العضو: ' + selectedMember.name + '\n' +
+    'الدور الحالي: ' + selectedMember.role + '\n\n' +
+    'اختر الصلاحية الجديدة:\n' +
+    '1. 👑 مدير (صلاحيات كاملة)\n' +
+    '2. 🎬 منتج (إدارة مشاريعه)\n' +
+    '3. 👤 موظف (مهامه فقط)\n\n' +
+    'أدخل الرقم (1-3):',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (permResult.getSelectedButton() !== ui.Button.OK) return;
+
+  const permChoice = parseInt(permResult.getResponseText());
+  if (isNaN(permChoice) || permChoice < 1 || permChoice > 3) {
+    showError('اختيار غير صالح');
+    return;
+  }
+
+  // تطبيق الصلاحية
+  try {
+    const admins = getAdminsList();
+    const memberEmail = selectedMember.email.toLowerCase().trim();
+
+    switch (permChoice) {
+      case 1: // مدير
+        // إضافة للمدراء إذا لم يكن موجوداً
+        if (memberEmail && !admins.includes(memberEmail)) {
+          const settingsSheet = getSheet(SHEETS.SETTINGS);
+          const lastAdminRow = settingsSheet.getLastRow();
+          let targetRow = PERMISSIONS_CONFIG.ADMINS_START_ROW;
+
+          for (let i = PERMISSIONS_CONFIG.ADMINS_START_ROW; i <= lastAdminRow + 1; i++) {
+            const cellValue = settingsSheet.getRange(i, PERMISSIONS_CONFIG.ADMINS_COLUMN).getValue();
+            if (!cellValue) {
+              targetRow = i;
+              break;
+            }
+            targetRow = i + 1;
+          }
+
+          settingsSheet.getRange(targetRow, PERMISSIONS_CONFIG.ADMINS_COLUMN).setValue(memberEmail);
+        }
+        showSuccess('✅ تم ترقية ' + selectedMember.name + ' إلى مدير');
+        break;
+
+      case 2: // منتج
+        // إزالة من المدراء إذا كان موجوداً
+        if (memberEmail && admins.includes(memberEmail)) {
+          removeEmailFromAdmins(memberEmail);
+        }
+        // تغيير الدور إلى منتج
+        teamSheet.getRange(selectedMember.row, TEAM_COLS.ROLE).setValue('منتج');
+        showSuccess('✅ تم تعيين ' + selectedMember.name + ' كمنتج');
+        break;
+
+      case 3: // موظف
+        // إزالة من المدراء إذا كان موجوداً
+        if (memberEmail && admins.includes(memberEmail)) {
+          removeEmailFromAdmins(memberEmail);
+        }
+        // تغيير الدور إذا كان منتج
+        const currentRole = selectedMember.role;
+        if (PERMISSIONS_CONFIG.PRODUCER_ROLES.some(r => normalizeString(currentRole).includes(normalizeString(r)))) {
+          teamSheet.getRange(selectedMember.row, TEAM_COLS.ROLE).setValue('موظف');
+        }
+        showSuccess('✅ تم تعيين ' + selectedMember.name + ' كموظف');
+        break;
+    }
+
+    // تسجيل التغيير
+    const levels = ['', 'مدير', 'منتج', 'موظف'];
+    logAuditEntry({
+      action: 'تغيير صلاحية',
+      sheetName: 'الفريق',
+      oldValue: selectedMember.role,
+      newValue: levels[permChoice],
+      details: 'العضو: ' + selectedMember.name
+    });
+
+  } catch (e) {
+    console.error('خطأ في تغيير الصلاحية:', e);
+    showError('❌ حدث خطأ: ' + e.message);
+  }
+}
+
+/**
+ * الحصول على مستوى صلاحية عضو معين
+ */
+function getTeamMemberLevel(email, role) {
+  // تحقق إذا كان مدير
+  if (email) {
+    const admins = getAdminsList();
+    if (admins.includes(email.toLowerCase().trim())) {
+      return '👑 مدير';
+    }
+  }
+
+  // تحقق إذا كان منتج
+  if (role) {
+    const isProducer = PERMISSIONS_CONFIG.PRODUCER_ROLES.some(
+      r => normalizeString(role).includes(normalizeString(r))
+    );
+    if (isProducer) {
+      return '🎬 منتج';
+    }
+  }
+
+  return '👤 موظف';
+}
+
+/**
+ * إزالة إيميل من قائمة المدراء (دالة مساعدة)
+ */
+function removeEmailFromAdmins(email) {
+  const sheet = getSheet(SHEETS.SETTINGS);
+  const lastRow = sheet.getLastRow();
+
+  for (let i = PERMISSIONS_CONFIG.ADMINS_START_ROW; i <= lastRow; i++) {
+    const cell = sheet.getRange(i, PERMISSIONS_CONFIG.ADMINS_COLUMN);
+    if (cell.getValue().toString().toLowerCase().trim() === email.toLowerCase().trim()) {
+      cell.clearContent();
+      break;
+    }
+  }
+}
+
+/**
  * إزالة مدير
  */
 function removeAdmin() {
