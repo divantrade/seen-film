@@ -28,31 +28,64 @@ function normalizeString(str) {
 }
 
 /**
- * تحويل أي تاريخ إلى الصيغة الموحدة DD/MM/YYYY
+ * تحليل مدخلات التاريخ بصيغ مختلفة وتحويلها إلى Date Object
+ * يدعم الفواصل: / و . و -
  */
-function formatDateToStandard(dateValue) {
-  if (!dateValue) return '';
+function parseDateInput_(dateValue) {
+  if (!dateValue) return null;
   
-  // إذا كان التاريخ بالفعل كائن Date
+  // إذا كان بالفعل Date Object
   if (dateValue instanceof Date) {
-    return Utilities.formatDate(dateValue, CONFIG.TIMEZONE, CONFIG.DATE_FORMAT);
+    return { dateObj: dateValue, isValid: !isNaN(dateValue.getTime()) };
   }
   
-  // إذا كان نص، حاول تحويله
+  // إذا كان نص
   const dateStr = dateValue.toString().trim();
-  if (!dateStr) return '';
+  if (!dateStr) return null;
   
+  // نمط التاريخ: dd/mm/yyyy أو dd.mm.yyyy أو dd-mm-yyyy
+  const regex = /^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})$/;
+  const match = dateStr.match(regex);
+  
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1; // الأشهر تبدأ من 0
+    const year = parseInt(match[3], 10);
+    
+    const dateObj = new Date(year, month, day);
+    
+    // التحقق من صحة التاريخ
+    if (dateObj.getDate() === day && dateObj.getMonth() === month && dateObj.getFullYear() === year) {
+      return { dateObj: dateObj, isValid: true };
+    }
+  }
+  
+  // محاولة أخيرة: استخدام Date constructor
   try {
-    // محاولة تحويل النص إلى Date
-    const parsedDate = new Date(dateStr);
-    if (!isNaN(parsedDate.getTime())) {
-      return Utilities.formatDate(parsedDate, CONFIG.TIMEZONE, CONFIG.DATE_FORMAT);
+    const dateObj = new Date(dateStr);
+    if (!isNaN(dateObj.getTime())) {
+      return { dateObj: dateObj, isValid: true };
     }
   } catch (e) {
     console.warn('Could not parse date:', dateStr);
   }
   
-  return dateStr;
+  return null;
+}
+
+/**
+ * تطبيع خلية تاريخ واحدة
+ */
+function normalizeDateCell_(range, value) {
+  const parseResult = parseDateInput_(value);
+  
+  if (parseResult && parseResult.isValid) {
+    range.setValue(parseResult.dateObj);
+    range.setNumberFormat('dd/mm/yyyy');
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -598,4 +631,78 @@ function isValidEmail(email) {
 function cleanText(text) {
   if (!text) return '';
   return text.toString().trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * تطبيع جميع التواريخ في النظام
+ * يمسح جميع أعمدة التواريخ ويحولها إلى Date Objects بصيغة dd/mm/yyyy
+ */
+function normalizeAllDates() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let totalNormalized = 0;
+  
+  try {
+    // 1. شيت الحركة - التاريخ وتاريخ التسليم
+    const movementSheet = getSheet(SHEETS.MOVEMENT);
+    if (movementSheet) {
+      const dateCol = getColumnByHeader(movementSheet, 'التاريخ');
+      const dueDateCol = getColumnByHeader(movementSheet, 'تاريخ التسليم');
+      
+      if (dateCol !== -1) {
+        totalNormalized += normalizeDateColumn_(movementSheet, dateCol);
+      }
+      if (dueDateCol !== -1) {
+        totalNormalized += normalizeDateColumn_(movementSheet, dueDateCol);
+      }
+    }
+    
+    // 2. شيت الفريق - تاريخ الانضمام
+    const teamSheet = getSheet(SHEETS.TEAM);
+    if (teamSheet) {
+      const joinDateCol = getColumnByHeader(teamSheet, 'تاريخ الانضمام');
+      if (joinDateCol !== -1) {
+        totalNormalized += normalizeDateColumn_(teamSheet, joinDateCol);
+      }
+    }
+    
+    // 3. شيت المشاريع - تاريخ البدء والانتهاء
+    const projectsSheet = getSheet(SHEETS.PROJECTS);
+    if (projectsSheet) {
+      if (PROJECT_COLS.START_DATE) {
+        totalNormalized += normalizeDateColumn_(projectsSheet, PROJECT_COLS.START_DATE);
+      }
+      if (PROJECT_COLS.END_DATE) {
+        totalNormalized += normalizeDateColumn_(projectsSheet, PROJECT_COLS.END_DATE);
+      }
+    }
+    
+    showSuccess(`تم تطبيع ${totalNormalized} تاريخ بنجاح ✅`);
+  } catch (e) {
+    showError('حدث خطأ أثناء تطبيع التواريخ: ' + e.message);
+    console.error('Error in normalizeAllDates:', e);
+  }
+}
+
+/**
+ * تطبيع عمود تاريخ كامل
+ */
+function normalizeDateColumn_(sheet, colNumber) {
+  const lastRow = getLastRowInColumn(sheet, colNumber);
+  if (lastRow <= 1) return 0;
+  
+  const range = sheet.getRange(2, colNumber, lastRow - 1, 1);
+  const values = range.getValues();
+  let normalized = 0;
+  
+  for (let i = 0; i < values.length; i++) {
+    const value = values[i][0];
+    if (value) {
+      const cell = sheet.getRange(i + 2, colNumber);
+      if (normalizeDateCell_(cell, value)) {
+        normalized++;
+      }
+    }
+  }
+  
+  return normalized;
 }

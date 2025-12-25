@@ -51,6 +51,7 @@ function onOpen() {
       .addItem('تحديث القوائم المنسدلة', 'updateAllDropdowns')
       .addItem('🔧 إصلاح شيت الحركة', 'fixMovementSheet')
       .addSeparator()
+      .addItem('📅 تطبيع التواريخ', 'normalizeAllDates')
       .addItem('⚡ تثبيت Triggers', 'installTriggers')
       .addSeparator()
       .addItem('👁️ إظهار شيت الروابط', 'showFolderLinksSheet')
@@ -112,6 +113,15 @@ function onProjectEdit(e) {
   for (let i = 0; i < numRows; i++) {
     const currentRow = startRow + i;
     if (currentRow <= 1) continue;
+
+    // 0. تطبيع التواريخ تلقائياً إلى dd/mm/yyyy
+    if (col === PROJECT_COLS.START_DATE || col === PROJECT_COLS.END_DATE) {
+      const cell = sheet.getRange(currentRow, col);
+      const value = cell.getValue();
+      if (value) {
+        normalizeDateCell_(cell, value);
+      }
+    }
 
     // توليد الكود تلقائياً عند إدخال اسم المشروع
     if (col === PROJECT_COLS.NAME) {

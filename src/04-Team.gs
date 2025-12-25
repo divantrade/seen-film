@@ -203,15 +203,12 @@ function onTeamEdit(e) {
     const currentRow = startRow + i;
     if (currentRow <= 1) continue;
 
-    // 0. تنسيق التواريخ تلقائياً إلى DD/MM/YYYY
+    // 0. تطبيع التواريخ تلقائياً إلى dd/mm/yyyy
     if (col === joinDateCol && joinDateCol !== -1) {
       const cell = sheet.getRange(currentRow, col);
       const value = cell.getValue();
       if (value) {
-        const formatted = formatDateToStandard(value);
-        if (formatted && formatted !== value) {
-          cell.setValue(formatted);
-        }
+        normalizeDateCell_(cell, value);
       }
     }
 
