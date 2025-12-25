@@ -74,6 +74,7 @@ function onOpen() {
       .addItem('👤 صلاحياتي', 'showMyPermissions')
       .addItem('📋 عرض المدراء', 'showAdminsList')
       .addSeparator()
+      .addItem('🔑 تعديل صلاحيات عضو', 'changeTeamMemberPermission')
       .addItem('➕ إضافة مدير', 'addAdmin')
       .addItem('➖ إزالة مدير', 'removeAdmin')
       .addSeparator()
@@ -99,6 +100,17 @@ function onEdit(e) {
   const sheetName = sheet.getName();
 
   try {
+    // التحقق من صلاحيات التعديل أولاً
+    try {
+      if (!validateEditPermission(e)) {
+        // تم رفض التعديل وإرجاع القيمة القديمة
+        return;
+      }
+    } catch (permError) {
+      console.error('خطأ في التحقق من الصلاحيات:', permError);
+      // في حالة الخطأ، نسمح بالتعديل
+    }
+
     // تسجيل التغيير في سجل التدقيق
     try {
       logEditChange(e);
