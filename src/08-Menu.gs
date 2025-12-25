@@ -51,6 +51,8 @@ function onOpen() {
       .addItem('تحديث القوائم المنسدلة', 'updateAllDropdowns')
       .addItem('🔧 إصلاح شيت الحركة', 'fixMovementSheet')
       .addSeparator()
+      .addItem('⚡ تثبيت Triggers', 'installTriggers')
+      .addSeparator()
       .addItem('👁️ إظهار شيت الروابط', 'showFolderLinksSheet')
       .addItem('🙈 إخفاء شيت الروابط', 'hideFolderLinksSheet')
       .addSeparator()
@@ -306,6 +308,12 @@ function installTriggers() {
     ScriptApp.deleteTrigger(trigger);
   }
 
+  // إضافة trigger للتعديل (onEdit)
+  ScriptApp.newTrigger('onEdit')
+    .forSpreadsheet(SpreadsheetApp.getActive())
+    .onEdit()
+    .create();
+
   // إضافة trigger للتحديث اليومي
   ScriptApp.newTrigger('updateDelayedTasks')
     .timeBased()
@@ -313,5 +321,5 @@ function installTriggers() {
     .atHour(8)
     .create();
 
-  showSuccess('تم تثبيت الـ Triggers');
+  showSuccess('تم تثبيت الـ Triggers بنجاح ✅');
 }
