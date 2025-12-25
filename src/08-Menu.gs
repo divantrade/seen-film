@@ -60,6 +60,15 @@ function onOpen() {
       .addItem('🔄 تهيئة النظام', 'initializeSystem')
       .addItem('🔧 تشخيص النظام', 'debugSettings'))
 
+    // نظام الأمان والحماية
+    .addSubMenu(ui.createMenu('🛡️ الأمان')
+      .addItem('💾 إنشاء نسخة احتياطية', 'createManualBackup')
+      .addItem('📋 عرض سجل التغييرات', 'showAuditLog')
+      .addItem('📤 تصدير سجل التدقيق', 'exportAuditLog')
+      .addSeparator()
+      .addItem('🔒 تفعيل نظام الأمان', 'installSafetyTriggers')
+      .addItem('📊 حالة نظام الأمان', 'showSafetyStatus'))
+
     .addToUi();
 
   // تحديث القوائم المنسدلة
@@ -78,6 +87,13 @@ function onEdit(e) {
   const sheetName = sheet.getName();
 
   try {
+    // تسجيل التغيير في سجل التدقيق
+    try {
+      logEditChange(e);
+    } catch (logError) {
+      console.error('خطأ في تسجيل التغيير:', logError);
+    }
+
     switch (sheetName) {
       case SHEETS.TEAM:
         onTeamEdit(e);
@@ -324,12 +340,25 @@ function installTriggers() {
     .onEdit()
     .create();
 
-  // إضافة trigger للتحديث اليومي
+  // إضافة trigger للتحديث اليومي (الساعة 8 صباحاً)
   ScriptApp.newTrigger('updateDelayedTasks')
     .timeBased()
     .everyDays(1)
     .atHour(8)
     .create();
 
-  showSuccess('تم تثبيت الـ Triggers بنجاح ✅');
+  // إضافة trigger للنسخ الاحتياطي اليومي (الساعة 3 صباحاً)
+  ScriptApp.newTrigger('dailyAutoBackup')
+    .timeBased()
+    .everyDays(1)
+    .atHour(3)
+    .create();
+
+  // إنشاء شيت سجل التدقيق إذا لم يكن موجوداً
+  createAuditLogSheet();
+
+  showSuccess('تم تثبيت الـ Triggers بنجاح ✅\n\n' +
+    '• تحديث المهام المتأخرة: 8 صباحاً\n' +
+    '• نسخ احتياطي تلقائي: 3 صباحاً\n' +
+    '• سجل التغييرات: مفعّل');
 }
