@@ -69,6 +69,18 @@ function onOpen() {
       .addItem('🔒 تفعيل نظام الأمان', 'installSafetyTriggers')
       .addItem('📊 حالة نظام الأمان', 'showSafetyStatus'))
 
+    // الصلاحيات
+    .addSubMenu(ui.createMenu('🔐 الصلاحيات')
+      .addItem('👤 صلاحياتي', 'showMyPermissions')
+      .addItem('📋 عرض المدراء', 'showAdminsList')
+      .addSeparator()
+      .addItem('➕ إضافة مدير', 'addAdmin')
+      .addItem('➖ إزالة مدير', 'removeAdmin')
+      .addSeparator()
+      .addItem('🗑️ حذف مشروع', 'deleteProjectProtected')
+      .addItem('🗑️ حذف عضو فريق', 'deleteTeamMemberProtected')
+      .addItem('🗑️ حذف صفوف محددة', 'deleteSelectedRowsProtected'))
+
     .addToUi();
 
   // تحديث القوائم المنسدلة
