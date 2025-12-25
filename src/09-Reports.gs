@@ -77,10 +77,38 @@ function generateDetailedFilmReport(projectName) {
   const allMovements = getProjectMovements(projectName);
   
   // Create new Spreadsheet
-  const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE || 'GMT', 'yyyy-MM-dd');
+  const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE || 'GMT', 'dd-MM-yyyy');
   const ss = SpreadsheetApp.create(`تقرير - ${projectName} - ${dateStr}`);
   const sheet = ss.getActiveSheet();
   sheet.setRightToLeft(true);
+  
+  // Try to move report to project's Reports folder
+  try {
+    const projectsSheet = getSheet(SHEETS.PROJECTS);
+    const projectRow = findRowByValue(projectsSheet, PROJECT_COLS.NAME, projectName);
+    
+    if (projectRow !== -1) {
+      const projectCode = projectsSheet.getRange(projectRow, PROJECT_COLS.CODE).getValue();
+      const mainFolderId = getProjectMainFolderId(projectCode);
+      
+      if (mainFolderId) {
+        const mainFolder = DriveApp.getFolderById(mainFolderId);
+        
+        // Create or get Reports subfolder
+        let reportsFolder = findFolderByName(mainFolder, 'Reports');
+        if (!reportsFolder) {
+          reportsFolder = mainFolder.createFolder('Reports');
+        }
+        
+        // Move the spreadsheet to Reports folder
+        const file = DriveApp.getFileById(ss.getId());
+        file.moveTo(reportsFolder);
+      }
+    }
+  } catch (e) {
+    console.error('Could not move report to project folder:', e);
+    // Continue anyway - report is still created
+  }
   
   // Header
   sheet.getRange('A1:E1').merge().setValue(`تقرير إنتاج تفصيلي: ${projectName}`)
@@ -90,89 +118,62 @@ function generateDetailedFilmReport(projectName) {
     .setBackground(COLORS.BACKGROUND).setHorizontalAlignment('center');
 
   // Headers
-  const headers = ['المرحلة', 'الخطوة (1-16)', 'المهمة/العنصر', 'المسؤول', 'الحالة'];
+  const headers = ['المرحلة', 'النوع الفرعي', 'المهمة/العنصر', 'المسؤول', 'الحالة'];
   sheet.getRange('A4:E4').setValues([headers])
     .setBackground('#E0E0E0').setFontWeight('bold').setBorder(true, true, true, true, true, true);
 
   let row = 5;
   
-  // Define standard workflow order using system definitions
-  const workflow = [
-    { phase: STAGES.DEVELOPMENT.name, step: 'الفكرة' },
-    { phase: STAGES.DEVELOPMENT.name, step: 'البحث' },
-    { phase: STAGES.DEVELOPMENT.name, step: 'المعالجة' },
-    { phase: STAGES.DEVELOPMENT.name, step: 'اسكربت أولي' },
-    { phase: STAGES.PRE_PRODUCTION.name, step: 'قائمة الضيوف' },
-    { phase: STAGES.PRE_PRODUCTION.name, step: 'الفكسز' },
-    { phase: STAGES.PRE_PRODUCTION.name, step: 'إعداد الأسئلة' },
-    { phase: STAGES.PRE_PRODUCTION.name, step: 'تنسيق المدن' },
-    { phase: STAGES.PRE_PRODUCTION.name, step: 'تنسيق الدراما' },
-    { phase: STAGES.PRODUCTION.name, step: 'التصوير' },
-    { phase: STAGES.POST_PAPERWORK.name, step: 'اسكربت نهائي' },
-    { phase: STAGES.POST_PAPERWORK.name, step: 'تجهيز الأرشيف' },
-    { phase: STAGES.POST_ELEMENTS.name, step: 'جرافيك' },
-    { phase: STAGES.POST_ELEMENTS.name, step: 'مشاهد دراما' },
-    { phase: STAGES.POST_ELEMENTS.name, step: 'الصوت' },
-    { phase: STAGES.EDITING.name, step: 'المونتاج' }
+  // Group all movements by stage
+  const stageOrder = [
+    STAGES.DEVELOPMENT,
+    STAGES.PRE_PRODUCTION,
+    STAGES.PRODUCTION,
+    STAGES.POST_PAPERWORK,
+    STAGES.POST_ELEMENTS,
+    STAGES.EDITING,
+    STAGES.COLORING,
+    STAGES.DELIVERY
   ];
   
-  // Group movements by Subtype (Step)
-  // Subtype in Config matches 'step' above mostly, but user data might vary. 
-  // We check mapping.
-  
-  workflow.forEach(item => {
-    // Header for the Step
-    sheet.getRange(row, 1, 1, 5).setBackground('#F3F3F3');
-    sheet.getRange(row, 1).setValue(item.phase).setFontWeight('bold');
-    sheet.getRange(row, 2).setValue(item.step).setFontWeight('bold').setFontColor('#1565C0');
+  stageOrder.forEach(stageObj => {
+    const stageName = stageObj.name;
+    const stageIcon = stageObj.icon;
     
-    // Find matching movements
-    const tasks = allMovements.filter(m => {
-      const mStage = normalizeString(m.stage);
-      const mSubtype = normalizeString(m.subtype);
-      const itemPhase = normalizeString(item.phase);
-      const itemStep = normalizeString(item.step);
-      
-      // Match by stage first
-      if (mStage !== itemPhase) return false;
-      
-      // For generic stages (like Production), match by stage only
-      if (itemPhase === normalizeString(STAGES.PRODUCTION.name)) {
-        return true;
-      }
-      
-      // For other stages, try to match by subtype
-      if (mSubtype && itemStep) {
-        return mSubtype.includes(itemStep) || itemStep.includes(mSubtype);
-      }
-      
-      // If no subtype, match by stage
-      return true;
-    });
-
+    // Filter tasks for this stage
+    const tasks = allMovements.filter(m => normalizeString(m.stage) === normalizeString(stageName));
+    
     if (tasks.length === 0) {
-      // ⚠️ COVERAGE CHECK: If this is "City Coordination" (Planning) or "Shooting" (Execution), we might want to flag mismatch
-      sheet.getRange(row, 3).setValue('⚠️ لا يوجد بيانات مسجلة').setFontColor('#E65100');
-      row++;
-    } else {
-      // Print tasks
-      
-      // ... (Existing printing logic)
-      
-      tasks.forEach(t => {
-         // ... (Printing rows)
-         sheet.getRange(row, 1).setValue(''); 
-         sheet.getRange(row, 2).setValue(''); 
-         sheet.getRange(row, 3).setValue(t.element);
-         sheet.getRange(row, 4).setValue(t.assignedTo);
-         sheet.getRange(row, 5).setValue(t.status);
-         
-         if(t.status.includes('تم')) sheet.getRange(row, 5).setFontColor('green');
-         if(t.status.includes('متأخر')) sheet.getRange(row, 5).setFontColor('red');
-         
-         row++;
-      });
+      // Skip empty stages
+      return;
     }
+    
+    // Stage Header
+    sheet.getRange(row, 1, 1, 5).merge()
+      .setValue(`${stageIcon} ${stageName}`)
+      .setBackground(COLORS.HEADER)
+      .setFontColor('white')
+      .setFontWeight('bold')
+      .setHorizontalAlignment('center')
+      .setFontSize(14);
+    row++;
+    
+    // Print tasks
+    tasks.forEach(t => {
+      sheet.getRange(row, 1).setValue(t.subtype || '-');
+      sheet.getRange(row, 2).setValue('');
+      sheet.getRange(row, 3).setValue(t.element);
+      sheet.getRange(row, 4).setValue(t.assignedTo);
+      sheet.getRange(row, 5).setValue(t.status);
+      
+      if(t.status.includes('تم')) sheet.getRange(row, 5).setFontColor('green');
+      if(t.status.includes('متأخر')) sheet.getRange(row, 5).setFontColor('red');
+      if(t.status.includes('جاري')) sheet.getRange(row, 5).setFontColor('blue');
+      
+      row++;
+    });
+    
+    row++; // Add spacing between stages
   });
 
   // ═══════════════════════════════════════════════════════════════════════════════
