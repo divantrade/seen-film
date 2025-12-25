@@ -210,57 +210,70 @@ function onMovementEdit(e) {
   const numRows = range.getNumRows();
   const col = range.getColumn();
 
-  // معالجة كل صف في النطاق المعدللدعم النسخ واللصق
+  // تحديد الأعمدة ديناميكياً
+  const projectCol = getColumnByHeader(sheet, 'الفيلم');
+  const stageCol = getColumnByHeader(sheet, 'المرحلة');
+  const subtypeCol = getColumnByHeader(sheet, 'المرحلة الفرعية');
+  const elementCol = getColumnByHeader(sheet, 'العنصر');
+  const statusCol = getColumnByHeader(sheet, 'الحالة');
+  const numberCol = getColumnByHeader(sheet, '#');
+  const dateCol = getColumnByHeader(sheet, 'التاريخ');
+  const linkCol = getColumnByHeader(sheet, 'الرابط');
+
+  if (projectCol === -1 || stageCol === -1) return;
+
+  // معالجة كل صف في النطاق المعدل لدعم النسخ واللصق
   for (let i = 0; i < numRows; i++) {
     const currentRow = startRow + i;
     if (currentRow <= 1) continue;
 
     // 1. ملء التاريخ والرقم تلقائياً عند إدخال بيانات جديدة (إذا كان المشروع موجوداً)
-    if (col >= MOVEMENT_COLS.PROJECT) {
-      const project = sheet.getRange(currentRow, MOVEMENT_COLS.PROJECT).getValue();
+    if (col === projectCol) {
+      const project = sheet.getRange(currentRow, projectCol).getValue();
       if (project) {
-        const numberCell = sheet.getRange(currentRow, MOVEMENT_COLS.NUMBER);
-        const dateCell = sheet.getRange(currentRow, MOVEMENT_COLS.DATE);
-
-        if (!numberCell.getValue()) {
-          const lastRow = getLastRowInColumn(sheet, MOVEMENT_COLS.PROJECT);
-          // تقدير الرقم التسلسلي
-          numberCell.setValue(currentRow - 1);
+        if (numberCol !== -1) {
+          const numberCell = sheet.getRange(currentRow, numberCol);
+          if (!numberCell.getValue()) {
+            numberCell.setValue(currentRow - 1);
+          }
         }
-        if (!dateCell.getValue()) {
-          dateCell.setValue(getCurrentDate());
+        if (dateCol !== -1) {
+          const dateCell = sheet.getRange(currentRow, dateCol);
+          if (!dateCell.getValue()) {
+            dateCell.setValue(getCurrentDate());
+          }
         }
       }
     }
 
     // 2. تلوين الصف عند تغيير الحالة
-    if (col === MOVEMENT_COLS.STATUS) {
-      const status = sheet.getRange(currentRow, MOVEMENT_COLS.STATUS).getValue();
+    if (col === statusCol && statusCol !== -1) {
+      const status = sheet.getRange(currentRow, statusCol).getValue();
       colorRowByStatus(sheet, currentRow, status);
     }
 
     // 3. تحديث الأنواع الفرعية عند تغيير المرحلة
-    if (col === MOVEMENT_COLS.STAGE) {
-      const stage = sheet.getRange(currentRow, MOVEMENT_COLS.STAGE).getValue();
+    if (col === stageCol) {
+      const stage = sheet.getRange(currentRow, stageCol).getValue();
       const subtypes = getSubtypesFromSettings(stage);
 
-      if (subtypes && subtypes.length > 0) {
-        const subtypeCell = sheet.getRange(currentRow, MOVEMENT_COLS.SUBTYPE);
+      if (subtypes && subtypes.length > 0 && subtypeCol !== -1) {
+        const subtypeCell = sheet.getRange(currentRow, subtypeCol);
         const rule = SpreadsheetApp.newDataValidation()
           .requireValueInList(subtypes, true)
           .setAllowInvalid(true)
           .build();
         subtypeCell.setDataValidation(rule);
-      } else {
+      } else if (subtypeCol !== -1) {
         // إزالة التحقق لبعض المراحل الخاصة
         const stageKey = Object.keys(STAGES).find(key => STAGES[key].name === stage);
         if (stageKey === 'PRODUCTION' || stageKey === 'SHOOTING') {
-          sheet.getRange(currentRow, MOVEMENT_COLS.SUBTYPE).clearDataValidations();
+          sheet.getRange(currentRow, subtypeCol).clearDataValidations();
         }
       }
       
       // [NEW] Trigger Smart Automation (Shortcuts & Folder Logic)
-      const project = sheet.getRange(currentRow, MOVEMENT_COLS.PROJECT).getValue();
+      const project = (projectCol !== -1) ? sheet.getRange(currentRow, projectCol).getValue() : '';
       if (project && stage) {
         try {
           onProjectStageChange(project, stage);
@@ -271,15 +284,15 @@ function onMovementEdit(e) {
     }
 
     // 4. إنشاء فولدر تلقائي للتصوير (الإنتاج) عند إدخال العنصر
-    if (col === MOVEMENT_COLS.ELEMENT) {
-      const stage = sheet.getRange(currentRow, MOVEMENT_COLS.STAGE).getValue();
+    if (col === elementCol && elementCol !== -1) {
+      const stage = (stageCol !== -1) ? sheet.getRange(currentRow, stageCol).getValue() : '';
       const isShootingStage = stage === 'الإنتاج' || stage === 'التصوير';
-      const elementValue = sheet.getRange(currentRow, MOVEMENT_COLS.ELEMENT).getValue();
+      const elementValue = sheet.getRange(currentRow, elementCol).getValue();
 
       if (isShootingStage && elementValue) {
-        const project = sheet.getRange(currentRow, MOVEMENT_COLS.PROJECT).getValue();
-        const subtype = sheet.getRange(currentRow, MOVEMENT_COLS.SUBTYPE).getValue();
-        const existingLink = sheet.getRange(currentRow, MOVEMENT_COLS.LINK).getValue();
+        const project = (projectCol !== -1) ? sheet.getRange(currentRow, projectCol).getValue() : '';
+        const subtype = (subtypeCol !== -1) ? sheet.getRange(currentRow, subtypeCol).getValue() : '';
+        const existingLink = (linkCol !== -1) ? sheet.getRange(currentRow, linkCol).getValue() : '';
 
         if (!existingLink && project) {
           createShootingFolder(project, subtype, currentRow, elementValue);
@@ -373,18 +386,21 @@ function getAllMovements() {
     const movements = [];
 
     for (const row of data) {
+      const dateVal = cols.date !== -1 ? row[cols.date - 1] : '';
+      const dueDateVal = cols.dueDate !== -1 ? row[cols.dueDate - 1] : '';
+
       movements.push({
         number: cols.number !== -1 ? row[cols.number - 1] : '',
-        date: cols.date !== -1 ? row[cols.date - 1] : '',
+        date: (dateVal instanceof Date) ? dateVal.toISOString() : dateVal,
         project: row[cols.project - 1],
-      stage: cols.stage !== -1 ? row[cols.stage - 1] : '',
-      subtype: cols.subtype !== -1 ? row[cols.subtype - 1] : '',
-      element: cols.element !== -1 ? row[cols.element - 1] : '',
-      details: cols.details !== -1 ? row[cols.details - 1] : '',
-      assignedTo: cols.assignedTo !== -1 ? row[cols.assignedTo - 1] : '',
-      status: cols.status !== -1 ? row[cols.status - 1] : '',
-      dueDate: cols.dueDate !== -1 ? row[cols.dueDate - 1] : '',
-      notes: cols.notes !== -1 ? row[cols.notes - 1] : ''
+        stage: cols.stage !== -1 ? row[cols.stage - 1] : '',
+        subtype: cols.subtype !== -1 ? row[cols.subtype - 1] : '',
+        element: cols.element !== -1 ? row[cols.element - 1] : '',
+        details: cols.details !== -1 ? row[cols.details - 1] : '',
+        assignedTo: cols.assignedTo !== -1 ? row[cols.assignedTo - 1] : '',
+        status: cols.status !== -1 ? row[cols.status - 1] : '',
+        dueDate: (dueDateVal instanceof Date) ? dueDateVal.toISOString() : dueDateVal,
+        notes: cols.notes !== -1 ? row[cols.notes - 1] : ''
       });
     }
     return movements;

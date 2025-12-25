@@ -192,25 +192,32 @@ function onTeamEdit(e) {
   const numRows = range.getNumRows();
   const col = range.getColumn();
 
+  const nameCol = getColumnByHeader(sheet, 'الاسم');
+  const roleCol = getColumnByHeader(sheet, 'الدور');
+  const codeCol = getColumnByHeader(sheet, 'الكود');
+  const statusCol = getColumnByHeader(sheet, 'الحالة');
+
   // معالجة كل صف في النطاق المعدل (لدعم النسخ واللصق)
   for (let i = 0; i < numRows; i++) {
     const currentRow = startRow + i;
     if (currentRow <= 1) continue;
 
     // إذا تم تعديل الدور أو الاسم، تأكد من وجود كود
-    if (col === TEAM_COLS.ROLE || col === TEAM_COLS.NAME) {
-      const role = sheet.getRange(currentRow, TEAM_COLS.ROLE).getValue();
-      const currentCode = sheet.getRange(currentRow, TEAM_COLS.CODE).getValue();
+    if (col === roleCol || col === nameCol) {
+      const role = (roleCol !== -1) ? sheet.getRange(currentRow, roleCol).getValue() : '';
+      const currentCode = (codeCol !== -1) ? sheet.getRange(currentRow, codeCol).getValue() : '';
 
       if (!currentCode && role) {
         const newCode = generateTeamCode(role);
-        sheet.getRange(currentRow, TEAM_COLS.CODE).setValue(newCode);
+        if (codeCol !== -1) {
+          sheet.getRange(currentRow, codeCol).setValue(newCode);
+        }
       }
     }
   }
 
   // إذا تم تعديل الحالة أو الدور أو الاسم، قم بتحديث القوائم المنسدلة
-  if (col === TEAM_COLS.STATUS || col === TEAM_COLS.ROLE || col === TEAM_COLS.NAME) {
+  if (col === statusCol || col === roleCol || col === nameCol) {
     updateMovementDropdowns();
   }
 }
