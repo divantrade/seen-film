@@ -1,13 +1,14 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * نظام إدارة الإنتاج - Seen Film
- * نظام الصلاحيات - الدفعة الأولى (الأساسيات)
+ * نظام الصلاحيات الكامل
  * ═══════════════════════════════════════════════════════════════════════════════
- * الإصدار: 1.0.0
+ * الإصدار: 2.0.0
  * يشمل:
- *   - تحديد المدراء
- *   - حماية عمليات الحذف
- *   - حماية إعادة التهيئة
+ *   - ثلاث مستويات: مدير، منتج، موظف
+ *   - ربط المستخدم بشيت الفريق عبر الإيميل
+ *   - تحديد المسؤول عن كل مشروع
+ *   - حماية عمليات الحذف والتعديل
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
@@ -21,10 +22,23 @@ const PERMISSIONS_CONFIG = {
   ADMINS_HEADER_ROW: 5,     // صف الهيدر
   ADMINS_START_ROW: 6,      // بداية البيانات
 
+  // مستويات الصلاحيات
+  LEVELS: {
+    ADMIN: 'مدير',
+    PRODUCER: 'منتج',
+    EMPLOYEE: 'موظف'
+  },
+
+  // الأدوار التي تُعتبر "منتج" (صلاحيات أعلى)
+  PRODUCER_ROLES: ['منتج', 'مخرج', 'مدير إنتاج'],
+
   // رسائل الخطأ
   MESSAGES: {
     NO_PERMISSION: '⛔ ليس لديك صلاحية لتنفيذ هذه العملية.',
     ADMIN_ONLY: '🔒 هذه العملية متاحة للمدراء فقط.',
+    PRODUCER_ONLY: '🔒 هذه العملية متاحة للمنتجين فقط.',
+    NOT_YOUR_PROJECT: '⚠️ هذا المشروع ليس من مشاريعك.',
+    NOT_YOUR_TASK: '⚠️ هذه المهمة ليست مسندة إليك.',
     CONTACT_ADMIN: 'تواصل مع أحد المدراء للمساعدة.',
     NO_ADMINS_CONFIGURED: '⚠️ لم يتم تحديد أي مدراء بعد.\n\nاذهب إلى: الإعدادات ← إضافة مدير'
   }
@@ -565,6 +579,268 @@ function deleteSelectedRowsProtected() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ربط المستخدم بشيت الفريق
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * الحصول على بيانات المستخدم الحالي من شيت الفريق
+ * @returns {Object|null} بيانات العضو أو null إذا لم يوجد
+ */
+function getCurrentUserInfo() {
+  const email = getCurrentUserEmail();
+  if (!email) return null;
+
+  try {
+    const sheet = getSheet(SHEETS.TEAM);
+    if (!sheet) return null;
+
+    const lastRow = getLastRowInColumn(sheet, TEAM_COLS.NAME);
+    if (lastRow < 2) return null;
+
+    // البحث في شيت الفريق عن الإيميل
+    const data = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+
+    for (const row of data) {
+      const memberEmail = row[TEAM_COLS.EMAIL - 1]; // EMAIL column
+      if (memberEmail && memberEmail.toString().toLowerCase().trim() === email) {
+        return {
+          code: row[TEAM_COLS.CODE - 1],
+          name: row[TEAM_COLS.NAME - 1],
+          role: row[TEAM_COLS.ROLE - 1],
+          status: row[TEAM_COLS.STATUS - 1],
+          email: memberEmail
+        };
+      }
+    }
+
+    return null;
+  } catch (e) {
+    console.error('خطأ في البحث عن المستخدم:', e);
+    return null;
+  }
+}
+
+/**
+ * تحديد مستوى صلاحية المستخدم الحالي
+ * @returns {string} المستوى: 'مدير', 'منتج', أو 'موظف'
+ */
+function getCurrentUserLevel() {
+  // أولاً: تحقق إذا كان مدير
+  if (isCurrentUserAdmin()) {
+    return PERMISSIONS_CONFIG.LEVELS.ADMIN;
+  }
+
+  // ثانياً: تحقق من دوره في شيت الفريق
+  const userInfo = getCurrentUserInfo();
+
+  if (!userInfo) {
+    // إذا لم يكن مسجلاً في الفريق، يُعتبر موظف
+    return PERMISSIONS_CONFIG.LEVELS.EMPLOYEE;
+  }
+
+  // تحقق إذا كان دوره من أدوار المنتجين
+  const role = userInfo.role ? userInfo.role.toString().trim() : '';
+  const isProducerRole = PERMISSIONS_CONFIG.PRODUCER_ROLES.some(
+    r => normalizeString(role).includes(normalizeString(r))
+  );
+
+  if (isProducerRole) {
+    return PERMISSIONS_CONFIG.LEVELS.PRODUCER;
+  }
+
+  return PERMISSIONS_CONFIG.LEVELS.EMPLOYEE;
+}
+
+/**
+ * الحصول على المشاريع التي يكون فيها المستخدم الحالي هو المنتج المسؤول
+ * @returns {Array<Object>} قائمة المشاريع
+ */
+function getUserProjects() {
+  const userInfo = getCurrentUserInfo();
+  if (!userInfo) return [];
+
+  const userName = userInfo.name;
+  if (!userName) return [];
+
+  try {
+    const sheet = getSheet(SHEETS.PROJECTS);
+    if (!sheet) return [];
+
+    const lastRow = getLastRowInColumn(sheet, PROJECT_COLS.NAME);
+    if (lastRow < 2) return [];
+
+    const data = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
+    const projects = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const projectName = row[PROJECT_COLS.NAME - 1];
+      const producer = row[PROJECT_COLS.PRODUCER - 1];
+
+      // المنتج المسؤول (عمود المنتج)
+      if (projectName && producer) {
+        const normalizedProducer = normalizeString(producer);
+        const normalizedUser = normalizeString(userName);
+
+        if (normalizedProducer.includes(normalizedUser) || normalizedUser.includes(normalizedProducer)) {
+          projects.push({
+            row: i + 2,
+            code: row[PROJECT_COLS.CODE - 1],
+            name: projectName,
+            type: row[PROJECT_COLS.TYPE - 1],
+            status: row[PROJECT_COLS.STATUS - 1]
+          });
+        }
+      }
+    }
+
+    return projects;
+  } catch (e) {
+    console.error('خطأ في جلب مشاريع المستخدم:', e);
+    return [];
+  }
+}
+
+/**
+ * التحقق إذا كان المستخدم مسؤولاً عن مشروع معين
+ * @param {string} projectName - اسم المشروع
+ * @returns {boolean}
+ */
+function isUserResponsibleForProject(projectName) {
+  if (!projectName) return false;
+
+  // المدراء لهم صلاحية على كل المشاريع
+  if (isCurrentUserAdmin()) return true;
+
+  const userProjects = getUserProjects();
+  const normalizedTarget = normalizeString(projectName);
+
+  return userProjects.some(p =>
+    normalizeString(p.name) === normalizedTarget
+  );
+}
+
+/**
+ * التحقق إذا كان المستخدم يمكنه تعديل مشروع معين
+ * @param {string} projectName - اسم المشروع
+ * @returns {boolean}
+ */
+function canEditProject(projectName) {
+  // المدراء يستطيعون تعديل كل شيء
+  if (isCurrentUserAdmin()) return true;
+
+  // المنتجون يستطيعون تعديل مشاريعهم فقط
+  const level = getCurrentUserLevel();
+  if (level === PERMISSIONS_CONFIG.LEVELS.PRODUCER) {
+    return isUserResponsibleForProject(projectName);
+  }
+
+  // الموظفون لا يستطيعون تعديل المشاريع
+  return false;
+}
+
+/**
+ * التحقق إذا كان المستخدم يمكنه تعديل مهمة معينة
+ * @param {string} projectName - اسم المشروع
+ * @param {string} assignedTo - المسؤول عن المهمة
+ * @returns {boolean}
+ */
+function canEditTask(projectName, assignedTo) {
+  // المدراء يستطيعون تعديل كل شيء
+  if (isCurrentUserAdmin()) return true;
+
+  // المنتجون يستطيعون تعديل مهام مشاريعهم
+  const level = getCurrentUserLevel();
+  if (level === PERMISSIONS_CONFIG.LEVELS.PRODUCER) {
+    return isUserResponsibleForProject(projectName);
+  }
+
+  // الموظفون يستطيعون تعديل المهام المسندة إليهم فقط
+  const userInfo = getCurrentUserInfo();
+  if (!userInfo || !assignedTo) return false;
+
+  const normalizedAssigned = normalizeString(assignedTo);
+  const normalizedUser = normalizeString(userInfo.name);
+
+  return normalizedAssigned.includes(normalizedUser) || normalizedUser.includes(normalizedAssigned);
+}
+
+/**
+ * طلب صلاحية تعديل مشروع مع عرض رسالة خطأ إذا لم تكن متوفرة
+ * @param {string} projectName - اسم المشروع
+ * @param {string} operationName - اسم العملية
+ * @returns {boolean}
+ */
+function requireProjectPermission(projectName, operationName) {
+  if (canEditProject(projectName)) {
+    return true;
+  }
+
+  const level = getCurrentUserLevel();
+  let message = '';
+
+  if (level === PERMISSIONS_CONFIG.LEVELS.EMPLOYEE) {
+    message = PERMISSIONS_CONFIG.MESSAGES.PRODUCER_ONLY + '\n\n';
+    message += 'المشروع: ' + projectName + '\n';
+    message += 'العملية: ' + operationName + '\n\n';
+    message += 'تواصل مع المنتج المسؤول عن هذا المشروع.';
+  } else {
+    message = PERMISSIONS_CONFIG.MESSAGES.NOT_YOUR_PROJECT + '\n\n';
+    message += 'المشروع: ' + projectName + '\n\n';
+    message += 'هذا المشروع ليس ضمن مشاريعك المسندة إليك.';
+  }
+
+  SpreadsheetApp.getUi().alert('⚠️ صلاحية غير متوفرة', message, SpreadsheetApp.getUi().ButtonSet.OK);
+
+  // تسجيل المحاولة
+  try {
+    logAuditEntry({
+      action: 'محاولة مرفوضة',
+      sheetName: operationName,
+      details: 'مشروع: ' + projectName + ' | المستخدم: ' + getCurrentUserEmail()
+    });
+  } catch (e) {
+    console.error('خطأ في تسجيل المحاولة:', e);
+  }
+
+  return false;
+}
+
+/**
+ * طلب صلاحية تعديل مهمة مع عرض رسالة خطأ إذا لم تكن متوفرة
+ * @param {string} projectName - اسم المشروع
+ * @param {string} assignedTo - المسؤول عن المهمة
+ * @param {string} operationName - اسم العملية
+ * @returns {boolean}
+ */
+function requireTaskPermission(projectName, assignedTo, operationName) {
+  if (canEditTask(projectName, assignedTo)) {
+    return true;
+  }
+
+  let message = PERMISSIONS_CONFIG.MESSAGES.NOT_YOUR_TASK + '\n\n';
+  message += 'المشروع: ' + projectName + '\n';
+  message += 'المسؤول: ' + (assignedTo || 'غير محدد') + '\n';
+  message += 'العملية: ' + operationName + '\n\n';
+  message += 'يمكنك فقط تعديل المهام المسندة إليك.';
+
+  SpreadsheetApp.getUi().alert('⚠️ صلاحية غير متوفرة', message, SpreadsheetApp.getUi().ButtonSet.OK);
+
+  // تسجيل المحاولة
+  try {
+    logAuditEntry({
+      action: 'محاولة مرفوضة',
+      sheetName: operationName,
+      details: 'مهمة في: ' + projectName + ' | المستخدم: ' + getCurrentUserEmail()
+    });
+  } catch (e) {
+    console.error('خطأ في تسجيل المحاولة:', e);
+  }
+
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // التحقق من حالة الصلاحيات
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -574,37 +850,223 @@ function deleteSelectedRowsProtected() {
 function showMyPermissions() {
   const ui = SpreadsheetApp.getUi();
   const currentEmail = getCurrentUserEmail();
-  const isAdmin = isCurrentUserAdmin();
+  const userInfo = getCurrentUserInfo();
+  const level = getCurrentUserLevel();
+  const userProjects = getUserProjects();
   const admins = getAdminsList();
+
+  // رمز المستوى
+  let levelIcon = '👤';
+  if (level === PERMISSIONS_CONFIG.LEVELS.ADMIN) levelIcon = '👑';
+  else if (level === PERMISSIONS_CONFIG.LEVELS.PRODUCER) levelIcon = '🎬';
 
   let message = '═══════════════════════════════════\n';
   message += '👤 معلومات المستخدم الحالي\n';
   message += '═══════════════════════════════════\n\n';
 
   message += '📧 البريد: ' + (currentEmail || 'غير محدد') + '\n';
-  message += '🔑 الصلاحية: ' + (isAdmin ? '✅ مدير' : '👤 مستخدم عادي') + '\n\n';
+
+  if (userInfo) {
+    message += '👤 الاسم: ' + userInfo.name + '\n';
+    message += '💼 الدور: ' + (userInfo.role || 'غير محدد') + '\n';
+  }
+
+  message += levelIcon + ' المستوى: ' + level + '\n\n';
 
   message += '───────────────────────────────────\n';
   message += 'ما يمكنك فعله:\n\n';
 
-  if (isAdmin) {
+  if (level === PERMISSIONS_CONFIG.LEVELS.ADMIN) {
     message += '✅ إضافة/تعديل/حذف المشاريع\n';
     message += '✅ إضافة/تعديل/حذف أعضاء الفريق\n';
-    message += '✅ إضافة/تعديل المهام\n';
+    message += '✅ إضافة/تعديل كل المهام\n';
     message += '✅ إعادة تهيئة النظام\n';
     message += '✅ إدارة المدراء\n';
     message += '✅ عرض سجل التغييرات\n';
-  } else {
-    message += '✅ إضافة/تعديل المهام\n';
-    message += '✅ تحديث حالة المهام\n';
+  } else if (level === PERMISSIONS_CONFIG.LEVELS.PRODUCER) {
+    message += '✅ تعديل مشاريعك\n';
+    message += '✅ إضافة/تعديل مهام مشاريعك\n';
     message += '✅ عرض التقارير\n';
     message += '❌ حذف المشاريع\n';
     message += '❌ حذف أعضاء الفريق\n';
     message += '❌ إعادة تهيئة النظام\n';
+  } else {
+    message += '✅ تعديل المهام المسندة إليك\n';
+    message += '✅ تحديث حالة مهامك\n';
+    message += '✅ عرض التقارير\n';
+    message += '❌ تعديل المشاريع\n';
+    message += '❌ حذف أي شيء\n';
+  }
+
+  // عرض المشاريع المسندة (للمنتجين)
+  if (level === PERMISSIONS_CONFIG.LEVELS.PRODUCER && userProjects.length > 0) {
+    message += '\n───────────────────────────────────\n';
+    message += '🎬 مشاريعك (' + userProjects.length + '):\n\n';
+    userProjects.forEach((p, i) => {
+      message += (i + 1) + '. ' + p.name + ' (' + p.code + ')\n';
+    });
   }
 
   message += '\n───────────────────────────────────\n';
   message += 'عدد المدراء المسجلين: ' + admins.length;
 
   ui.alert('🔐 صلاحياتي', message, ui.ButtonSet.OK);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// حماية التعديل في الـ onEdit
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * التحقق من صلاحية تعديل صف في شيت المشاريع
+ * تُستدعى من onProjectEdit
+ * @param {Object} e - حدث التعديل
+ * @returns {boolean} true إذا مسموح بالتعديل
+ */
+function validateProjectEdit(e) {
+  try {
+    const sheet = e.source.getActiveSheet();
+    if (sheet.getName() !== SHEETS.PROJECTS) return true;
+
+    const row = e.range.getRow();
+    if (row <= 1) return true; // الهيدر
+
+    // المدراء يستطيعون تعديل كل شيء
+    if (isCurrentUserAdmin()) return true;
+
+    // الحصول على اسم المشروع
+    const projectName = sheet.getRange(row, PROJECT_COLS.NAME).getValue();
+    if (!projectName) return true; // صف فارغ
+
+    // التحقق من الصلاحية
+    if (!canEditProject(projectName)) {
+      // إرجاع القيمة القديمة
+      const oldValue = e.oldValue;
+      if (oldValue !== undefined) {
+        e.range.setValue(oldValue);
+      }
+
+      // عرض تنبيه
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        PERMISSIONS_CONFIG.MESSAGES.NOT_YOUR_PROJECT,
+        '⚠️ صلاحية مرفوضة',
+        5
+      );
+
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('خطأ في validateProjectEdit:', error);
+    return true; // السماح في حالة الخطأ
+  }
+}
+
+/**
+ * التحقق من صلاحية تعديل صف في شيت الحركة (المهام)
+ * تُستدعى من onMovementEdit
+ * @param {Object} e - حدث التعديل
+ * @returns {boolean} true إذا مسموح بالتعديل
+ */
+function validateMovementEdit(e) {
+  try {
+    const sheet = e.source.getActiveSheet();
+    if (sheet.getName() !== SHEETS.MOVEMENT) return true;
+
+    const row = e.range.getRow();
+    if (row <= 1) return true; // الهيدر
+
+    // المدراء يستطيعون تعديل كل شيء
+    if (isCurrentUserAdmin()) return true;
+
+    // الحصول على بيانات المهمة
+    const projectName = sheet.getRange(row, MOVEMENT_COLS.PROJECT).getValue();
+    const assignedTo = sheet.getRange(row, MOVEMENT_COLS.ASSIGNED_TO).getValue();
+
+    if (!projectName) return true; // صف فارغ
+
+    // التحقق من الصلاحية
+    if (!canEditTask(projectName, assignedTo)) {
+      // إرجاع القيمة القديمة
+      const oldValue = e.oldValue;
+      if (oldValue !== undefined) {
+        e.range.setValue(oldValue);
+      }
+
+      // عرض تنبيه
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        PERMISSIONS_CONFIG.MESSAGES.NOT_YOUR_TASK,
+        '⚠️ صلاحية مرفوضة',
+        5
+      );
+
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('خطأ في validateMovementEdit:', error);
+    return true; // السماح في حالة الخطأ
+  }
+}
+
+/**
+ * التحقق من صلاحية تعديل صف في شيت الفريق
+ * تُستدعى من onTeamEdit
+ * @param {Object} e - حدث التعديل
+ * @returns {boolean} true إذا مسموح بالتعديل
+ */
+function validateTeamEdit(e) {
+  try {
+    const sheet = e.source.getActiveSheet();
+    if (sheet.getName() !== SHEETS.TEAM) return true;
+
+    const row = e.range.getRow();
+    if (row <= 1) return true; // الهيدر
+
+    // فقط المدراء يستطيعون تعديل شيت الفريق
+    if (!isCurrentUserAdmin()) {
+      // إرجاع القيمة القديمة
+      const oldValue = e.oldValue;
+      if (oldValue !== undefined) {
+        e.range.setValue(oldValue);
+      }
+
+      // عرض تنبيه
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        PERMISSIONS_CONFIG.MESSAGES.ADMIN_ONLY,
+        '⚠️ صلاحية مرفوضة',
+        5
+      );
+
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('خطأ في validateTeamEdit:', error);
+    return true;
+  }
+}
+
+/**
+ * التحقق الموحد من صلاحيات التعديل
+ * يُستدعى من onEdit الرئيسية
+ * @param {Object} e - حدث التعديل
+ * @returns {boolean}
+ */
+function validateEditPermission(e) {
+  const sheetName = e.source.getActiveSheet().getName();
+
+  switch (sheetName) {
+    case SHEETS.PROJECTS:
+      return validateProjectEdit(e);
+    case SHEETS.MOVEMENT:
+      return validateMovementEdit(e);
+    case SHEETS.TEAM:
+      return validateTeamEdit(e);
+    default:
+      return true;
+  }
 }
