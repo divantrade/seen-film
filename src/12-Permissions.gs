@@ -106,21 +106,7 @@ function getAdminsList() {
  */
 function isCurrentUserAdmin() {
   const currentEmail = getCurrentUserEmail();
-
-  // إذا لم نستطع تحديد المستخدم، نسمح (لتجنب مشاكل التطوير)
-  if (!currentEmail) {
-    console.log('تحذير: لم يتم تحديد إيميل المستخدم');
-    return true;
-  }
-
-  const admins = getAdminsList();
-
-  // إذا لم يتم تحديد أي مدراء، السماح للجميع (النظام جديد)
-  if (admins.length === 0) {
-    return true;
-  }
-
-  return admins.includes(currentEmail);
+  return Security.isAdmin(currentEmail);
 }
 
 /**
@@ -129,16 +115,7 @@ function isCurrentUserAdmin() {
  * @returns {boolean}
  */
 function isAdmin(email) {
-  if (!email) return false;
-
-  const admins = getAdminsList();
-
-  // إذا لم يتم تحديد أي مدراء، السماح للجميع
-  if (admins.length === 0) {
-    return true;
-  }
-
-  return admins.includes(email.toLowerCase().trim());
+  return Security.isAdmin(email);
 }
 
 /**
@@ -147,36 +124,7 @@ function isAdmin(email) {
  * @returns {boolean} true إذا كان مدير، false إذا لا
  */
 function requireAdmin(operationName) {
-  if (isCurrentUserAdmin()) {
-    return true;
-  }
-
-  // عرض رسالة رفض الصلاحية
-  const admins = getAdminsList();
-  let message = PERMISSIONS_CONFIG.MESSAGES.ADMIN_ONLY + '\n\n';
-  message += 'العملية المطلوبة: ' + operationName + '\n\n';
-
-  if (admins.length > 0) {
-    message += 'المدراء المعتمدون:\n';
-    message += admins.map(a => '• ' + a).join('\n');
-  } else {
-    message += PERMISSIONS_CONFIG.MESSAGES.CONTACT_ADMIN;
-  }
-
-  SpreadsheetApp.getUi().alert('🔒 صلاحية مرفوضة', message, SpreadsheetApp.getUi().ButtonSet.OK);
-
-  // تسجيل المحاولة في سجل التدقيق
-  try {
-    logAuditEntry({
-      action: 'محاولة مرفوضة',
-      sheetName: operationName,
-      details: 'المستخدم: ' + getCurrentUserEmail()
-    });
-  } catch (e) {
-    console.error('خطأ في تسجيل المحاولة:', e);
-  }
-
-  return false;
+  return Security.enforce(operationName, 'ADMIN');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

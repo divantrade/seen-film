@@ -706,3 +706,27 @@ function normalizeDateColumn_(sheet, colNumber) {
   
   return normalized;
 }
+
+/**
+ * الحصول على مشروع بواسطة المعرف
+ * @param {string} projectId - كود المشروع
+ * @returns {Object|null} بيانات المشروع
+ */
+function getProjectById(projectId) {
+  const sheet = getSheet(SHEETS.PROJECTS);
+  if (!sheet) return null;
+  
+  const row = findRowByValue(sheet, PROJECT_COLS.CODE, projectId);
+  if (!row) return null;
+  
+  const data = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+  
+  // تحويل الصف إلى كائن
+  const project = {};
+  for (const key in PROJECT_COLS) {
+    project[PROJECT_COLS[key]] = data[PROJECT_COLS[key] - 1];
+  }
+  
+  return project;
+}
+

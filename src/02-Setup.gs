@@ -77,6 +77,7 @@ function createProjectsSheet(ss) {
   sheet.setColumnWidth(PROJECT_COLS.STATUS, 100);
   sheet.setColumnWidth(PROJECT_COLS.FOLDER_LINK, 250);
   sheet.setColumnWidth(PROJECT_COLS.NOTES, 200);
+  sheet.setColumnWidth(PROJECT_COLS.OWNER_EMAIL, 200);
 
   // تجميد الصف الأول
   sheet.setFrozenRows(1);

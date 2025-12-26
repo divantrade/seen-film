@@ -80,6 +80,8 @@ function showAddTeamMemberForm() {
  * إضافة عضو جديد للفريق
  */
 function addTeamMember(data) {
+  if (!Security.enforce('إضافة عضو فريق', 'ADMIN')) return;
+
   const sheet = getSheet(SHEETS.TEAM);
   const lastRow = getLastRowInColumn(sheet, TEAM_COLS.NAME);
   const newRow = lastRow + 1;
@@ -108,6 +110,8 @@ function addTeamMember(data) {
  * تحديث حالة عضو الفريق
  */
 function toggleTeamMemberStatus() {
+  if (!Security.enforce('تغيير حالة عضو', 'ADMIN')) return;
+
   const sheet = SpreadsheetApp.getActiveSheet();
 
   if (sheet.getName() !== SHEETS.TEAM) {
