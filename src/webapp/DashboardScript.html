@@ -1,0 +1,239 @@
+<script>
+    // بيانات المستخدم الحالي
+    let currentUser = null;
+
+    /**
+     * تحميل البيانات عند فتح الصفحة
+     */
+    window.addEventListener('DOMContentLoaded', function () {
+        loadUserData();
+        loadDashboardData();
+    });
+
+    /**
+     * تحميل بيانات المستخدم
+     */
+    function loadUserData() {
+        const userData = localStorage.getItem('seenfilm_user');
+
+        if (!userData) {
+            window.location.href = '<?= ScriptApp.getService().getUrl() ?>';
+            return;
+        }
+
+        currentUser = JSON.parse(userData);
+        document.getElementById('userName').textContent = currentUser.name;
+        document.getElementById('headerUserName').textContent = currentUser.name;
+    }
+
+    /**
+     * تحميل بيانات Dashboard
+     */
+    function loadDashboardData() {
+        google.script.run
+            .withSuccessHandler(displayDashboardData)
+            .withFailureHandler(handleDashboardError)
+            .webAppGetGeneralManagerData();
+    }
+
+    /**
+     * عرض بيانات Dashboard
+     */
+    function displayDashboardData(data) {
+        if (!data.success) {
+            showError(data.message);
+            return;
+        }
+
+        // عرض الإحصائيات
+        displayStats(data.stats);
+
+        // عرض المشاريع الأخيرة
+        displayRecentProjects(data.recentProjects);
+
+        // عرض المهام المتأخرة
+        displayDelayedTasks(data.delayedTasks);
+
+        // عرض تقدم المهام
+        displayTaskProgress(data.stats);
+    }
+
+    /**
+     * عرض الإحصائيات
+     */
+    function displayStats(stats) {
+        document.getElementById('totalProjects').textContent = stats.totalProjects;
+        document.getElementById('activeProjects').textContent = stats.activeProjects;
+        document.getElementById('totalTasks').textContent = stats.totalTasks;
+        document.getElementById('totalTeam').textContent = stats.totalTeam;
+    }
+
+    /**
+     * عرض المشاريع الأخيرة
+     */
+    function displayRecentProjects(projects) {
+        const container = document.getElementById('recentProjects');
+        document.getElementById('projectCount').textContent = projects.length;
+
+        if (projects.length === 0) {
+            container.innerHTML = '<p class="empty-state">لا توجد مشاريع</p>';
+            return;
+        }
+
+        let html = '<div class="projects-list">';
+
+        projects.forEach(project => {
+            html += `
+        <div class="project-item">
+          <div class="project-info">
+            <h4>${project.name}</h4>
+            <p class="project-code">${project.code}</p>
+          </div>
+          <div class="project-meta">
+            <span class="badge badge-small">${project.type}</span>
+            <span class="status-badge status-${getStatusClass(project.status)}">${project.status}</span>
+          </div>
+        </div>
+      `;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    /**
+     * عرض المهام المتأخرة
+     */
+    function displayDelayedTasks(tasks) {
+        const container = document.getElementById('delayedTasks');
+        document.getElementById('delayedCount').textContent = tasks.length;
+
+        if (tasks.length === 0) {
+            container.innerHTML = '<p class="empty-state success">👏 رائع! لا توجد مهام متأخرة</p>';
+            return;
+        }
+
+        let html = '<div class="tasks-list">';
+
+        tasks.forEach(task => {
+            html += `
+        <div class="task-item delayed">
+          <div class="task-header">
+            <span class="badge badge-danger">متأخر</span>
+            <span class="badge badge-small">${task.project}</span>
+          </div>
+          <div class="task-content">
+            <h4>${task.stage}</h4>
+            <p>${task.details || '-'}</p>
+            <div class="task-meta">
+              <span>📅 ${task.dueDate}</span>
+              <span>👤 ${task.assignedTo || '-'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    /**
+     * عرض تقدم المهام
+     */
+    function displayTaskProgress(stats) {
+        const totalTasks = stats.totalTasks || 1; // تجنب القسمة على صفر
+        const completedPercent = Math.round((stats.completedTasks / totalTasks) * 100);
+        const inProgressPercent = Math.round((stats.inProgressTasks / totalTasks) * 100);
+
+        document.getElementById('completedCount').textContent = stats.completedTasks;
+        document.getElementById('inProgressCount').textContent = stats.inProgressTasks;
+
+        document.getElementById('completedProgress').style.width = completedPercent + '%';
+        document.getElementById('inProgressProgress').style.width = inProgressPercent + '%';
+    }
+
+    /**
+     * تحديد class الحالة
+     */
+    function getStatusClass(status) {
+        const statusMap = {
+            'نشط': 'success',
+            'جاري': 'info',
+            'متوقف': 'warning',
+            'منتهي': 'secondary',
+            'ملغي': 'danger'
+        };
+        return statusMap[status] || 'secondary';
+    }
+
+    /**
+     * معالجة الأخطاء
+     */
+    function handleDashboardError(error) {
+        console.error('Error loading dashboard:', error);
+
+        document.querySelectorAll('.loading').forEach(el => {
+            el.innerHTML = '<p class="error-state">❌ حدث خطأ في تحميل البيانات</p>';
+        });
+
+        showError('حدث خطأ في تحميل البيانات');
+    }
+
+    /**
+     * عرض رسالة خطأ
+     */
+    function showError(message) {
+        alert(message);
+    }
+
+    /**
+     * إدارة المستخدمين
+     */
+    function manageUsers() {
+        // سيتم تنفيذها لاحقاً
+        alert('لوحة إدارة المستخدمين - قريباً!');
+    }
+
+    /**
+     * فتح Google Sheet
+     */
+    function openSheet() {
+        window.open('https://docs.google.com/spreadsheets/d/<?= SpreadsheetApp.getActive().getId() ?>', '_blank');
+    }
+
+    /**
+     * عرض التقارير
+     */
+    function viewReports() {
+        // سيتم تنفيذها لاحقاً
+        alert('صفحة التقارير - قريباً!');
+    }
+
+    /**
+     * تسجيل الخروج
+     */
+    function logout() {
+        if (confirm('هل تريد تسجيل الخروج؟')) {
+            localStorage.removeItem('seenfilm_user');
+            window.location.href = '<?= ScriptApp.getService().getUrl() ?>';
+        }
+    }
+
+    /**
+     * تحديث البيانات
+     */
+    function refreshData() {
+        document.querySelectorAll('.loading').forEach(el => {
+            el.innerHTML = `
+        <div class="loader-big"></div>
+        <p>جاري التحديث...</p>
+      `;
+        });
+
+        loadDashboardData();
+    }
+
+    // تحديث تلقائي كل 5 دقائق
+    setInterval(refreshData, 5 * 60 * 1000);
+</script>

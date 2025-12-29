@@ -82,6 +82,17 @@ function onOpen() {
       .addItem('🗑️ حذف عضو فريق', 'deleteTeamMemberProtected')
       .addItem('🗑️ حذف صفوف محددة', 'deleteSelectedRowsProtected'))
 
+    // نظام المستخدمين و Web App
+    .addSubMenu(ui.createMenu('🌐 نظام المستخدمين')
+      .addItem('🔧 إعداد شيت المستخدمين', 'setupUsersSheet')
+      .addItem('📊 عرض شيت المستخدمين', 'openUsersSheet')
+      .addSeparator()
+      .addItem('➕ إضافة مستخدم جديد', 'showAddUserForm')
+      .addItem('🔄 تحويل المستخدمين القدامى', 'migrateOldUsers')
+      .addSeparator()
+      .addItem('🌐 فتح Web App', 'openWebApp')
+      .addItem('📋 نسخ رابط Web App', 'copyWebAppUrl'))
+
     .addToUi();
 
   // تحديث القوائم المنسدلة

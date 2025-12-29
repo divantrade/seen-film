@@ -1,0 +1,144 @@
+<script>
+    /**
+     * معالجة تسجيل الدخول
+     */
+    function handleLogin(event) {
+        event.preventDefault();
+
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const remember = document.getElementById('remember').checked;
+
+        if (!email || !password) {
+            showError('⚠️ يرجى إدخال البريد الإلكتروني وكلمة المرور');
+            return;
+        }
+
+        // إظهار حالة التحميل
+        setLoading(true);
+        hideError();
+
+        // استدعاء دالة تسجيل الدخول
+        google.script.run
+            .withSuccessHandler(handleLoginSuccess)
+            .withFailureHandler(handleLoginFailure)
+            .webAppLogin(email, password);
+    }
+
+    /**
+     * نجاح تسجيل الدخول
+     */
+    function handleLoginSuccess(response) {
+        setLoading(false);
+
+        if (response.success) {
+            // حفظ بيانات المستخدم في localStorage
+            const userData = {
+                email: response.user.email,
+                name: response.user.name,
+                role: response.user.role,
+                projects: response.user.projects,
+                userId: response.user.userId
+            };
+
+            localStorage.setItem('seenfilm_user', JSON.stringify(userData));
+
+            // إظهار رسالة نجاح
+            showSuccess('✅ تم تسجيل الدخول بنجاح! جاري التحميل...');
+
+            // الانتقال إلى لوحة التحكم
+            setTimeout(() => {
+                if (response.user.role === 'مدير عام') {
+                    window.location.href = '<?= ScriptApp.getService().getUrl() ?>?page=general-manager';
+                } else {
+                    window.location.href = '<?= ScriptApp.getService().getUrl() ?>?page=project-manager';
+                }
+            }, 1500);
+
+        } else {
+            showError(response.message || '⚠️ خطأ في تسجيل الدخول');
+        }
+    }
+
+    /**
+     * فشل تسجيل الدخول
+     */
+    function handleLoginFailure(error) {
+        setLoading(false);
+        showError('❌ حدث خطأ: ' + error.message);
+        console.error('Login error:', error);
+    }
+
+    /**
+     * إظهار/إخفاء حالة التحميل
+     */
+    function setLoading(loading) {
+        const btn = document.getElementById('loginBtn');
+        const btnText = document.getElementById('btnText');
+        const btnLoader = document.getElementById('btnLoader');
+
+        btn.disabled = loading;
+        btnText.style.display = loading ? 'none' : 'inline';
+        btnLoader.style.display = loading ? 'inline-block' : 'none';
+    }
+
+    /**
+     * إظهار رسالة خطأ
+     */
+    function showError(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        errorDiv.className = 'error-message';
+    }
+
+    /**
+     * إظهار رسالة نجاح
+     */
+    function showSuccess(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        errorDiv.className = 'success-message';
+    }
+
+    /**
+     * إخفاء رسائل الخطأ
+     */
+    function hideError() {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.style.display = 'none';
+    }
+
+    /**
+     * التحقق من تسجيل الدخول المسبق
+     */
+    window.addEventListener('DOMContentLoaded', function () {
+        const savedUser = localStorage.getItem('seenfilm_user');
+
+        if (savedUser) {
+            const user = JSON.parse(savedUser);
+            const email = document.getElementById('email');
+
+            if (email) {
+                email.value = user.email;
+                document.getElementById('remember').checked = true;
+            }
+        }
+
+        // Focus على حقل البريد الإلكتروني
+        document.getElementById('email').focus();
+    });
+
+    /**
+     * معالجة Enter key
+     */
+    document.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            const form = document.getElementById('loginForm');
+            if (form) {
+                form.dispatchEvent(new Event('submit'));
+            }
+        }
+    });
+</script>
