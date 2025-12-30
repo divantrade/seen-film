@@ -80,6 +80,50 @@ function setupUsersSheet() {
   sheet.setColumnWidth(USER_COLS.ACTIVE, 80);
   sheet.setColumnWidth(USER_COLS.CREATED_DATE, 150);
   sheet.setColumnWidth(USER_COLS.LAST_LOGIN, 150);
+
+  // --- إضافة القوائم المنسدلة (Data Validation) ---
+  
+  // 1. قائمة الأدوار (مدير عام / مدير مشروعات)
+  const roleRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList([USER_ROLES.GENERAL_MANAGER, USER_ROLES.PROJECT_MANAGER], true)
+    .setAllowInvalid(false)
+    .setHelpText('يرجى اختيار الدور من القائمة')
+    .build();
+  sheet.getRange(2, USER_COLS.ROLE, 1000).setDataValidation(roleRule);
+  
+  // 2. قائمة الحالة (TRUE / FALSE)
+  const activeRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['TRUE', 'FALSE'], true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, USER_COLS.ACTIVE, 1000).setDataValidation(activeRule);
+  
+  // 3. قائمة المشاريع (تُجلب من شيت المشاريع)
+  const projectsSheet = ss.getSheetByName(SHEETS.PROJECTS);
+  if (projectsSheet) {
+    const lastRow = Math.max(projectsSheet.getLastRow(), 2);
+    const rawData = projectsSheet.getRange(2, 1, lastRow - 1, 2).getValues();
+    
+    // تنسيق العرض: [الكود] اسم الفيلم
+    const dropdownList = ['ALL'];
+    rawData.forEach(row => {
+      if (row[0] && row[1]) {
+        dropdownList.push(`[${row[0]}] ${row[1]}`);
+      } else if (row[0]) {
+        dropdownList.push(row[0]);
+      }
+    });
+    
+    const projectRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(dropdownList, true)
+      .setAllowInvalid(true) // السماح بإدخال قيم متعددة دون إظهار خطأ صارم
+      .setHelpText('اختر المشاريع لإضافتها أو حذفها.')
+      .build();
+    sheet.getRange(2, USER_COLS.PROJECTS, 1000).setDataValidation(projectRule);
+  }
+  
+  // 4. ملاحظة على عمود المشاريع
+  sheet.getRange(1, USER_COLS.PROJECTS).setNote('💡 نظام الاختيار المتعدد الذكي:\n- اختر [كود] اسم لإضافته.\n- اختره ثانيةً لحذفه.\n- سيقوم النظام تلقائياً بتحويل الاختيار لأكواد فقط لكي تعمل في الـ Web App.');
   
   Logger.log('✅ تم إعداد شيت المستخدمين بنجاح');
   return sheet;
@@ -215,12 +259,16 @@ function getUserByEmail(email) {
   const data = sheet.getDataRange().getValues();
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][USER_COLS.EMAIL - 1] === email) {
+    const rowEmail = String(data[i][USER_COLS.EMAIL - 1]).trim().toLowerCase();
+    if (rowEmail === email.trim().toLowerCase()) {
+      const rawName = data[i][USER_COLS.NAME - 1];
+      console.log(`[getUserByEmail] Found user. Email: ${rowEmail}, RawName: "${rawName}"`);
+      
       return {
         row: i + 1,
         userId: data[i][USER_COLS.ID - 1],
         email: data[i][USER_COLS.EMAIL - 1],
-        name: data[i][USER_COLS.NAME - 1],
+        name: rawName, // Keep original value to debug
         role: data[i][USER_COLS.ROLE - 1],
         passwordHash: data[i][USER_COLS.PASSWORD - 1],
         projects: data[i][USER_COLS.PROJECTS - 1],
@@ -360,31 +408,40 @@ function updateLastLogin(email) {
  */
 function authenticateUser(email, password) {
   try {
-    const user = getUserByEmail(email);
+    if (!email || !password) {
+      return { success: false, message: '⚠️ يرجى إدخل البريد الإلكتروني وكلمة المرور' };
+    }
+    
+    // تنظيف المدخلات
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = getUserByEmail(cleanEmail);
     
     if (!user) {
       return {
         success: false,
-        message: '⚠️ البريد الإلكتروني أو كلمة المرور غير صحيحة'
+        message: '⚠️ البريد الإلكتروني غير مسجل في النظام'
       };
     }
     
-    if (!user.active) {
+    // التحقق من الحالة النشطة (سواء كانت Boolean أو String)
+    const isActive = String(user.active).toUpperCase() === 'TRUE' || user.active === true;
+    if (!isActive) {
       return {
         success: false,
-        message: '⚠️ هذا الحساب غير نشط. يرجى التواصل مع المدير'
+        message: '⚠️ هذا الحساب معطل (نشط = FALSE)'
       };
     }
     
-    if (!verifyPassword(password, user.passwordHash)) {
+    // التحقق من كلمة المرور مع تنظيفها من أي مسافات بالخطأ
+    if (!verifyPassword(String(password).trim(), user.passwordHash)) {
       return {
         success: false,
-        message: '⚠️ البريد الإلكتروني أو كلمة المرور غير صحيحة'
+        message: '⚠️ كلمة المرور التي أدخلتها غير صحيحة'
       };
     }
     
-    // تحديث آخر تسجيل دخول
-    updateLastLogin(email);
+    // تحديث آخر تسجيل دخول (pass row directly to avoid re-scan)
+    updateLastLogin(cleanEmail, user.row);
     
     return {
       success: true,
@@ -403,6 +460,35 @@ function authenticateUser(email, password) {
       success: false,
       message: `❌ خطأ: ${error.message}`
     };
+  }
+}
+
+/**
+ * تحديث آخر تسجيل دخول
+ * @param {string} email
+ * @param {number} rowNumber - Optional row number to skip search
+ */
+function updateLastLogin(email, rowNumber) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(USER_SHEET_NAME);
+    
+    let targetRow = rowNumber;
+    
+    // Fallback if row not provided
+    if (!targetRow) {
+      const user = getUserByEmail(email);
+      if (user) targetRow = user.row;
+    }
+    
+    if (targetRow) {
+      // Use formatted string for clearer logging/reading
+      const now = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd/MM/yyyy HH:mm:ss');
+      sheet.getRange(targetRow, USER_COLS.LAST_LOGIN).setValue(now);
+    }
+  } catch (e) {
+    console.error('Failed to update last login:', e);
+    // Don't fail the login just because this fails
   }
 }
 
@@ -437,12 +523,16 @@ function getUserAllowedProjects(user) {
       }
     }
   } else {
-    // مدير مشروعات - يرى مشاريعه فقط
-    const allowedProjects = user.projects.split(',').map(p => p.trim());
+    // مدير مشروعات - استخراج الأكواد من التنسيق المليء بالأسماء [P25001] الاسم
+    let projectStrings = user.projects.split(',').map(p => p.trim());
+    let allowedCodes = projectStrings.map(str => {
+      const match = str.match(/\[(.*?)\]/);
+      return match ? match[1] : str; // إذا وجد قوسين يأخذ ما بينهما، وإلا يأخذ النص كما هو
+    });
     
     for (let i = 1; i < data.length; i++) {
-      const projectCode = data[i][PROJECT_COLS.CODE - 1];
-      if (projectCode && allowedProjects.includes(projectCode)) {
+      const projectCode = String(data[i][PROJECT_COLS.CODE - 1]).trim();
+      if (projectCode && allowedCodes.includes(projectCode)) {
         projects.push({
           code: projectCode,
           name: data[i][PROJECT_COLS.NAME - 1],
@@ -461,44 +551,64 @@ function getUserAllowedProjects(user) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * تحويل بيانات المستخدمين القدامى من شيت الإعدادات
+ * تحويل بيانات المستخدمين القدامى من شيت الصلاحيات
  */
 function migrateOldUsers() {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const settingsSheet = ss.getSheetByName(SHEETS.SETTINGS);
+    const allSheets = ss.getSheets();
+    let permSheet = null;
     
-    if (!settingsSheet) {
-      Logger.log('⚠️ شيت الإعدادات غير موجود');
+    // البحث عن الشيت الذي يحتوي اسمه على كلمة "الصلاحيات"
+    for (const s of allSheets) {
+      if (s.getName().indexOf('الصلاحيات') > -1) {
+        permSheet = s;
+        break;
+      }
+    }
+    
+    if (!permSheet) {
+      SpreadsheetApp.getUi().alert('⚠️ لم يتم العثور على شيت يحتوي على كلمة "الصلاحيات"');
       return;
     }
     
-    // إنشاء شيت المستخدمين
-    const usersSheet = setupUsersSheet();
+    // إنشاء شيت المستخدمين إذا لم يكن موجوداً
+    setupUsersSheet();
     
-    const data = settingsSheet.getDataRange().getValues();
+    const data = permSheet.getDataRange().getValues();
     let migratedCount = 0;
     
-    for (let i = 1; i < data.length; i++) {
-      const email = data[i][0]; // العمود الأول: البريد الإلكتروني
+    // البحث عن نقطة البداية (تخطي أي هيدرات حتى نجد البريد الإلكتروني)
+    let startIndex = 1;
+    for (let i = 0; i < data.length; i++) {
+        const cell = String(data[i][0]).trim();
+        if (cell === 'البريد الإلكتروني' || cell === 'إيميل') {
+            startIndex = i + 1;
+            break;
+        }
+    }
+    
+    for (let i = startIndex; i < data.length; i++) {
+      const email = String(data[i][0]).toLowerCase().trim(); // العمود الأول: البريد الإلكتروني
       const name = data[i][1];  // العمود الثاني: الاسم
-      const role = data[i][2];  // العمود الثالث: مستوى الصلاحية
-      const projects = data[i][3] || ''; // العمود الرابع: المشاريع (إن وجد)
+      const roleText = String(data[i][2]);  // العمود الثالث: مستوى الصلاحية
+      const projects = String(data[i][3] || ''); // العمود الرابع: كود المشروع
       
-      if (email && name) {
+      // التأكد أن هذا صف ببيانات حقيقية (بريد إلكتروني يحتوي على @)
+      if (email && email.indexOf('@') > -1) {
         // تحديد الدور
         let userRole = USER_ROLES.PROJECT_MANAGER;
-        if (role && role.includes('مدير')) {
+        if (roleText.includes('مدير') || roleText.includes('نظام')) {
           userRole = USER_ROLES.GENERAL_MANAGER;
         }
         
         // إضافة المستخدم
         const result = addUser({
           email: email,
-          name: name,
+          name: name || email.split('@')[0],
           role: userRole,
-          password: 'Seen2025', // كلمة مرور افتراضية - يجب تغييرها
-          projects: projects || (userRole === USER_ROLES.GENERAL_MANAGER ? 'ALL' : '')
+          password: 'Seen2025', // كلمة مرور افتراضية
+          projects: (userRole === USER_ROLES.GENERAL_MANAGER) ? 'ALL' : projects
         });
         
         if (result.success) {
@@ -509,14 +619,124 @@ function migrateOldUsers() {
     
     SpreadsheetApp.getUi().alert(
       '✅ تم تحويل المستخدمين',
-      `تم تحويل ${migratedCount} مستخدم بنجاح\n\n` +
-      'كلمة المرور الافتراضية: Seen2025\n' +
-      'يرجى تغيير كلمة المرور لكل مستخدم',
+      `تم تحويل ${migratedCount} مستخدم من شيت الصلاحيات بنجاح\n\n` +
+      'كلمة المرور الافتراضية للجميع: Seen2025\n' +
+      'يرجى إبلاغ الفريق بتغيير كلمات سرهم قريباً.',
       SpreadsheetApp.getUi().ButtonSet.OK
     );
     
   } catch (error) {
     Logger.log(`❌ خطأ في تحويل المستخدمين: ${error}`);
     SpreadsheetApp.getUi().alert('❌ خطأ في تحويل المستخدمين: ' + error.message);
+  }
+}
+/**
+ * دالة للمسؤول لتعيين كلمة مرور جديدة لأي مستخدم
+ */
+function adminChangeUserPassword() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // التحقق من أن المستخدم الحالي مدير عام
+  const currentUserEmail = Session.getEffectiveUser().getEmail();
+  if (!Security.isAdmin(currentUserEmail)) {
+    ui.alert('❌ ليس لديك صلاحية لتغيير كلمات مرور المستخدمين. هذه الميزة للمدير العام فقط.');
+    return;
+  }
+  
+  // طلب البريد الإلكتروني للمستخدم
+  const emailResult = ui.prompt(
+    '🔑 إعادة تعيين كلمة مرور',
+    'أدخل البريد الإلكتروني للمستخدم المراد تغيير كلمة مروره:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (emailResult.getSelectedButton() !== ui.Button.OK) return;
+  const targetEmail = emailResult.getResponseText().trim().toLowerCase();
+  
+  const user = getUserByEmail(targetEmail);
+  if (!user) {
+    ui.alert('❌ هذا المستخدم غير مسجل في شيت المستخدمين.');
+    return;
+  }
+  
+  // طلب كلمة المرور الجديدة
+  const passResult = ui.prompt(
+    '🔑 كلمة المرور الجديدة',
+    `أدخل كلمة المرور الجديدة للمستخدم: ${user.name}`,
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (passResult.getSelectedButton() !== ui.Button.OK) return;
+  const newPassword = passResult.getResponseText().trim();
+  
+  if (newPassword.length < 4) {
+    ui.alert('⚠️ كلمة المرور قصيرة جداً، يرجى إدخال 4 أحرف على الأقل.');
+    return;
+  }
+  
+  // تنفيذ التغيير
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(USER_SHEET_NAME);
+    const hashedPassword = hashPassword(newPassword);
+    
+    sheet.getRange(user.row, USER_COLS.PASSWORD).setValue(hashedPassword);
+    
+    ui.alert('✅ تم تغيير كلمة المرور بنجاح للمستخدم: ' + user.name);
+    
+  } catch (e) {
+    ui.alert('❌ حدث خطأ أثناء تغيير كلمة المرور: ' + e.message);
+  }
+}
+
+/**
+ * إظهار كافة الشيتات للمدير العام (حل طوارئ)
+ */
+function showAllSheetsForAdmin() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const currentUserEmail = Session.getEffectiveUser().getEmail().toLowerCase().trim();
+  const ownerEmail = ss.getOwner().getEmail().toLowerCase().trim();
+  
+  // التحقق من أن المستخدم مدير عام (بالإيميل أو بالدور)
+  if (Security.isAdmin(currentUserEmail) || currentUserEmail === ownerEmail) {
+    const sheets = ss.getSheets();
+    sheets.forEach(sheet => sheet.showSheet());
+    ui.alert('✅ تم إظهار كافة الشيتات بنجاح يا مدير.');
+  } else {
+    ui.alert('❌ عذراً، هذه الخاصية للمدير العام فقط.');
+  }
+}
+/**
+ * حذف شيت الصلاحيات القديم نهائياً
+ */
+function deleteOldPermissionsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  
+  const response = ui.alert(
+    '🗑️ حذف الشيت القديم',
+    'هل أنت متأكد من حذف شيت "الصلاحيات" نهائياً؟ \n (سيتم الاعتماد كلياً على شيت المستخدمين الجديد)',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response !== ui.Button.YES) return;
+  
+  const sheetNames = ['🛡️ الصلاحيات', 'الصلاحيات'];
+  let sheetFound = null;
+  
+  for (const name of sheetNames) {
+    const s = ss.getSheetByName(name);
+    if (s) {
+      sheetFound = s;
+      break;
+    }
+  }
+  
+  if (sheetFound) {
+    ss.deleteSheet(sheetFound);
+    ui.alert('✅ تم حذف شيت الصلاحيات بنجاح.');
+  } else {
+    ui.alert('ℹ️ لم يتم العثور على شيت باسم "الصلاحيات" أو "🛡️ الصلاحيات".');
   }
 }

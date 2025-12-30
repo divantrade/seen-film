@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - مدير عام</title>
+    <?!= include('DashboardStyles'); ?>
+</head>
+
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="nav-right">
+                <span class="logo">🎬</span>
+                <span class="system-name">Seen Film</span>
+            </div>
+            <div class="nav-left">
+                <span class="user-name" id="userName"></span>
+                <span class="user-role badge-primary">مدير عام</span>
+                <button class="btn-logout" onclick="logout()">تسجيل خروج</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Header Section -->
+        <div class="page-header">
+            <h1>مرحباً بك، <span id="headerUserName"></span></h1>
+            <p class="subtitle">لوحة التحكم الرئيسية</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card stat-primary">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <h3 id="totalProjects">-</h3>
+                    <p>إجمالي المشاريع</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-success">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <h3 id="activeProjects">-</h3>
+                    <p>المشاريع النشطة</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-info">
+                <div class="stat-icon">📋</div>
+                <div class="stat-content">
+                    <h3 id="totalTasks">-</h3>
+                    <p>إجمالي المهام</p>
+                </div>
+            </div>
+
+            <div class="stat-card stat-warning">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <h3 id="totalTeam">-</h3>
+                    <p>أعضاء الفريق</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="manageUsers()">
+                <span class="icon">👥</span>
+                إدارة المستخدمين
+            </button>
+            <button class="btn btn-secondary" onclick="openSheet()">
+                <span class="icon">📊</span>
+                فتح Google Sheet
+            </button>
+            <!-- 
+            <button class="btn btn-success" onclick="viewReports()">
+                <span class="icon">📈</span>
+                عرض التقارير
+            </button>
+            -->
+        </div>
+
+        <!-- Two Columns Layout -->
+        <div class="dashboard-grid">
+            <!-- Recent Projects -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3>آخر المشاريع</h3>
+                    <span class="badge badge-info" id="projectCount">0</span>
+                </div>
+                <div class="card-content">
+                    <div id="recentProjects" class="loading">
+                        <div class="loader-big"></div>
+                        <p>جاري التحميل...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delayed Tasks -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3>المهام المتأخرة</h3>
+                    <span class="badge badge-danger" id="delayedCount">0</span>
+                </div>
+                <div class="card-content">
+                    <div id="delayedTasks" class="loading">
+                        <div class="loader-big"></div>
+                        <p>جاري التحميل...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Progress -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3>تقدم المهام</h3>
+            </div>
+            <div class="card-content">
+                <div class="progress-section">
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>المهام المكتملة</span>
+                            <span id="completedCount">0</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill progress-fill-success" id="completedProgress" style="width: 0%">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>المهام الجارية</span>
+                            <span id="inProgressCount">0</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill progress-fill-info" id="inProgressProgress" style="width: 0%">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>👥 إدارة مستخدمي النظام</h2>
+                <span class="close" onclick="closeUserModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-actions" style="margin-bottom: 20px;">
+                    <button class="btn btn-primary" onclick="showAddUserForm()">
+                        <span class="icon">➕</span> إضافة مستخدم جديد
+                    </button>
+                </div>
+                <div id="usersTableContainer" class="table-responsive">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f8f9fa;">
+                                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">الاسم
+                                </th>
+                                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">البريد
+                                    الإلكتروني</th>
+                                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">الدور
+                                </th>
+                                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">المشاريع
+                                </th>
+                                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">الحالة
+                                </th>
+                                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">
+                                    الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- سيتم التعبئة ديناميكياً -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal Sub -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3>➕ إضافة مستخدم جديد</h3>
+                <span class="close" onclick="closeAddUserModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addUserFormWeb" onsubmit="submitAddUser(event)">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px;">الاسم الكامل</label>
+                        <input type="text" id="newUserName" required
+                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px;">البريد الإلكتروني</label>
+                        <input type="email" id="newUserEmail" required
+                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px;">كلمة المرور</label>
+                        <input type="password" id="newUserPassword" required minlength="6"
+                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px;">الدور</label>
+                        <select id="newUserRole" onchange="toggleProjectSelect()" required
+                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="مدير عام">مدير عام</option>
+                            <option value="مدير مشروعات">مدير مشروعات</option>
+                        </select>
+                    </div>
+                    <div id="projectSelectGroup" class="form-group" style="display:none; margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px;">المشاريع (Ctrl لاختيار متعدد)</label>
+                        <select id="newUserProjects" multiple
+                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 100px;">
+                            <!-- سيتم جلب المشاريع من السيرفر -->
+                        </select>
+                    </div>
+                    <div class="modal-footer"
+                        style="padding-top: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-primary">حفظ المستخدم</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeAddUserModal()">إلغاء</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <?!= include('DashboardScript'); ?>
+</body>
+
+</html>

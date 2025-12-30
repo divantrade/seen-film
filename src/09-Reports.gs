@@ -345,12 +345,13 @@ function getFilmTimelineData(projectName) {
     nextStep = `${firstPending.stage} > ${firstPending.subtype || ''} : ${firstPending.element}`;
   }
 
-  return {
+  // تطهير البيانات قبل الإرسال لمنع أخطاء السيرفر
+  return sanitizeForClient({
     projectName: projectName,
     timeline: timeline,
     overallProgress: completionPercentage,
     nextStep: nextStep
-  };
+  });
 }
 
 // ... (Existing helper functions groupBy, formatDate) ...
@@ -398,10 +399,10 @@ function getResearchAndFixingData() {
     });
     
     console.log('Finished Fetching Research/Fixing. Research Count:', Object.keys(researchByPerson).length, 'Fixing Count:', fixingData.length);
-    return {
+    return sanitizeForClient({
       research: researchByPerson,
       fixing: fixingData
-    };
+    });
   } catch (e) {
     console.error('Error in getResearchAndFixingData:', e);
     throw e;
@@ -457,7 +458,11 @@ function getFilmingLogisticsData() {
       tasksCount: g.tasks.length,
       startDate: g.startDate ? formatDate(g.startDate) : 'غير محدد',
       endDate: g.endDate ? formatDate(g.endDate) : 'غير محدد',
-      tasks: g.tasks
+      tasks: g.tasks.map(t => ({
+          ...t,
+          date: t.date ? formatDate(t.date) : '',
+          dueDate: t.dueDate ? formatDate(t.dueDate) : ''
+      }))
     }));
     
     reportData.sort((a, b) => {
@@ -467,7 +472,7 @@ function getFilmingLogisticsData() {
     });
     
     console.log('Finished Filming Logistics. City Groups:', reportData.length);
-    return reportData;
+    return sanitizeForClient(reportData);
   } catch (e) {
     console.error('Error in getFilmingLogisticsData:', e);
     throw e;
@@ -497,11 +502,11 @@ function getPostProductionData() {
     );
 
     console.log('Post-Production Found - Sound:', soundData.length, 'Graphics:', graphicsData.length, 'Editing:', editingData.length);
-    return {
+    return sanitizeForClient({
       sound: groupBy(soundData, 'project'),
       graphics: groupBy(graphicsData, 'project'),
       editing: groupBy(editingData, 'project')
-    };
+    });
   } catch (e) {
     console.error('Error in getPostProductionData:', e);
     throw e;
@@ -527,10 +532,10 @@ function getDeliveryData() {
     );
 
     console.log('Delivery Found - Archive:', archiveData.length, 'Delivery:', deliveryData.length);
-    return {
+    return sanitizeForClient({
       archive: archiveData,
       delivery: groupBy(deliveryData, 'project')
-    };
+    });
   } catch (e) {
     console.error('Error in getDeliveryData:', e);
     throw e;
@@ -565,7 +570,7 @@ function getMemberWorkloadData(memberName) {
      return dateA - dateB;
   });
   
-  return tasks;
+  return sanitizeForClient(tasks);
 }
 
 /**

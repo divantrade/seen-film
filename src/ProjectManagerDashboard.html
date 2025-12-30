@@ -51,6 +51,36 @@
             <!-- سيتم تعبئته ديناميكياً -->
         </div>
 
+        <!-- My Tasks Table -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3>جدول المهام الجارية</h3>
+                <button class="btn btn-primary btn-sm" onclick="loadDashboardData()"
+                    style="padding: 5px 12px; font-size: 13px;">🔄 تحديث</button>
+            </div>
+            <div class="card-content">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الفيلم</th>
+                                <th>المرحلة</th>
+                                <th>العنصر/التفاصيل</th>
+                                <th>المسؤول</th>
+                                <th>الحالة</th>
+                                <th>موعد التسليم</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailedTasksBody">
+                            <tr>
+                                <td colspan="6" style="text-align:center;">جاري تحميل المهام...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Recent Tasks -->
         <div class="dashboard-card">
             <div class="card-header">
@@ -85,6 +115,10 @@
                 <span class="icon">📊</span>
                 فتح Google Sheet
             </button>
+            <button class="btn btn-success" onclick="viewReports()">
+                <span class="icon">📈</span>
+                عرض التقارير الذكية
+            </button>
         </div>
     </div>
 
@@ -100,7 +134,9 @@
         function loadUserData() {
             const userData = localStorage.getItem('seenfilm_user');
             if (!userData) {
-                window.location.href = '<?= ScriptApp.getService().getUrl() ?>';
+                const url = new URL(window.location.href);
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
                 return;
             }
 
@@ -128,11 +164,37 @@
             // عرض إحصائيات المشاريع
             displayProjectStats(data.projectStats);
 
-            // عرض المهام الأخيرة
+            // عرض الجدول التفصيلي
+            displayDetailedTasks(data.recentTasks);
+
+            // عرض المهام الأخيرة (الكروت)
             displayRecentTasks(data.recentTasks);
 
             // عرض المهام المتأخرة
             displayDelayedTasks(data.delayedTasks);
+        }
+
+        function displayDetailedTasks(tasks) {
+            const tbody = document.getElementById('detailedTasksBody');
+            tbody.innerHTML = '';
+
+            if (tasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">لا توجد مهام حالياً</td></tr>';
+                return;
+            }
+
+            tasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${task.project}</strong></td>
+                    <td>${task.stage}</td>
+                    <td>${task.subtype || ''}<br><small style="color:#666">${task.details || ''}</small></td>
+                    <td>${task.assignedTo || '-'}</td>
+                    <td><span class="status-badge status-${getStatusClass(task.status)}">${task.status}</span></td>
+                    <td>${task.dueDate || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
         }
 
         function displayProjects(projects) {
@@ -281,11 +343,26 @@
             window.open('https://docs.google.com/spreadsheets/d/<?= SpreadsheetApp.getActive().getId() ?>', '_blank');
         }
 
+        function viewReports() {
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.style = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:10000; display:flex; align-items:center; justify-content:center; flex-direction:column;';
+            loadingOverlay.innerHTML = '<div class="loader-big"></div><p style="margin-top:20px; font-weight:bold;">جاري تحميل المستكشف الذكي...</p>';
+            document.body.appendChild(loadingOverlay);
+
+            google.script.run
+                .withSuccessHandler(function (htmlContent) {
+                    document.open();
+                    document.write(htmlContent);
+                    document.close();
+                })
+                .webAppGetView('SmartExplorer');
+        }
+
         function logout() {
-            if (confirm('هل تريد تسجيل الخروج؟')) {
-                localStorage.removeItem('seenfilm_user');
-                window.location.href = '<?= ScriptApp.getService().getUrl() ?>';
-            }
+            localStorage.removeItem('seenfilm_user');
+            const url = new URL(window.location.href);
+            url.searchParams.delete('page');
+            window.location.href = url.toString();
         }
     </script>
 </body>

@@ -1,0 +1,16 @@
+# تجاهل كل شيء في البداية
+**
+
+# استثناء ملفات الكود والـ HTML في أي مكان داخل rootDir
+!**/*.gs
+!**/*.html
+!appsscript.json
+
+# تجاهل ملفات النظام والمكتبات
+node_modules/
+package.json
+package-lock.json
+.clasp.json
+.claspignore
+.gitignore
+*.md

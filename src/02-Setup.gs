@@ -70,21 +70,37 @@ function createProjectsSheet(ss) {
   sheet.setColumnWidth(PROJECT_COLS.CODE, 100);
   sheet.setColumnWidth(PROJECT_COLS.NAME, 200);
   sheet.setColumnWidth(PROJECT_COLS.TYPE, 120);
+  sheet.setColumnWidth(PROJECT_COLS.CHANNEL, 120);
+  sheet.setColumnWidth(PROJECT_COLS.PROGRAM, 150);
   sheet.setColumnWidth(PROJECT_COLS.PRODUCER, 120);
   sheet.setColumnWidth(PROJECT_COLS.EDITOR, 120);
   sheet.setColumnWidth(PROJECT_COLS.START_DATE, 110);
   sheet.setColumnWidth(PROJECT_COLS.END_DATE, 110);
   sheet.setColumnWidth(PROJECT_COLS.STATUS, 100);
-  sheet.setColumnWidth(PROJECT_COLS.FOLDER_LINK, 250);
   sheet.setColumnWidth(PROJECT_COLS.NOTES, 200);
-  sheet.setColumnWidth(PROJECT_COLS.OWNER_EMAIL, 200);
+  sheet.setColumnWidth(PROJECT_COLS.FOLDER_LINK, 250);
 
   // تجميد الصف الأول
   sheet.setFrozenRows(1);
 
-  // إضافة القوائم المنسدلة
-  setDropdown(sheet, 2, PROJECT_COLS.TYPE, 500, getProjectTypesFromSettings());
-  setDropdown(sheet, 2, PROJECT_COLS.STATUS, 500, getStatusesFromSettings());
+  // 1. النوع (من شيت الإعدادات عمود A)
+  setRangeDropdown(sheet, 2, PROJECT_COLS.TYPE, 500, ss.getSheetByName('الإعدادات').getRange('A6:A100'));
+  
+  // 2. القناة (من شيت الإعدادات عمود L)
+  setRangeDropdown(sheet, 2, PROJECT_COLS.CHANNEL, 500, ss.getSheetByName('الإعدادات').getRange('L6:L100'));
+  
+  // 3. البرنامج (من شيت الإعدادات عمود M)
+  setRangeDropdown(sheet, 2, PROJECT_COLS.PROGRAM, 500, ss.getSheetByName('الإعدادات').getRange('M6:M100'));
+  
+  // 4. المنتج والمخرج (من شيت الفريق عمود B - الاسم)
+  const teamSheet = ss.getSheetByName(SHEETS.TEAM);
+  if (teamSheet) {
+    setRangeDropdown(sheet, 2, PROJECT_COLS.PRODUCER, 500, teamSheet.getRange('B2:B200'));
+    setRangeDropdown(sheet, 2, PROJECT_COLS.EDITOR, 500, teamSheet.getRange('B2:B200'));
+  }
+
+  // 5. الحالة
+  setDropdown(sheet, 2, PROJECT_COLS.STATUS, 500, PROJECT_STATUS);
 
   return sheet;
 }
@@ -151,13 +167,14 @@ function createMovementSheet(ss) {
   sheet.setColumnWidth(MOVEMENT_COLS.PROJECT, 150);
   sheet.setColumnWidth(MOVEMENT_COLS.STAGE, 100);
   sheet.setColumnWidth(MOVEMENT_COLS.SUBTYPE, 120);
+  sheet.setColumnWidth(MOVEMENT_COLS.CITY, 120);
   sheet.setColumnWidth(MOVEMENT_COLS.ELEMENT, 150);
   sheet.setColumnWidth(MOVEMENT_COLS.DETAILS, 200);
   sheet.setColumnWidth(MOVEMENT_COLS.ASSIGNED_TO, 120);
   sheet.setColumnWidth(MOVEMENT_COLS.STATUS, 100);
   sheet.setColumnWidth(MOVEMENT_COLS.DUE_DATE, 110);
   sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
-  sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
+  sheet.setColumnWidth(MOVEMENT_COLS.FOLDER_LINK, 250);
 
   // تجميد الصف الأول
   sheet.setFrozenRows(1);
@@ -275,19 +292,23 @@ function createSettingsSheet(ss) {
     }
   };
 
-  // 3. ملء القوائم الأساسية (A, B, C, D) مع الحفاظ على التعديلات اليدوية
+  // 3. ملء القوائم الأساسية (A-M) مع الحفاظ على التعديلات اليدوية
   fillIfEmpty(1, 'أنواع المشاريع', PROJECT_TYPES);
   fillIfEmpty(2, 'أدوار الفريق', TEAM_ROLES);
   fillIfEmpty(3, 'الحالات', STATUS_WITH_ICONS);
   fillIfEmpty(4, 'المدن', CONFIG.DEFAULT_CITIES);
+  
+  // إضافة أعمدة القنوات والبرامج (جديد)
+  fillIfEmpty(12, 'القنوات / المنصات', ['قناة الجزيرة', 'قناة العربية', 'منصة شاهد', 'يوتيوب']);
+  fillIfEmpty(13, 'البرامج الشهيرة', ['برنامج 1', 'برنامج 2', 'وثائقيات خاصة']);
 
-  // 4. تحديث المراحل والمراحل الفرعية (E, F, G, H) - يتم التحديث دائماً لضمان المزامنة
+  // 4. تحديث المراحل والمراحل الفرعية (E, F, G, H)
   sheet.getRange('E5').setValue('المرحلة').setBackground(COLORS.INFO).setFontWeight('bold');
   sheet.getRange('F5').setValue('المرحلة الفرعية').setBackground(COLORS.INFO).setFontWeight('bold');
   sheet.getRange('G5').setValue('Stage').setBackground(COLORS.INFO).setFontWeight('bold');
   sheet.getRange('H5').setValue('Subtype').setBackground(COLORS.INFO).setFontWeight('bold');
 
-  // مسح البيانات القديمة للمراحل فقط قبل إعادة الكتابة (بداية من الصف 6 في الأعمدة E-H)
+  // مسح وتحديث المراحل
   const maxRows = sheet.getMaxRows();
   if (maxRows >= 6) {
     sheet.getRange(6, 5, maxRows - 5, 4).clearContent();
@@ -298,13 +319,10 @@ function createSettingsSheet(ss) {
     const stage = STAGES[key];
     if (stage.subtypes && stage.subtypes.length > 0) {
       for (let i = 0; i < stage.subtypes.length; i++) {
-        const subtype = stage.subtypes[i];
-        const engSubtype = stage.engSubtypes ? stage.engSubtypes[i] : '';
-
         sheet.getRange(stageRow, 5).setValue(stage.name);
-        sheet.getRange(stageRow, 6).setValue(subtype);
+        sheet.getRange(stageRow, 6).setValue(stage.subtypes[i]);
         sheet.getRange(stageRow, 7).setValue(stage.engName || '');
-        sheet.getRange(stageRow, 8).setValue(engSubtype || '');
+        sheet.getRange(stageRow, 8).setValue(stage.engSubtypes ? stage.engSubtypes[i] : '');
         stageRow++;
       }
     }
@@ -319,6 +337,9 @@ function createSettingsSheet(ss) {
   sheet.setColumnWidth(6, 150);
   sheet.setColumnWidth(7, 120);
   sheet.setColumnWidth(8, 150);
+  // تعيين عرض الأعمدة لـ L و M
+  sheet.setColumnWidth(12, 180);
+  sheet.setColumnWidth(13, 180);
 
   return sheet;
 }
@@ -337,7 +358,19 @@ function formatHeader(range) {
 }
 
 /**
- * إضافة قائمة منسدلة
+ * إضافة قائمة منسدلة مبنية على نِطاق (Range)
+ */
+function setRangeDropdown(sheet, startRow, column, numRows, sourceRange) {
+  const range = sheet.getRange(startRow, column, numRows, 1);
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(sourceRange, true)
+    .setAllowInvalid(false)
+    .build();
+  range.setDataValidation(rule);
+}
+
+/**
+ * إضافة قائمة منسدلة مبنية على قائمة قيم (List)
  */
 function setDropdown(sheet, startRow, column, numRows, values) {
   const range = sheet.getRange(startRow, column, numRows, 1);
@@ -431,13 +464,14 @@ function fixMovementSheet() {
   sheet.setColumnWidth(MOVEMENT_COLS.PROJECT, 150);
   sheet.setColumnWidth(MOVEMENT_COLS.STAGE, 100);
   sheet.setColumnWidth(MOVEMENT_COLS.SUBTYPE, 120);
+  sheet.setColumnWidth(MOVEMENT_COLS.CITY, 120);
   sheet.setColumnWidth(MOVEMENT_COLS.ELEMENT, 150);
   sheet.setColumnWidth(MOVEMENT_COLS.DETAILS, 200);
   sheet.setColumnWidth(MOVEMENT_COLS.ASSIGNED_TO, 120);
   sheet.setColumnWidth(MOVEMENT_COLS.STATUS, 100);
   sheet.setColumnWidth(MOVEMENT_COLS.DUE_DATE, 110);
   sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
-  sheet.setColumnWidth(MOVEMENT_COLS.LINK, 250);
+  sheet.setColumnWidth(MOVEMENT_COLS.FOLDER_LINK, 250);
 
   // إضافة القوائم المنسدلة (من شيت الإعدادات)
   const stagesForFix = getStagesFromSettings();

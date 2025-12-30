@@ -259,6 +259,48 @@ function findTeamMemberByName(name) {
 }
 
 /**
+ * الحصول على قائمة أعضاء الفريق النشطين مع كافة بياناتهم
+ */
+function getActiveTeamMembers() {
+  const sheet = getSheet(SHEETS.TEAM);
+  if (!sheet) return [];
+  
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return [];
+  
+  const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  const members = [];
+  
+  data.forEach((row, i) => {
+    const name = row[TEAM_COLS.NAME - 1];
+    const status = normalizeString(row[TEAM_COLS.STATUS - 1]);
+    
+    // نعتبر العضو نشط إذا كانت الحالة "نشط" أو فارغة
+    if (name && (status === '' || status.includes('نشط'))) {
+      members.push({
+        row: i + 2,
+        code: row[TEAM_COLS.CODE - 1],
+        name: name,
+        role: row[TEAM_COLS.ROLE - 1],
+        city: row[TEAM_COLS.CITY - 1],
+        email: row[TEAM_COLS.EMAIL - 1],
+        phone: row[TEAM_COLS.PHONE - 1],
+        status: row[TEAM_COLS.STATUS - 1]
+      });
+    }
+  });
+  
+  return members;
+}
+
+/**
+ * الحصول على أسماء الفريق النشطين فقط
+ */
+function getActiveTeamNames() {
+  return getActiveTeamMembers().map(m => m.name);
+}
+
+/**
  * الحصول على إحصائيات الفريق
  */
 function getTeamStats() {

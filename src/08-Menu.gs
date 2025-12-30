@@ -11,6 +11,13 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
+  // --- نظام الحماية والإخفاء التلقائي ---
+  try {
+    // enforceSheetVisibility();
+  } catch (e) {
+    console.error('خطأ في إنفاذ رؤية الشيتات:', e);
+  }
+
   ui.createMenu('🎬 نظام الإنتاج')
     // المشاريع
     .addSubMenu(ui.createMenu('📁 المشاريع')
@@ -51,6 +58,7 @@ function onOpen() {
       .addItem('تحديث القوائم المنسدلة', 'updateAllDropdowns')
       .addItem('🔧 إصلاح شيت الحركة', 'fixMovementSheet')
       .addSeparator()
+      .addItem('🔓 إظهار كافة الشيتات', 'showAllSheetsForAdmin') // زر الطوارئ
       .addItem('📅 تطبيع التواريخ', 'normalizeAllDates')
       .addItem('⚡ تثبيت Triggers', 'installTriggers')
       .addSeparator()
@@ -69,19 +77,6 @@ function onOpen() {
       .addItem('🔒 تفعيل نظام الأمان', 'installSafetyTriggers')
       .addItem('📊 حالة نظام الأمان', 'showSafetyStatus'))
 
-    // الصلاحيات
-    .addSubMenu(ui.createMenu('🔐 الصلاحيات')
-      .addItem('👤 صلاحياتي', 'showMyPermissions')
-      .addItem('📋 عرض المدراء', 'showAdminsList')
-      .addSeparator()
-      .addItem('🔑 تعديل صلاحيات عضو', 'changeTeamMemberPermission')
-      .addItem('➕ إضافة مدير', 'addAdmin')
-      .addItem('➖ إزالة مدير', 'removeAdmin')
-      .addSeparator()
-      .addItem('🗑️ حذف مشروع', 'deleteProjectProtected')
-      .addItem('🗑️ حذف عضو فريق', 'deleteTeamMemberProtected')
-      .addItem('🗑️ حذف صفوف محددة', 'deleteSelectedRowsProtected'))
-
     // نظام المستخدمين و Web App
     .addSubMenu(ui.createMenu('🌐 نظام المستخدمين')
       .addItem('🔧 إعداد شيت المستخدمين', 'setupUsersSheet')
@@ -90,14 +85,19 @@ function onOpen() {
       .addItem('➕ إضافة مستخدم جديد', 'showAddUserForm')
       .addItem('🔄 تحويل المستخدمين القدامى', 'migrateOldUsers')
       .addSeparator()
+      .addItem('🔑 تعيين كلمة مرور مستخدم', 'adminChangeUserPassword')
+      .addItem('🔑 تعيين كلمة مروري الخاصة', 'resetMyPassword')
+      .addSeparator()
       .addItem('🌐 فتح Web App', 'openWebApp')
-      .addItem('📋 نسخ رابط Web App', 'copyWebAppUrl'))
+      .addItem('📋 نسخ رابط Web App', 'copyWebAppUrl')
+      .addSeparator()
+      .addItem('🗑️ حذف شيت الصلاحيات نهائياً', 'deleteOldPermissionsSheet'))
 
     .addToUi();
 
   // تحديث القوائم المنسدلة
   try {
-    updateMovementDropdowns();
+    // updateMovementDropdowns();
   } catch (e) {
     console.log('تخطي تحديث القوائم:', e);
   }
@@ -130,6 +130,53 @@ function onEdit(e) {
     }
 
     switch (sheetName) {
+      case USER_SHEET_NAME:
+        // نظام الاختيار المتعدد الذكي (إخفاء المثلث الأحمر)
+        const range = e.range;
+        const col = range.getColumn();
+        if (col === USER_COLS.PROJECTS && range.getRow() > 1) {
+          let newValue = e.value;
+          const oldValue = e.oldValue;
+          const sheet = range.getSheet();
+          
+          if (!newValue) return;
+          
+          let projects = [];
+          if (newValue === 'ALL') {
+             projects = ['ALL'];
+          } else if (!oldValue || oldValue === 'ALL') {
+            projects = [newValue];
+          } else {
+            projects = oldValue.split(',').map(p => p.trim()).filter(p => p !== '');
+            const index = projects.indexOf(newValue);
+            if (index > -1) projects.splice(index, 1);
+            else projects.push(newValue);
+            projects.sort();
+          }
+
+          const finalValue = projects.join(', ');
+          range.setValue(finalValue);
+
+          // --- السحر البرمجي لإخفاء المثلث الأحمر ---
+          // جلب القائمة الأصلية للأفلام
+          const projectsSheet = e.source.getSheetByName(SHEETS.PROJECTS);
+          if (projectsSheet) {
+            const lastRow = Math.max(projectsSheet.getLastRow(), 2);
+            const rawDropDown = projectsSheet.getRange(2, 1, lastRow - 1, 2).getValues()
+              .map(r => r[0] && r[1] ? `[${r[0]}] ${r[1]}` : r[0])
+              .filter(r => r);
+            
+            // إضافة "ALL" والقيمة الحالية (المدمجة) للقائمة لمنع الخطأ
+            const authorizedList = ['ALL', finalValue, ...rawDropDown];
+            
+            const newRule = SpreadsheetApp.newDataValidation()
+              .requireValueInList(authorizedList, true)
+              .setAllowInvalid(true)
+              .build();
+            range.setDataValidation(newRule);
+          }
+        }
+        break;
       case SHEETS.TEAM:
         onTeamEdit(e);
         break;
@@ -363,11 +410,17 @@ function createProjectFoldersManual() {
  * تثبيت الـ Triggers
  */
 function installTriggers() {
-  // حذف الـ Triggers القديمة
+  // حذف الـ Triggers القديمة لتجنب التكرار
   const triggers = ScriptApp.getProjectTriggers();
   for (const trigger of triggers) {
     ScriptApp.deleteTrigger(trigger);
   }
+
+  // إضافة trigger للفتح (onOpen) لتحجيم الرؤية
+  ScriptApp.newTrigger('enforceSheetVisibility')
+    .forSpreadsheet(SpreadsheetApp.getActive())
+    .onOpen()
+    .create();
 
   // إضافة trigger للتعديل (onEdit)
   ScriptApp.newTrigger('onEdit')
@@ -393,6 +446,7 @@ function installTriggers() {
   createAuditLogSheet();
 
   showSuccess('تم تثبيت الـ Triggers بنجاح ✅\n\n' +
+    '• نظام الرؤية التلقائي: مفعّل\n' +
     '• تحديث المهام المتأخرة: 8 صباحاً\n' +
     '• نسخ احتياطي تلقائي: 3 صباحاً\n' +
     '• سجل التغييرات: مفعّل');

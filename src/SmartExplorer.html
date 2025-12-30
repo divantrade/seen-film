@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html dir="rtl">
+
+<head>
+    <base target="_top">
+    <?!= include('DashboardStyles'); ?>
+    <style>
+        :root {
+            --sidebar-width: 280px;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .explorer-layout {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: white;
+            border-left: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.2rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .filter-group {
+            margin-bottom: 18px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 6px;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid #eef0f2;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            background: #fdfdfe;
+        }
+
+        .filter-input:focus {
+            border-color: #667eea;
+            background: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Main Content */
+        .main-view {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            height: 70px;
+            background: white;
+            padding: 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .view-content {
+            flex: 1;
+            padding: 25px 30px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+            display: flex;
+            flex-direction: column;
+            border-right: 4px solid #ddd;
+        }
+
+        .stat-box.primary {
+            border-right-color: #667eea;
+        }
+
+        .stat-box.success {
+            border-right-color: #4caf50;
+        }
+
+        .stat-box.warning {
+            border-right-color: #ff9800;
+        }
+
+        .stat-box.danger {
+            border-right-color: #f44336;
+        }
+
+        .stat-box .label {
+            font-size: 0.8rem;
+            color: #777;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        /* Table Card */
+        .data-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            min-height: 400px;
+        }
+
+        .data-table-container {
+            overflow: auto;
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+
+        table th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: right;
+            font-weight: 600;
+            color: #555;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 2px solid #eee;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f2f2f2;
+            color: #444;
+            vertical-align: middle;
+        }
+
+        table tr:hover {
+            background: #f9faff;
+        }
+
+        /* Loader Overlay */
+        #loadingOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 1000;
+            border-radius: 16px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1100px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 800px) {
+            .explorer-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            /* Could add a toggle in real app */
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="explorer-layout">
+        <!-- Filter Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🔎 الفلاتر الذكية</h2>
+            </div>
+            <div class="sidebar-content">
+                <div class="filter-group">
+                    <label>بحث عام</label>
+                    <input type="text" id="searchGlobal" class="filter-input" placeholder="اسم الفيلم أو المسؤول..."
+                        oninput="applyFilters()">
+                </div>
+
+                <div class="filter-group">
+                    <label>الفيلم</label>
+                    <select id="filterProject" class="filter-input" onchange="applyFilters()">
+                        <option value="">جميع الأفلام</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>المدينة</label>
+                    <select id="filterCity" class="filter-input" onchange="applyFilters()">
+                        <option value="">جميع المدن</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>المسؤول</label>
+                    <select id="filterMember" class="filter-input" onchange="applyFilters()">
+                        <option value="">أي مسؤول</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>القناة</label>
+                    <select id="filterChannel" class="filter-input" onchange="applyFilters()">
+                        <option value="">جميع القنوات</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>المرحلة</label>
+                    <select id="filterStage" class="filter-input" onchange="applyFilters()">
+                        <option value="">جميع المراحل</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>الحالة</label>
+                    <select id="filterStatus" class="filter-input" onchange="applyFilters()">
+                        <option value="">جميع الحالات</option>
+                        <option value="تم">✅ تم</option>
+                        <option value="جاري">🔄 جاري</option>
+                        <option value="متأخر">🔴 متأخر</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-secondary" style="width:100%; margin-top:10px" onclick="resetFilters()">🔄 تصفير
+                    الفلاتر</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-view">
+            <header class="toolbar">
+                <div class="toolbar-right">
+                    <h2 style="font-size:1.4rem; color:#333">📊 مستكشف العمليات والإنتاج</h2>
+                </div>
+                <div class="toolbar-left" style="display:flex; gap:10px">
+                    <button class="btn btn-success btn-sm" onclick="exportToExcel()">📥 تصدير Excel</button>
+                    <button class="btn btn-primary btn-sm" onclick="backToDashboard()">🏠 لوحة التحكم</button>
+                    <button class="btn btn-logout btn-sm" onclick="logout()" style="background:#f44336; color:white">🚪
+                        خروج</button>
+                </div>
+            </header>
+
+            <main class="view-content">
+                <!-- Stats Row -->
+                <div class="stats-row">
+                    <div class="stat-box primary">
+                        <span class="label">إجمالي المهام</span>
+                        <span class="value" id="statTotal">0</span>
+                    </div>
+                    <div class="stat-box success">
+                        <span class="label">مكتملة</span>
+                        <span class="value" id="statDone">0</span>
+                    </div>
+                    <div class="stat-box warning">
+                        <span class="label">جاري العمل</span>
+                        <span class="value" id="statActive">0</span>
+                    </div>
+                    <div class="stat-box danger">
+                        <span class="label">متأخرة</span>
+                        <span class="value" id="statLate">0</span>
+                    </div>
+                </div>
+
+                <!-- Table Card -->
+                <div class="data-card">
+                    <div id="loadingOverlay">
+                        <div class="spinner"></div>
+                        <p style="margin-top:15px; font-weight:600; color:#667eea">جاري جلب وتحليل البيانات...</p>
+                    </div>
+
+                    <div class="data-table-container">
+                        <table id="resultsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px">#</th>
+                                    <th>الفيلم</th>
+                                    <th>المدينة</th>
+                                    <th>المرحلة</th>
+                                    <th>المهمة / التفاصيل</th>
+                                    <th>المسؤول</th>
+                                    <th>الحالة</th>
+                                    <th>التسليم</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody">
+                                <!-- Data will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let filteredData = [];
+
+        window.onload = function () {
+            loadInitialData();
+        };
+
+        function loadInitialData() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            google.script.run
+                .withSuccessHandler(function (response) {
+                    rawData = response.data;
+                    populateFilters(response.filters);
+                    applyFilters();
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                })
+                .withFailureHandler(function (err) {
+                    document.getElementById('loadingOverlay').innerHTML = `<p style="color:red">❌ فشل تحميل البيانات: ${err.message}</p>`;
+                    alert('خطأ في تحميل البيانات: ' + err.message);
+                })
+                .webAppGetSmartExplorerData();
+        }
+
+        function populateFilters(filters) {
+            const populate = (id, items) => {
+                const select = document.getElementById(id);
+                // Clear existing options except the first one
+                select.innerHTML = select.options[0].outerHTML;
+                items.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    opt.textContent = item;
+                    select.appendChild(opt);
+                });
+            };
+
+            populate('filterProject', filters.projects);
+            populate('filterCity', filters.cities);
+            populate('filterMember', filters.members);
+            populate('filterChannel', filters.channels);
+            populate('filterStage', filters.stages);
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchGlobal').value.toLowerCase();
+            const project = document.getElementById('filterProject').value;
+            const city = document.getElementById('filterCity').value;
+            const member = document.getElementById('filterMember').value;
+            const channel = document.getElementById('filterChannel').value;
+            const stage = document.getElementById('filterStage').value;
+            const status = document.getElementById('filterStatus').value;
+
+            filteredData = rawData.filter(m => {
+                const matchesSearch = !search ||
+                    m.project.toLowerCase().includes(search) ||
+                    m.details.toLowerCase().includes(search) ||
+                    m.element.toLowerCase().includes(search) ||
+                    m.assignedTo.toLowerCase().includes(search);
+
+                const matchesProject = !project || m.project === project;
+                const matchesCity = !city || m.city === city;
+                const matchesMember = !member || m.assignedTo === member;
+                const matchesChannel = !channel || m.channel === channel;
+                const matchesStage = !stage || m.stage === stage;
+                const matchesStatus = !status || m.status.includes(status);
+
+                return matchesSearch && matchesProject && matchesCity && matchesMember && matchesChannel && matchesStage && matchesStatus;
+            });
+
+            renderTable();
+            updateStats();
+        }
+
+        function renderTable() {
+            const body = document.getElementById('resultsBody');
+            if (filteredData.length === 0) {
+                body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:#999">لا توجد نتائج تطابق الفلاتر المختارة</td></tr>';
+                return;
+            }
+
+            // Building HTML string once for performance
+            let html = '';
+            filteredData.forEach((m, idx) => {
+                html += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td style="font-weight:600">${m.project}<br><small style="color:#888">${m.channel || '-'}</small></td>
+                        <td>${m.city || '-'}</td>
+                        <td><span style="font-weight:500">${m.stage}</span><br><small style="color:#999">${m.subtype || ''}</small></td>
+                        <td><div style="max-width:300px; white-space:normal; line-height:1.4"><strong>${m.element}</strong><br><small style="color:#777">${m.details || ''}</small></div></td>
+                        <td>${m.assignedTo || '-'}</td>
+                        <td>${getStatusBadge(m.status)}</td>
+                        <td><small>${formatDisplayDate(m.dueDate) || '-'}</small></td>
+                    </tr>
+                `;
+            });
+            body.innerHTML = html;
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').textContent = filteredData.length;
+            document.getElementById('statDone').textContent = filteredData.filter(m => m.status.includes('تم')).length;
+            document.getElementById('statActive').textContent = filteredData.filter(m => m.status.includes('جاري')).length;
+            document.getElementById('statLate').textContent = filteredData.filter(m => m.status.includes('متأخر')).length;
+        }
+
+        function getStatusBadge(status) {
+            if (status.includes('تم')) return `<span class="badge badge-success" style="font-size:0.7rem">${status}</span>`;
+            if (status.includes('متأخر')) return `<span class="badge badge-danger" style="font-size:0.7rem">${status}</span>`;
+            if (status.includes('جاري')) return `<span class="badge badge-info" style="font-size:0.7rem">${status}</span>`;
+            return `<span class="badge" style="background:#eee; color:#666; font-size:0.7rem">${status}</span>`;
+        }
+
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+            } catch (e) { return dateStr; }
+        }
+
+        function resetFilters() {
+            document.getElementById('searchGlobal').value = '';
+            document.getElementById('filterProject').selectedIndex = 0;
+            document.getElementById('filterCity').selectedIndex = 0;
+            document.getElementById('filterMember').selectedIndex = 0;
+            document.getElementById('filterChannel').selectedIndex = 0;
+            document.getElementById('filterStage').selectedIndex = 0;
+            document.getElementById('filterStatus').selectedIndex = 0;
+            applyFilters();
+        }
+
+        function backToDashboard() {
+            const userData = JSON.parse(localStorage.getItem('seenfilm_user')) || {};
+            const viewName = (userData.role === 'مدير عام') ? 'GeneralManagerDashboard' : 'ProjectManagerDashboard';
+
+            if (typeof navigateToView === 'function') {
+                navigateToView(viewName);
+            } else {
+                document.body.innerHTML = '<div style="display:flex; height:100vh; align-items:center; justify-content:center; flex-direction:column; font-family:sans-serif;"><div class="spinner"></div><p>جاري العودة للوحة التحكم...</p></div>';
+
+                google.script.run
+                    .withSuccessHandler(function (htmlContent) {
+                        document.open();
+                        document.write(htmlContent);
+                        document.close();
+                    })
+                    .webAppGetView(viewName);
+            }
+        }
+
+        function logout() {
+            google.script.run.withSuccessHandler(() => {
+                window.location.search = "";
+            }).logoutUser();
+        }
+
+        function exportToExcel() {
+            let csv = "\ufeffID,Project,Channel,Program,City,Stage,Subtype,Task,Details,AssignedTo,Status,DueDate\n";
+            filteredData.forEach((m, idx) => {
+                const safe = (str) => `"${(str || '').toString().replace(/"/g, '""')}"`;
+                csv += `${idx + 1},${safe(m.project)},${safe(m.channel)},${safe(m.program)},${safe(m.city)},${safe(m.stage)},${safe(m.subtype)},${safe(m.element)},${safe(m.details)},${safe(m.assignedTo)},${safe(m.status)},${safe(m.dueDate)}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `SeenFilm_Production_Report_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+
+</html>

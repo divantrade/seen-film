@@ -358,59 +358,71 @@ function getMovementStats(projectName) {
 }
 
 /**
- * الحصول على جميع الحركات
+ * الحصول على جميع الحركات - نسخة محسنة للأداء
  */
 function getAllMovements() {
   try {
     const sheet = getSheet(SHEETS.MOVEMENT);
-    if (!sheet) {
-      console.warn('Movement sheet not found:', SHEETS.MOVEMENT);
-      return [];
-    }
+    if (!sheet) return [];
 
-    const projectCol = getColumnByHeader(sheet, 'الفيلم');
-    if (projectCol === -1) {
-      console.warn('Project column not found in Movement sheet');
-      return [];
-    }
-
-    const lastRow = getLastRowInColumn(sheet, projectCol);
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
     if (lastRow <= 1) return [];
 
-    // تحديد الأعمدة ديناميكياً
-    const cols = {
-      number: getColumnByHeader(sheet, '#'),
-      date: getColumnByHeader(sheet, 'التاريخ'),
-      project: projectCol,
-      stage: getColumnByHeader(sheet, 'المرحلة'),
-      subtype: getColumnByHeader(sheet, 'المرحلة الفرعية'),
-      element: getColumnByHeader(sheet, 'العنصر'),
-      details: getColumnByHeader(sheet, 'التفاصيل'),
-      assignedTo: getColumnByHeader(sheet, 'المسؤول'),
-      status: getColumnByHeader(sheet, 'الحالة'),
-      dueDate: getColumnByHeader(sheet, 'تاريخ التسليم'),
-      notes: getColumnByHeader(sheet, 'ملاحظات')
+    // جلب البيانات والهيدرات في نطاق محدد بدقة للسرعة
+    const dataRange = sheet.getRange(1, 1, lastRow, lastCol);
+    const allValues = dataRange.getValues();
+    const headers = allValues[0];
+    const data = allValues.slice(1);
+
+    // تحديد الفهارس (Indexes) مع معالجة المرادفات برمجياً
+    const getIdx = (columnName) => {
+      const search = normalizeString(columnName);
+      return headers.findIndex(h => normalizeString(h) === search);
     };
 
-    const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
-    const movements = [];
+    const idx = {
+      number: getIdx('#'),
+      date: getIdx('التاريخ'),
+      project: getIdx('الفيلم'),
+      stage: getIdx('المرحلة'),
+      subtype: getIdx('المرحلة الفرعية'),
+      city: getIdx('المدينة'),
+      element: getIdx('العنصر'),
+      details: getIdx('التفاصيل'),
+      assignedTo: getIdx('المسؤول'),
+      status: getIdx('الحالة'),
+      dueDate: getIdx('تاريخ التسليم'),
+      notes: getIdx('ملاحظات')
+    };
 
+    // التحقق من الهيدرات الأساسية
+    if (idx.project === -1) {
+      idx.project = getIdx('المشروع');
+      if (idx.project === -1) return [];
+    }
+
+    const movements = [];
     for (const row of data) {
-      const dateVal = cols.date !== -1 ? row[cols.date - 1] : '';
-      const dueDateVal = cols.dueDate !== -1 ? row[cols.dueDate - 1] : '';
+      const projectName = row[idx.project];
+      if (!projectName || String(projectName).trim() === "") continue;
+
+      const dateVal = idx.date !== -1 ? row[idx.date] : '';
+      const dueDateVal = idx.dueDate !== -1 ? row[idx.dueDate] : '';
 
       movements.push({
-        number: cols.number !== -1 ? row[cols.number - 1] : '',
+        number: idx.number !== -1 ? row[idx.number] : '',
         date: (dateVal instanceof Date) ? dateVal.toISOString() : dateVal,
-        project: row[cols.project - 1],
-        stage: cols.stage !== -1 ? row[cols.stage - 1] : '',
-        subtype: cols.subtype !== -1 ? row[cols.subtype - 1] : '',
-        element: cols.element !== -1 ? row[cols.element - 1] : '',
-        details: cols.details !== -1 ? row[cols.details - 1] : '',
-        assignedTo: cols.assignedTo !== -1 ? row[cols.assignedTo - 1] : '',
-        status: cols.status !== -1 ? row[cols.status - 1] : '',
+        project: String(projectName).trim(),
+        stage: idx.stage !== -1 ? row[idx.stage] : '',
+        subtype: idx.subtype !== -1 ? row[idx.subtype] : '',
+        city: idx.city !== -1 ? row[idx.city] : '',
+        element: idx.element !== -1 ? row[idx.element] : '',
+        details: idx.details !== -1 ? row[idx.details] : '',
+        assignedTo: idx.assignedTo !== -1 ? row[idx.assignedTo] : '',
+        status: idx.status !== -1 ? row[idx.status] : '',
         dueDate: (dueDateVal instanceof Date) ? dueDateVal.toISOString() : dueDateVal,
-        notes: cols.notes !== -1 ? row[cols.notes - 1] : ''
+        notes: idx.notes !== -1 ? row[idx.notes] : ''
       });
     }
     return movements;

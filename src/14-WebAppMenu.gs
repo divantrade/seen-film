@@ -34,8 +34,11 @@ function openUsersSheet() {
  * نموذج إضافة مستخدم جديد
  */
 function showAddUserForm() {
-  // التحقق من أن المستخدم الحالي هو مدير
-  if (!isCurrentUserAdmin()) {
+  // التحقق من أن المستخدم الحالي هو مدير أو هو صاحب الشيت
+  const userEmail = Session.getActiveUser().getEmail();
+  const ownerEmail = SpreadsheetApp.getActiveSpreadsheet().getOwner() ? SpreadsheetApp.getActiveSpreadsheet().getOwner().getEmail() : '';
+  
+  if (!isCurrentUserAdmin() && userEmail !== ownerEmail) {
     showError('⚠️ فقط المدراء يمكنهم إضافة مستخدمين جدد');
     return;
   }
@@ -248,6 +251,22 @@ function showAddUserForm() {
 }
 
 /**
+ * الحصول على إحصائيات لوحة التحكم للويب أب
+ */
+function webAppGetDashboardStats() {
+  const stats = getMovementStats();
+  const projects = getActiveProjects();
+
+  return sanitizeForClient({
+    totalProjects: projects.length,
+    activeProjects: projects.length, // حالياً نعتبر النشط هو المتاح
+    totalTasks: stats.total,
+    delayedTasks: stats.delayed,
+    teamCount: getActiveTeamMembers().length
+  });
+}
+
+/**
  * فتح Web App
  */
 function openWebApp() {
@@ -353,11 +372,43 @@ function copyWebAppUrl() {
  * الحصول على رابط Web App
  */
 function getWebAppUrl() {
-  try {
-    // محاولة الحصول على الرابط من deployment
-    const url = ScriptApp.getService().getUrl();
-    return url;
-  } catch (e) {
-    return 'يرجى نشر Web App أولاً من: Extensions > Apps Script > Deploy > New deployment';
+  // استخدام معرف النسخة المستقرة الموثوقة (Deployment ID)
+  // هذا الرابط مفتوح للجميع (ANYONE) ويعمل بصلاحيات المالك (USER_DEPLOYING)
+  const stableId = 'AKfycbxE_2BD4ljd1ci2rmaXlrpZF4M5mK7MD-5riWgy44PQR3lnFdjdyKOiOrwHRj_2gehn';
+  return `https://script.google.com/macros/s/${stableId}/exec`;
+}
+
+/**
+ * إعادة تعيين كلمة مرور المستخدم الحالي (إصلاح سريع للوصول)
+ */
+function resetMyPassword() {
+  const email = Session.getActiveUser().getEmail();
+  const ui = SpreadsheetApp.getUi();
+  
+  const response = ui.prompt('🔑 إعادة تعيين كلمة المرور', 
+    `سيتم تعيين كلمة مرور جديدة للحساب: ${email}\n\nالرجاء إدخال كلمة المرور (6 أحرف على الأقل):`, 
+    ui.ButtonSet.OK_CANCEL);
+    
+  if (response.getSelectedButton() === ui.Button.OK) {
+    const newPassword = response.getResponseText().trim();
+    if (newPassword.length < 5) {
+      ui.alert('⚠️ كلمة المرور قصيرة جداً');
+      return;
+    }
+    
+    // تشفير
+    const hashedPassword = hashPassword(newPassword);
+    const user = getUserByEmail(email);
+    
+    if (!user) {
+      ui.alert('⚠️ لم يتم العثور على بريدك في شيت "المستخدمين".\nيرجى التأكد من إضافة بريدك الإلكتروني في الشيت أولاً.');
+      return;
+    }
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(USER_SHEET_NAME);
+    sheet.getRange(user.row, USER_COLS.PASSWORD).setValue(hashedPassword);
+    
+    ui.alert('✅ تم تحديث كلمة المرور بنجاح!\nيمكنك الآن تسجيل الدخول في الويب أب بكلمة السر الجديدة.');
   }
 }

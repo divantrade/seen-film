@@ -22,9 +22,54 @@ function getCurrentDateTime() {
 /**
  * تنظيف النصوص ومطابقتها (تجاهل المسافات وحالة الأحرف)
  */
+/**
+ * تطبيع النصوص - نسخة محسنة جداً للغة العربية
+ */
 function normalizeString(str) {
-  if (!str) return '';
-  return str.toString().trim().toLowerCase();
+  if (str === null || str === undefined) return '';
+  let normalized = str.toString().trim().toLowerCase();
+  
+  // تطبيع الألفات
+  normalized = normalized.replace(/[أإآ]/g, 'ا');
+  // تطبيع الهاء والتاء المربوطة
+  normalized = normalized.replace(/ة/g, 'ه');
+  // تطبيع الياء والألف المقصورة
+  normalized = normalized.replace(/ى/g, 'ي');
+  // إزالة التشكيل
+  normalized = normalized.replace(/[\u064B-\u0652]/g, '');
+  
+  return normalized;
+}
+
+/**
+ * تجهيز البيانات للإرسال للعميل (Client-Side)
+ * يضمن تحويل كافة القيم إلى أنواع بسيطة (Strings/Numbers) لتجنب أخطاء السيرفر
+ */
+function sanitizeForClient(data) {
+  if (data === null || data === undefined) return '';
+  
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeForClient(item));
+  }
+  
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    const sanitized = {};
+    for (const key in data) {
+      sanitized[key] = sanitizeForClient(data[key]);
+    }
+    return sanitized;
+  }
+  
+  if (data instanceof Date) {
+    if (isNaN(data.getTime())) return '';
+    try {
+      return data.toISOString();
+    } catch (e) {
+      return '';
+    }
+  }
+  
+  return data;
 }
 
 /**
@@ -96,12 +141,22 @@ function getSheet(sheetName) {
   return ss.getSheetByName(sheetName);
 }
 
+// ذاكرة مؤقتة للهيدرات لتقليل عمليات الـ API
+const _headerCache = {};
+
 /**
  * الحصول على رقم العمود بناءً على اسم الهيدر
  */
 function getColumnByHeader(sheet, headerName) {
   if (!sheet) return -1;
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const sheetName = sheet.getName();
+  
+  // التحقق من الكاش أولاً
+  if (!_headerCache[sheetName]) {
+    _headerCache[sheetName] = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  }
+  
+  const headers = _headerCache[sheetName];
   const normalizedSearch = normalizeString(headerName);
   
   // قاموس المرادفات الشائعة للهيدرات
@@ -116,7 +171,7 @@ function getColumnByHeader(sheet, headerName) {
     'المرحلة': ['المرحلة', 'مرحلة', 'القسم', 'المرحلة الرئيسية', 'stage'],
     'المرحلة الفرعية': ['المرحلة الفرعية', 'المرحلة الفرعيه', 'النوع الفرعي', 'subtype'],
     'التاريخ': ['التاريخ', 'تاريخ', 'تاريخ الحركة', 'date'],
-    'تاريخ التسليم': ['تاريخ التسليم', 'الموعد', 'deadline', 'due date', 'تاريخ الاستحقاق'],
+    'تاريخ التسليم': ['تاريخ التسليم', 'الموعد', 'deadline', 'due date', 'تاريخ الاستحقاق', 'تاريخ المهمة'],
     'العنصر': ['العنصر', 'عنصر', 'المهمة', 'task', 'element']
   };
 
@@ -221,30 +276,31 @@ function generateTeamCode(role) {
 }
 
 /**
- * الحصول على قائمة المشاريع النشطة
+ * الحصول على قائمة المشاريع النشطة - نسخة ذكية
  */
 function getActiveProjects() {
   const sheet = getSheet(SHEETS.PROJECTS);
   if (!sheet) return [];
 
   const lastRow = getLastRowInColumn(sheet, PROJECT_COLS.NAME);
+  if (lastRow <= 1) return [];
 
-  if (lastRow <= 1) {
-    return [];
-  }
-
-  const data = sheet.getRange(2, 1, lastRow - 1, PROJECT_COLS.NOTES).getValues();
+  // جلب البيانات حتى عمود الحالة
+  const maxCol = Math.max(PROJECT_COLS.NAME, PROJECT_COLS.STATUS, PROJECT_COLS.CODE);
+  const data = sheet.getRange(2, 1, lastRow - 1, maxCol).getValues();
   const projects = [];
 
   for (const row of data) {
-    const status = row[PROJECT_COLS.STATUS - 1];
     const name = row[PROJECT_COLS.NAME - 1];
+    const rawStatus = row[PROJECT_COLS.STATUS - 1];
+    const status = normalizeString(rawStatus);
 
-    // إضافة المشروع إذا كان نشطاً أو لم تُحدد حالته
-    if (name && (status === 'نشط' || status === '' || !status)) {
+    // إضافة المشروع إذا كان الاسم موجوداً والحالة (نشط) أو (فارغة)
+    // نستخدم includes('نشط') للتعامل مع الإيقونات مثل ✅ نشط
+    if (name && (status === '' || status.includes('نشط') || status.includes('active'))) {
       projects.push({
         code: row[PROJECT_COLS.CODE - 1],
-        name: name
+        name: String(name).trim()
       });
     }
   }
@@ -717,7 +773,7 @@ function getProjectById(projectId) {
   if (!sheet) return null;
   
   const row = findRowByValue(sheet, PROJECT_COLS.CODE, projectId);
-  if (!row) return null;
+  if (row === -1) return null;
   
   const data = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
   
