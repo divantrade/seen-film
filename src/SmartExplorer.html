@@ -448,7 +448,7 @@
                 const matchesMember = !member || m.assignedTo === member;
                 const matchesChannel = !channel || m.channel === channel;
                 const matchesStage = !stage || m.stage === stage;
-                const matchesStatus = !status || m.status.includes(status);
+                const matchesStatus = !status || String(m.status || '').includes(status);
 
                 return matchesSearch && matchesProject && matchesCity && matchesMember && matchesChannel && matchesStage && matchesStatus;
             });
@@ -485,16 +485,17 @@
 
         function updateStats() {
             document.getElementById('statTotal').textContent = filteredData.length;
-            document.getElementById('statDone').textContent = filteredData.filter(m => m.status.includes('تم')).length;
-            document.getElementById('statActive').textContent = filteredData.filter(m => m.status.includes('جاري')).length;
-            document.getElementById('statLate').textContent = filteredData.filter(m => m.status.includes('متأخر')).length;
+            document.getElementById('statDone').textContent = filteredData.filter(m => String(m.status || '').includes('تم')).length;
+            document.getElementById('statActive').textContent = filteredData.filter(m => String(m.status || '').includes('جاري')).length;
+            document.getElementById('statLate').textContent = filteredData.filter(m => String(m.status || '').includes('متأخر')).length;
         }
 
         function getStatusBadge(status) {
-            if (status.includes('تم')) return `<span class="badge badge-success" style="font-size:0.7rem">${status}</span>`;
-            if (status.includes('متأخر')) return `<span class="badge badge-danger" style="font-size:0.7rem">${status}</span>`;
-            if (status.includes('جاري')) return `<span class="badge badge-info" style="font-size:0.7rem">${status}</span>`;
-            return `<span class="badge" style="background:#eee; color:#666; font-size:0.7rem">${status}</span>`;
+            const s = String(status || '');
+            if (s.includes('تم')) return `<span class="badge badge-success" style="font-size:0.7rem">${s}</span>`;
+            if (s.includes('متأخر')) return `<span class="badge badge-danger" style="font-size:0.7rem">${s}</span>`;
+            if (s.includes('جاري')) return `<span class="badge badge-info" style="font-size:0.7rem">${s}</span>`;
+            return `<span class="badge" style="background:#eee; color:#666; font-size:0.7rem">${s}</span>`;
         }
 
         function formatDisplayDate(dateStr) {

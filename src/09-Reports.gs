@@ -164,11 +164,12 @@ function generateDetailedFilmReport(projectName) {
       sheet.getRange(row, 2).setValue('');
       sheet.getRange(row, 3).setValue(t.element);
       sheet.getRange(row, 4).setValue(t.assignedTo);
-      sheet.getRange(row, 5).setValue(t.status);
-      
-      if(t.status.includes('تم')) sheet.getRange(row, 5).setFontColor('green');
-      if(t.status.includes('متأخر')) sheet.getRange(row, 5).setFontColor('red');
-      if(t.status.includes('جاري')) sheet.getRange(row, 5).setFontColor('blue');
+      const tStatus = String(t.status || '');
+      sheet.getRange(row, 5).setValue(tStatus);
+
+      if(tStatus.includes('تم')) sheet.getRange(row, 5).setFontColor('green');
+      if(tStatus.includes('متأخر')) sheet.getRange(row, 5).setFontColor('red');
+      if(tStatus.includes('جاري')) sheet.getRange(row, 5).setFontColor('blue');
       
       row++;
     });
@@ -311,13 +312,13 @@ function getFilmTimelineData(projectName) {
     // أو نتخطاها إذا أردنا إخفاء المراحل الفارغة (حسب رغبة المستخدم)
     // هنا سنظهر المراحل لتوضيح خارطة الطريق
     
-    const completedTasks = tasks.filter(m => m.status.includes('تم')).length;
+    const completedTasks = tasks.filter(m => String(m.status || '').includes('تم')).length;
     let stageStatus = 'pending';
-    
+
     if (tasks.length > 0) {
         if (completedTasks === tasks.length) stageStatus = 'completed';
-        else if (tasks.some(m => m.status.includes('جاري'))) stageStatus = 'active';
-        else if (tasks.some(m => m.status.includes('متأخر'))) stageStatus = 'delayed';
+        else if (tasks.some(m => String(m.status || '').includes('جاري'))) stageStatus = 'active';
+        else if (tasks.some(m => String(m.status || '').includes('متأخر'))) stageStatus = 'delayed';
     }
 
     return {
@@ -335,12 +336,15 @@ function getFilmTimelineData(projectName) {
 
   // حساب النسبة الكلية
   let totalTasks = allMovements.length;
-  let completedTotal = allMovements.filter(m => m.status.includes('تم')).length;
+  let completedTotal = allMovements.filter(m => String(m.status || '').includes('تم')).length;
   let completionPercentage = totalTasks > 0 ? Math.round((completedTotal / totalTasks) * 100) : 0;
 
   // الخطوة القادمة
   let nextStep = "لم يتم تحديد مهام بعد";
-  const firstPending = allMovements.find(m => !m.status.includes('تم') && !m.status.includes('ملغي'));
+  const firstPending = allMovements.find(m => {
+    const s = String(m.status || '');
+    return !s.includes('تم') && !s.includes('ملغي');
+  });
   if (firstPending) {
     nextStep = `${firstPending.stage} > ${firstPending.subtype || ''} : ${firstPending.element}`;
   }
@@ -561,7 +565,10 @@ function getMemberWorkloadData(memberName) {
   if(!memberName) return [];
   const allData = getAllMovements();
   // Filter by assignedTo
-  const tasks = allData.filter(m => m.assignedTo === memberName && !m.status.includes('تم') && !m.status.includes('ملغي'));
+  const tasks = allData.filter(m => {
+    const s = String(m.status || '');
+    return m.assignedTo === memberName && !s.includes('تم') && !s.includes('ملغي');
+  });
   
   // Sort by date/deadline
   tasks.sort((a,b) => {
