@@ -189,3 +189,77 @@ const Security = {
 function enforceSheetVisibility() {
   Security.enforceSheetVisibility();
 }
+
+/**
+ * دالة تشخيص مشكلة إخفاء الشيتات
+ * شغلها من القائمة: Run > diagnoseVisibilityIssue
+ */
+function diagnoseVisibilityIssue() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+
+  let message = "=== تشخيص نظام الرؤية ===\n\n";
+
+  // 1. إيميل المستخدم الحالي
+  let activeEmail = "";
+  let effectiveEmail = "";
+
+  try {
+    activeEmail = Session.getActiveUser().getEmail();
+  } catch(e) {
+    activeEmail = "فشل: " + e.message;
+  }
+
+  try {
+    effectiveEmail = Session.getEffectiveUser().getEmail();
+  } catch(e) {
+    effectiveEmail = "فشل: " + e.message;
+  }
+
+  message += "1. إيميلك (Active): " + (activeEmail || "فارغ") + "\n";
+  message += "2. إيميلك (Effective): " + (effectiveEmail || "فارغ") + "\n\n";
+
+  // 2. صاحب الملف
+  let ownerEmail = "";
+  try {
+    const owner = ss.getOwner();
+    ownerEmail = owner ? owner.getEmail() : "لا يوجد owner";
+  } catch(e) {
+    ownerEmail = "فشل: " + e.message;
+  }
+
+  message += "3. صاحب الملف: " + ownerEmail + "\n\n";
+
+  // 3. المقارنة
+  const normalizedActive = (activeEmail || "").trim().toLowerCase();
+  const normalizedOwner = (ownerEmail || "").trim().toLowerCase();
+  const isOwner = normalizedActive === normalizedOwner && normalizedActive !== "";
+
+  message += "4. هل أنت صاحب الملف؟ " + (isOwner ? "نعم ✅" : "لا ❌") + "\n";
+  message += "   - إيميلك: [" + normalizedActive + "]\n";
+  message += "   - صاحب الملف: [" + normalizedOwner + "]\n\n";
+
+  // 4. التحقق من شيت المستخدمين
+  let user = null;
+  try {
+    user = getUserByEmail(normalizedActive);
+  } catch(e) {
+    message += "5. خطأ في getUserByEmail: " + e.message + "\n";
+  }
+
+  message += "5. هل أنت في شيت المستخدمين؟ " + (user ? "نعم ✅" : "لا ❌") + "\n";
+  if (user) {
+    message += "   - الدور: " + user.role + "\n";
+    message += "   - نشط: " + user.active + "\n";
+  }
+
+  // 5. قائمة المدراء
+  let admins = [];
+  try {
+    admins = Security.getAdminGroupEmails();
+  } catch(e) {}
+  message += "\n6. المدراء المسجلين: " + (admins.length > 0 ? admins.join(", ") : "لا يوجد") + "\n";
+  message += "   - هل أنت مدير؟ " + (admins.includes(normalizedActive) ? "نعم ✅" : "لا ❌") + "\n";
+
+  ui.alert("تشخيص نظام الرؤية", message, ui.ButtonSet.OK);
+}
