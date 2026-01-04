@@ -82,36 +82,73 @@ const Security = {
     try {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheets = ss.getSheets();
-      
+
+      // دالة مساعدة لإظهار كل الشيتات
+      const showAllSheets = function() {
+        sheets.forEach(s => {
+          try { s.showSheet(); } catch(e) {}
+        });
+      };
+
       // الحصول على إيميل المستخدم بأكثر من طريقة لضمان النجاح
       let email = "";
       try { email = Session.getActiveUser().getEmail(); } catch(e) {}
       if (!email) {
         try { email = Session.getEffectiveUser().getEmail(); } catch(e) {}
       }
-      
+
       email = (email || "").trim().toLowerCase();
-      const ownerEmail = ss.getOwner() ? ss.getOwner().getEmail().trim().toLowerCase() : "";
-      
-      // إذا فشلنا في جلب الإيميل أو كان صاحب الملف، نفتح كل شيء
-      if (email === "" || email === ownerEmail) {
-         sheets.forEach(s => {
-           try { s.showSheet(); } catch(e) {}
-         });
-         return;
+
+      // إذا فشلنا في جلب الإيميل، نفتح كل شيء (أمان)
+      if (email === "") {
+        console.log('[enforceSheetVisibility] Email is empty, showing all sheets');
+        showAllSheets();
+        return;
       }
 
-      const user = getUserByEmail(email);
-      const isGeneralManager = user && (String(user.role).trim() === 'مدير عام');
-      
-      if (isGeneralManager) {
-         sheets.forEach(s => {
-           try { s.showSheet(); } catch(e) {}
-         });
-         return;
+      // التحقق من صاحب الملف
+      let ownerEmail = "";
+      try {
+        const owner = ss.getOwner();
+        ownerEmail = owner ? owner.getEmail().trim().toLowerCase() : "";
+      } catch(e) {
+        console.log('[enforceSheetVisibility] Could not get owner email:', e);
       }
-      
+
+      // إذا كان صاحب الملف، نفتح كل شيء
+      if (ownerEmail && email === ownerEmail) {
+        console.log('[enforceSheetVisibility] User is owner, showing all sheets');
+        showAllSheets();
+        return;
+      }
+
+      // التحقق من المستخدم في شيت المستخدمين
+      const user = getUserByEmail(email);
+
+      // إذا كان مدير عام، نفتح كل شيء
+      if (user && String(user.role).trim() === 'مدير عام') {
+        console.log('[enforceSheetVisibility] User is مدير عام, showing all sheets');
+        showAllSheets();
+        return;
+      }
+
+      // التحقق الإضافي: إذا كان المستخدم في قائمة المدراء
+      if (this.isAdmin(email)) {
+        console.log('[enforceSheetVisibility] User is admin, showing all sheets');
+        showAllSheets();
+        return;
+      }
+
+      // إذا لم يكن المستخدم موجوداً في شيت المستخدمين، نفتح كل شيء (أمان)
+      // هذا يمنع قفل الملف على مستخدمين جدد أو غير مسجلين
+      if (!user) {
+        console.log('[enforceSheetVisibility] User not found in المستخدمين sheet, showing all sheets as safety measure');
+        showAllSheets();
+        return;
+      }
+
       // لمدير المشروعات: المسموح به فقط
+      console.log('[enforceSheetVisibility] User is مدير مشروعات, limiting visibility');
       const allowedNames = ['الحركة', 'داشبورد'];
       sheets.forEach(sheet => {
         try {
@@ -188,4 +225,78 @@ const Security = {
  */
 function enforceSheetVisibility() {
   Security.enforceSheetVisibility();
+}
+
+/**
+ * دالة تشخيص مشكلة إخفاء الشيتات
+ * شغلها من القائمة: Run > diagnoseVisibilityIssue
+ */
+function diagnoseVisibilityIssue() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+
+  let message = "=== تشخيص نظام الرؤية ===\n\n";
+
+  // 1. إيميل المستخدم الحالي
+  let activeEmail = "";
+  let effectiveEmail = "";
+
+  try {
+    activeEmail = Session.getActiveUser().getEmail();
+  } catch(e) {
+    activeEmail = "فشل: " + e.message;
+  }
+
+  try {
+    effectiveEmail = Session.getEffectiveUser().getEmail();
+  } catch(e) {
+    effectiveEmail = "فشل: " + e.message;
+  }
+
+  message += "1. إيميلك (Active): " + (activeEmail || "فارغ") + "\n";
+  message += "2. إيميلك (Effective): " + (effectiveEmail || "فارغ") + "\n\n";
+
+  // 2. صاحب الملف
+  let ownerEmail = "";
+  try {
+    const owner = ss.getOwner();
+    ownerEmail = owner ? owner.getEmail() : "لا يوجد owner";
+  } catch(e) {
+    ownerEmail = "فشل: " + e.message;
+  }
+
+  message += "3. صاحب الملف: " + ownerEmail + "\n\n";
+
+  // 3. المقارنة
+  const normalizedActive = (activeEmail || "").trim().toLowerCase();
+  const normalizedOwner = (ownerEmail || "").trim().toLowerCase();
+  const isOwner = normalizedActive === normalizedOwner && normalizedActive !== "";
+
+  message += "4. هل أنت صاحب الملف؟ " + (isOwner ? "نعم ✅" : "لا ❌") + "\n";
+  message += "   - إيميلك: [" + normalizedActive + "]\n";
+  message += "   - صاحب الملف: [" + normalizedOwner + "]\n\n";
+
+  // 4. التحقق من شيت المستخدمين
+  let user = null;
+  try {
+    user = getUserByEmail(normalizedActive);
+  } catch(e) {
+    message += "5. خطأ في getUserByEmail: " + e.message + "\n";
+  }
+
+  message += "5. هل أنت في شيت المستخدمين؟ " + (user ? "نعم ✅" : "لا ❌") + "\n";
+  if (user) {
+    message += "   - الدور: " + user.role + "\n";
+    message += "   - نشط: " + user.active + "\n";
+  }
+
+  // 5. قائمة المدراء
+  let admins = [];
+  try {
+    admins = Security.getAdminGroupEmails();
+  } catch(e) {}
+  message += "\n6. المدراء المسجلين: " + (admins.length > 0 ? admins.join(", ") : "لا يوجد") + "\n";
+  message += "   - هل أنت مدير؟ " + (admins.includes(normalizedActive) ? "نعم ✅" : "لا ❌") + "\n";
+
+  ui.alert("تشخيص نظام الرؤية", message, ui.ButtonSet.OK);
 }
