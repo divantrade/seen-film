@@ -382,6 +382,71 @@ function setDropdown(sheet, startRow, column, numRows, values) {
 }
 
 /**
+ * تحديث/إعادة تطبيق Dropdowns شيت المشاريع
+ * يمكن تشغيلها من القائمة: نظام الإنتاج > أدوات > تحديث قوائم المشاريع
+ */
+function refreshProjectsDropdowns() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.PROJECTS);
+
+  if (!sheet) {
+    ui.alert('❌ خطأ', 'لم يتم العثور على شيت المشاريع', ui.ButtonSet.OK);
+    return;
+  }
+
+  const lastRow = Math.max(sheet.getLastRow(), 500);
+  const numRows = lastRow - 1; // من الصف 2 إلى آخر صف
+
+  try {
+    // 1. مسح أي validation خاطئ من عمود تاريخ البداية (H) وتاريخ التسليم (I)
+    sheet.getRange(2, PROJECT_COLS.START_DATE, numRows, 1).clearDataValidations();
+    sheet.getRange(2, PROJECT_COLS.END_DATE, numRows, 1).clearDataValidations();
+
+    // 2. النوع (من شيت الإعدادات عمود A)
+    const settingsSheet = ss.getSheetByName('الإعدادات');
+    if (settingsSheet) {
+      setRangeDropdown(sheet, 2, PROJECT_COLS.TYPE, numRows, settingsSheet.getRange('A6:A100'));
+
+      // 3. القناة (من شيت الإعدادات عمود L)
+      setRangeDropdown(sheet, 2, PROJECT_COLS.CHANNEL, numRows, settingsSheet.getRange('L6:L100'));
+
+      // 4. البرنامج (من شيت الإعدادات عمود M)
+      setRangeDropdown(sheet, 2, PROJECT_COLS.PROGRAM, numRows, settingsSheet.getRange('M6:M100'));
+    } else {
+      ui.alert('⚠️ تحذير', 'لم يتم العثور على شيت الإعدادات - تم تخطي dropdowns النوع والقناة والبرنامج', ui.ButtonSet.OK);
+    }
+
+    // 5. المنتج والمونتير (من شيت الفريق عمود B)
+    const teamSheet = ss.getSheetByName(SHEETS.TEAM);
+    if (teamSheet) {
+      setRangeDropdown(sheet, 2, PROJECT_COLS.PRODUCER, numRows, teamSheet.getRange('B2:B200'));
+      setRangeDropdown(sheet, 2, PROJECT_COLS.EDITOR, numRows, teamSheet.getRange('B2:B200'));
+    } else {
+      ui.alert('⚠️ تحذير', 'لم يتم العثور على شيت الفريق - تم تخطي dropdowns المنتج والمونتير', ui.ButtonSet.OK);
+    }
+
+    // 6. الحالة (قائمة ثابتة)
+    setDropdown(sheet, 2, PROJECT_COLS.STATUS, numRows, PROJECT_STATUS);
+
+    ui.alert('✅ تم بنجاح',
+      'تم تحديث جميع القوائم المنسدلة في شيت المشاريع:\n\n' +
+      '• النوع (عمود C) ← من الإعدادات\n' +
+      '• القناة (عمود D) ← من الإعدادات\n' +
+      '• البرنامج (عمود E) ← من الإعدادات\n' +
+      '• المنتج (عمود F) ← من الفريق\n' +
+      '• المونتير (عمود G) ← من الفريق\n' +
+      '• الحالة (عمود J) ← قائمة ثابتة\n\n' +
+      '• تم إزالة أي dropdown من عمود تاريخ البداية (H) وتاريخ التسليم (I)',
+      ui.ButtonSet.OK);
+
+  } catch (error) {
+    ui.alert('❌ خطأ', 'حدث خطأ أثناء تحديث القوائم:\n' + error.message, ui.ButtonSet.OK);
+    console.error('refreshProjectsDropdowns error:', error);
+  }
+}
+
+/**
  * حذف الشيت الافتراضي
  */
 function deleteDefaultSheet(ss) {
