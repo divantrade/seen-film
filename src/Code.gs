@@ -73,26 +73,93 @@ function webAppGetUserProjects(userEmail) {
 /**
  * الحصول على بيانات Dashboard للمدير العام
  */
-/**
- * الحصول على بيانات Dashboard للمدير العام
- */
-/**
- * الحصول على بيانات Dashboard للمدير العام
- */
 function webAppGetGeneralManagerData() {
-  // ISOLATION MODE: Return immediate mock data purely to test UI connection speed.
-  // This bypasses ALL Sheet reading operations.
-  return {
-    success: true,
-    stats: {
-      totalProjects: 0,
-      activeProjects: 0,
-      totalTasks: 0,
-      totalTeam: 0 // Mock Data
-    },
-    recentProjects: [],
-    delayedTasks: []
-  };
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // 1. إحصائيات المشاريع
+    const allProjects = getAllProjects();
+    const activeProjects = getActiveProjects();
+
+    // 2. إحصائيات الفريق
+    const teamSheet = ss.getSheetByName(SHEETS.TEAM);
+    const totalTeam = teamSheet ? Math.max(0, teamSheet.getLastRow() - 1) : 0;
+
+    // 3. إحصائيات المهام من شيت الحركة
+    const movementSheet = ss.getSheetByName(SHEETS.MOVEMENT);
+    let totalTasks = 0;
+    let completedTasks = 0;
+    let inProgressTasks = 0;
+    let delayedTasksList = [];
+
+    if (movementSheet && movementSheet.getLastRow() > 1) {
+      const mLastRow = movementSheet.getLastRow();
+      const movementData = movementSheet.getRange(2, 1, mLastRow - 1, movementSheet.getLastColumn()).getValues();
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      for (let i = 0; i < movementData.length; i++) {
+        const row = movementData[i];
+        const projectName = row[MOVEMENT_COLS.PROJECT - 1];
+        if (!projectName) continue;
+
+        totalTasks++;
+        const status = String(row[MOVEMENT_COLS.STATUS - 1] || '').trim();
+
+        if (status.includes('تم')) {
+          completedTasks++;
+        } else if (status.includes('جاري')) {
+          inProgressTasks++;
+        }
+
+        // المهام المتأخرة
+        const dueDateRaw = row[MOVEMENT_COLS.DUE_DATE - 1];
+        if (dueDateRaw && !status.includes('تم') && !status.includes('ملغي')) {
+          const dueDate = new Date(dueDateRaw);
+          if (dueDate < today && delayedTasksList.length < 10) {
+            delayedTasksList.push({
+              project: projectName,
+              stage: row[MOVEMENT_COLS.STAGE - 1] || '',
+              element: row[MOVEMENT_COLS.ELEMENT - 1] || '',
+              details: row[MOVEMENT_COLS.DETAILS - 1] || '',
+              dueDate: Utilities.formatDate(dueDate, CONFIG.TIMEZONE, CONFIG.DATE_FORMAT),
+              assignedTo: row[MOVEMENT_COLS.ASSIGNED_TO - 1] || ''
+            });
+          }
+        }
+      }
+    }
+
+    // 4. آخر المشاريع (أحدث 10)
+    const recentProjects = allProjects.slice(0, 10).map(p => ({
+      code: p.code || '',
+      name: p.name || '',
+      type: p.type || '',
+      status: p.status || 'نشط'
+    }));
+
+    return {
+      success: true,
+      stats: {
+        totalProjects: allProjects.length,
+        activeProjects: activeProjects.length,
+        totalTasks: totalTasks,
+        completedTasks: completedTasks,
+        inProgressTasks: inProgressTasks,
+        totalTeam: totalTeam
+      },
+      recentProjects: recentProjects,
+      delayedTasks: delayedTasksList
+    };
+
+  } catch (error) {
+    console.error('Error in webAppGetGeneralManagerData:', error);
+    return {
+      success: false,
+      message: 'حدث خطأ في جلب البيانات: ' + error.message
+    };
+  }
 }
 
 /**
