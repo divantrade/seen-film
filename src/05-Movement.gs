@@ -337,11 +337,12 @@ function getMovementStats(projectName) {
   };
 
   for (const m of movements) {
+    const status = String(m.status || '');
     // إحصائيات الحالة
-    if (m.status.includes('تم')) stats.completed++;
-    else if (m.status.includes('جاري')) stats.inProgress++;
-    else if (m.status.includes('انتظار')) stats.waiting++;
-    else if (m.status.includes('متأخر')) stats.delayed++;
+    if (status.includes('تم')) stats.completed++;
+    else if (status.includes('جاري')) stats.inProgress++;
+    else if (status.includes('انتظار')) stats.waiting++;
+    else if (status.includes('متأخر')) stats.delayed++;
     else stats.notStarted++;
 
     // إحصائيات المراحل
@@ -349,7 +350,7 @@ function getMovementStats(projectName) {
       stats.byStage[m.stage] = { total: 0, completed: 0 };
     }
     stats.byStage[m.stage].total++;
-    if (m.status.includes('تم')) {
+    if (status.includes('تم')) {
       stats.byStage[m.stage].completed++;
     }
   }
@@ -440,7 +441,8 @@ function getDelayedTasks() {
   const today = new Date();
 
   return movements.filter(m => {
-    if (m.status.includes('تم') || m.status.includes('ملغي')) return false;
+    const status = String(m.status || '');
+    if (status.includes('تم') || status.includes('ملغي')) return false;
     if (!m.dueDate) return false;
 
     const dueDate = new Date(m.dueDate);

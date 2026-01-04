@@ -257,9 +257,10 @@
         
         let taskListHtml = '';
         stage.tasks.forEach(task => {
+          const taskStatus = String(task.status || '');
           taskListHtml += `
             <div class="task-item">
-              <span class="status-icon">${task.status.includes('تم') ? '✅' : (task.status.includes('جاري') ? '🔄' : '⬜')}</span>
+              <span class="status-icon">${taskStatus.includes('تم') ? '✅' : (taskStatus.includes('جاري') ? '🔄' : '⬜')}</span>
               <span><strong>${task.element}</strong></span>
               <span style="color:#777; font-size: 0.8em; margin-right:auto;">${task.assignedTo || ''}</span>
             </div>
