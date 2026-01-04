@@ -321,7 +321,7 @@ function getAllProjects() {
     return [];
   }
 
-  const data = sheet.getRange(2, 1, lastRow - 1, PROJECT_COLS.NOTES).getValues();
+  const data = sheet.getRange(2, 1, lastRow - 1, PROJECT_COLS.FOLDER_LINK).getValues();
   const projects = [];
 
   for (const row of data) {
@@ -329,7 +329,11 @@ function getAllProjects() {
     if (name) {
       projects.push({
         code: row[PROJECT_COLS.CODE - 1],
-        name: name
+        name: name,
+        type: row[PROJECT_COLS.TYPE - 1] || '',
+        channel: row[PROJECT_COLS.CHANNEL - 1] || '',
+        producer: row[PROJECT_COLS.PRODUCER - 1] || '',
+        status: row[PROJECT_COLS.STATUS - 1] || 'نشط'
       });
     }
   }
