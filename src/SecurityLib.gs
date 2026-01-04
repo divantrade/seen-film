@@ -77,8 +77,17 @@ const Security = {
 
   /**
    * التحكم في رؤية التبويبات (Tabs) بناءً على الرتبة
+   * ⚠️ معطل مؤقتاً - لتفعيله غيّر ENABLE_SHEET_VISIBILITY إلى true
    */
+  ENABLE_SHEET_VISIBILITY: false, // غيّر إلى true لتفعيل إخفاء الشيتات
+
   enforceSheetVisibility: function() {
+    // إذا كان النظام معطلاً، لا نفعل شيئاً
+    if (!this.ENABLE_SHEET_VISIBILITY) {
+      console.log('[enforceSheetVisibility] System is DISABLED. Set ENABLE_SHEET_VISIBILITY to true to enable.');
+      return;
+    }
+
     try {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheets = ss.getSheets();
