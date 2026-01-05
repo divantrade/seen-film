@@ -74,7 +74,7 @@ function onOpen() {
       .addItem('📋 عرض سجل التغييرات', 'showAuditLog')
       .addItem('📤 تصدير سجل التدقيق', 'exportAuditLog')
       .addSeparator()
-      .addItem('🔒 تفعيل نظام الأمان', 'installSafetyTriggers')
+      .addItem('⚡ تفعيل نظام الأمان', 'installSafetyTriggers')
       .addItem('📊 حالة نظام الأمان', 'showSafetyStatus'))
 
     // نظام المستخدمين و Web App
@@ -178,15 +178,19 @@ function onEdit(e) {
         }
         break;
       case SHEETS.TEAM:
+      case SHEETS_LEGACY.TEAM:
         onTeamEdit(e);
         break;
       case SHEETS.MOVEMENT:
+      case SHEETS_LEGACY.MOVEMENT:
         onMovementEdit(e);
         break;
       case SHEETS.PROJECTS:
+      case SHEETS_LEGACY.PROJECTS:
         onProjectEdit(e);
         break;
       case SHEETS.DASHBOARD:
+      case SHEETS_LEGACY.DASHBOARD:
         onDashboardEdit(e);
         break;
     }
