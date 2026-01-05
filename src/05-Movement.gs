@@ -11,7 +11,6 @@
 function showAddMovementForm() {
   const projects = getActiveProjectNames();
   const team = getActiveTeamNames();
-  const cities = getCitiesFromSettings();
 
   if (projects.length === 0) {
     showError('لا توجد مشاريع نشطة. أضف مشروعاً أولاً.');
@@ -53,18 +52,9 @@ function showAddMovementForm() {
           </select>
         </div>
       </div>
-      <div class="row">
-        <div class="form-group">
-          <label>المدينة</label>
-          <select id="city">
-            <option value="">اختر المدينة</option>
-            ${cities.map(c => `<option value="${c}">${c}</option>`).join('')}
-          </select>
-        </div>
-        <div class="form-group">
-          <label>العنصر *</label>
-          <input type="text" id="element" required placeholder="مثال: مقابلة أحمد، بحث المصادر...">
-        </div>
+      <div class="form-group">
+        <label>العنصر *</label>
+        <input type="text" id="element" required placeholder="مثال: مقابلة أحمد، بحث المصادر...">
       </div>
       <div class="form-group">
         <label>التفاصيل</label>
@@ -113,7 +103,6 @@ function showAddMovementForm() {
           project: document.getElementById('project').value,
           stage: document.getElementById('stage').value,
           subtype: document.getElementById('subtype').value,
-          city: document.getElementById('city').value,
           element: document.getElementById('element').value,
           details: document.getElementById('details').value,
           assignedTo: document.getElementById('assignedTo').value,
@@ -122,13 +111,12 @@ function showAddMovementForm() {
         };
         google.script.run
           .withSuccessHandler(() => google.script.host.close())
-          .withFailureHandler((err) => alert('خطأ: ' + err.message))
           .addMovement(data);
       };
     </script>
   `)
     .setWidth(500)
-    .setHeight(550);
+    .setHeight(500);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'إضافة حركة جديدة');
 }
@@ -137,58 +125,33 @@ function showAddMovementForm() {
  * إضافة حركة جديدة
  */
 function addMovement(data) {
-  try {
-    const sheet = getSheet(SHEETS.MOVEMENT);
-    if (!sheet) {
-      throw new Error('شيت الحركة غير موجود');
-    }
+  const sheet = getSheet(SHEETS.MOVEMENT);
+  const lastRow = getLastRowInColumn(sheet, MOVEMENT_COLS.PROJECT);
+  const newRow = Math.max(lastRow + 1, 2);
 
-    const lastRow = getLastRowInColumn(sheet, MOVEMENT_COLS.PROJECT);
-    const newRow = Math.max(lastRow + 1, 2);
+  // الرقم التسلسلي
+  const number = lastRow <= 1 ? 1 : lastRow;
 
-    // الرقم التسلسلي
-    const number = lastRow <= 1 ? 1 : lastRow;
+  // إضافة البيانات
+  sheet.getRange(newRow, MOVEMENT_COLS.NUMBER).setValue(number);
+  sheet.getRange(newRow, MOVEMENT_COLS.DATE).setValue(getCurrentDate());
+  sheet.getRange(newRow, MOVEMENT_COLS.PROJECT).setValue(data.project);
+  sheet.getRange(newRow, MOVEMENT_COLS.STAGE).setValue(data.stage);
+  sheet.getRange(newRow, MOVEMENT_COLS.SUBTYPE).setValue(data.subtype || '');
+  sheet.getRange(newRow, MOVEMENT_COLS.ELEMENT).setValue(cleanText(data.element));
+  sheet.getRange(newRow, MOVEMENT_COLS.DETAILS).setValue(data.details || '');
+  sheet.getRange(newRow, MOVEMENT_COLS.ASSIGNED_TO).setValue(data.assignedTo || '');
+  sheet.getRange(newRow, MOVEMENT_COLS.STATUS).setValue('⬜ لم يبدأ');
+  sheet.getRange(newRow, MOVEMENT_COLS.DUE_DATE).setValue(data.dueDate || '');
+  sheet.getRange(newRow, MOVEMENT_COLS.NOTES).setValue(data.notes || '');
 
-    // تجهيز كل البيانات في صف واحد (13 عمود)
-    const rowData = [
-      number,                           // 1: الرقم
-      getCurrentDate(),                 // 2: التاريخ
-      data.project || '',               // 3: الفيلم
-      data.stage || '',                 // 4: المرحلة
-      data.subtype || '',               // 5: المرحلة الفرعية
-      data.city || '',                  // 6: المدينة
-      cleanText(data.element) || '',    // 7: العنصر
-      data.details || '',               // 8: التفاصيل
-      data.assignedTo || '',            // 9: المسؤول
-      '⬜ لم يبدأ',                      // 10: الحالة
-      data.dueDate || '',               // 11: تاريخ التسليم
-      data.notes || '',                 // 12: ملاحظات
-      ''                                // 13: الرابط (يُملأ لاحقاً)
-    ];
-
-    // حفظ كل البيانات دفعة واحدة
-    sheet.getRange(newRow, 1, 1, rowData.length).setValues([rowData]);
-
-    // إنشاء فولدر تلقائي إذا كانت المرحلة "التصوير"
-    const isShootingStage = data.stage === 'التصوير' || data.stage === 'تصوير' ||
-                           (data.stage && data.stage.toLowerCase() === 'shooting');
-    if (isShootingStage && data.element) {
-      try {
-        createShootingFolder(data.project, data.city || data.subtype, newRow, data.element);
-      } catch (folderErr) {
-        console.error('خطأ في إنشاء الفولدر:', folderErr);
-        // لا نوقف العملية بسبب خطأ الفولدر
-      }
-    }
-
-    showSuccess('تم إضافة الحركة بنجاح');
-    return { success: true, row: newRow };
-
-  } catch (error) {
-    console.error('خطأ في إضافة الحركة:', error);
-    showError('فشل في إضافة الحركة: ' + error.message);
-    throw error; // إعادة الخطأ للـ client
+  // إنشاء فولدر تلقائي إذا كانت المرحلة "التصوير"
+  const isShootingStage = data.stage === 'التصوير' || data.stage === 'تصوير' || (data.stage && data.stage.toLowerCase() === 'shooting');
+  if (isShootingStage && data.element) {
+    createShootingFolder(data.project, data.subtype, newRow, data.element);
   }
+
+  showSuccess('تم إضافة الحركة بنجاح');
 }
 
 /**
