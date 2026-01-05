@@ -84,16 +84,19 @@ function createProjectsSheet(ss) {
   sheet.setFrozenRows(1);
 
   // 1. النوع (من شيت الإعدادات عمود A)
-  setRangeDropdown(sheet, 2, PROJECT_COLS.TYPE, 500, ss.getSheetByName('الإعدادات').getRange('A6:A100'));
-  
-  // 2. القناة (من شيت الإعدادات عمود L)
-  setRangeDropdown(sheet, 2, PROJECT_COLS.CHANNEL, 500, ss.getSheetByName('الإعدادات').getRange('L6:L100'));
-  
-  // 3. البرنامج (من شيت الإعدادات عمود M)
-  setRangeDropdown(sheet, 2, PROJECT_COLS.PROGRAM, 500, ss.getSheetByName('الإعدادات').getRange('M6:M100'));
+  const settingsSheet = getSheet(SHEETS.SETTINGS);
+  if (settingsSheet) {
+    setRangeDropdown(sheet, 2, PROJECT_COLS.TYPE, 500, settingsSheet.getRange('A6:A100'));
+
+    // 2. القناة (من شيت الإعدادات عمود L)
+    setRangeDropdown(sheet, 2, PROJECT_COLS.CHANNEL, 500, settingsSheet.getRange('L6:L100'));
+
+    // 3. البرنامج (من شيت الإعدادات عمود M)
+    setRangeDropdown(sheet, 2, PROJECT_COLS.PROGRAM, 500, settingsSheet.getRange('M6:M100'));
+  }
   
   // 4. المنتج والمخرج (من شيت الفريق عمود B - الاسم)
-  const teamSheet = ss.getSheetByName(SHEETS.TEAM);
+  const teamSheet = getSheet(SHEETS.TEAM);
   if (teamSheet) {
     setRangeDropdown(sheet, 2, PROJECT_COLS.PRODUCER, 500, teamSheet.getRange('B2:B200'));
     setRangeDropdown(sheet, 2, PROJECT_COLS.EDITOR, 500, teamSheet.getRange('B2:B200'));
@@ -404,7 +407,7 @@ function refreshProjectsDropdowns() {
     sheet.getRange(2, PROJECT_COLS.END_DATE, numRows, 1).clearDataValidations();
 
     // 2. النوع (من شيت الإعدادات عمود A)
-    const settingsSheet = ss.getSheetByName('الإعدادات');
+    const settingsSheet = getSheet(SHEETS.SETTINGS);
     if (settingsSheet) {
       setRangeDropdown(sheet, 2, PROJECT_COLS.TYPE, numRows, settingsSheet.getRange('A6:A100'));
 
