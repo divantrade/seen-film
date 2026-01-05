@@ -74,7 +74,7 @@ function onOpen() {
       .addItem('📋 عرض سجل التغييرات', 'showAuditLog')
       .addItem('📤 تصدير سجل التدقيق', 'exportAuditLog')
       .addSeparator()
-      .addItem('🔒 تفعيل نظام الأمان', 'installSafetyTriggers')
+      .addItem('⚡ تفعيل نظام الأمان', 'installSafetyTriggers')
       .addItem('📊 حالة نظام الأمان', 'showSafetyStatus'))
 
     // نظام المستخدمين و Web App
