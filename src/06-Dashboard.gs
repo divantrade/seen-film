@@ -287,3 +287,134 @@ ${report}
 
   SpreadsheetApp.getUi().showModalDialog(html, 'تقرير المشروع');
 }
+
+/**
+ * حذف شيت لوحة التحكم القديم
+ */
+function deleteControlPanelSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+
+  // البحث عن شيت لوحة التحكم
+  const sheetNames = ['لوحة التحكم', '🎛️ لوحة التحكم'];
+  let sheetToDelete = null;
+
+  for (const name of sheetNames) {
+    const sheet = ss.getSheetByName(name);
+    if (sheet) {
+      sheetToDelete = sheet;
+      break;
+    }
+  }
+
+  if (!sheetToDelete) {
+    ui.alert('ℹ️ معلومة', 'لم يتم العثور على شيت "لوحة التحكم"', ui.ButtonSet.OK);
+    return;
+  }
+
+  // تأكيد الحذف
+  const response = ui.alert(
+    '🗑️ حذف شيت لوحة التحكم',
+    'هل أنت متأكد من حذف شيت "لوحة التحكم"؟\n\nسيتم الاعتماد على شيت "داشبورد" فقط.',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (response === ui.Button.YES) {
+    ss.deleteSheet(sheetToDelete);
+    ui.alert('✅ تم', 'تم حذف شيت "لوحة التحكم" بنجاح.\n\nيمكنك الآن استخدام شيت "داشبورد" فقط.', ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * إضافة أيقونة لاسم شيت الداشبورد وتحسين المظهر
+ */
+function upgradeDashboardSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+
+  // البحث عن شيت الداشبورد
+  let sheet = ss.getSheetByName(SHEETS.DASHBOARD);
+  if (!sheet) {
+    sheet = ss.getSheetByName('داشبورد');
+  }
+
+  if (!sheet) {
+    ui.alert('❌ خطأ', 'لم يتم العثور على شيت الداشبورد', ui.ButtonSet.OK);
+    return;
+  }
+
+  // تغيير اسم التاب مع أيقونة
+  const newName = '📊 داشبورد';
+  try {
+    sheet.setName(newName);
+  } catch (e) {
+    // إذا كان الاسم موجود مسبقاً، نتجاهل الخطأ
+  }
+
+  // تحسين لون التاب
+  sheet.setTabColor('#1a73e8'); // أزرق جوجل
+
+  // تحديث العنوان الرئيسي
+  sheet.getRange('A1').setValue('📊 لوحة المتابعة - نظام إدارة الإنتاج');
+  sheet.getRange('A1:D1').merge()
+    .setBackground('#1a73e8')
+    .setFontColor('#ffffff')
+    .setFontSize(18)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  sheet.setRowHeight(1, 50);
+
+  // تحديث الداشبورد بالبيانات
+  refreshDashboard();
+
+  ui.alert('✅ تم التحسين',
+    'تم تحسين شيت الداشبورد:\n\n' +
+    '• تم إضافة أيقونة 📊 للتاب\n' +
+    '• تم تغيير لون التاب للأزرق\n' +
+    '• تم تحسين العنوان الرئيسي\n' +
+    '• تم تحديث البيانات',
+    ui.ButtonSet.OK);
+}
+
+/**
+ * تنظيف وترتيب الشيتات مع أيقونات
+ */
+function organizeAllSheetTabs() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // قائمة الشيتات مع الأيقونات والألوان
+  const sheetConfig = [
+    { oldName: 'المشاريع', newName: '🎬 المشاريع', color: '#34a853' },
+    { oldName: 'الفريق', newName: '👥 الفريق', color: '#fbbc04' },
+    { oldName: 'الحركة', newName: '📋 الحركة', color: '#ea4335' },
+    { oldName: 'داشبورد', newName: '📊 داشبورد', color: '#1a73e8' },
+    { oldName: 'الإعدادات', newName: '⚙️ الإعدادات', color: '#9e9e9e' },
+    { oldName: 'المستخدمين', newName: '🔐 المستخدمين', color: '#9c27b0' },
+    { oldName: 'روابط الفولدرات', newName: '📁 روابط الفولدرات', color: '#ff9800' }
+  ];
+
+  let updatedCount = 0;
+
+  for (const config of sheetConfig) {
+    // جرب الاسم القديم أو الاسم الجديد (إذا كان محدث مسبقاً)
+    let sheet = ss.getSheetByName(config.oldName) || ss.getSheetByName(config.newName);
+
+    if (sheet) {
+      try {
+        // لا نغير الاسم إذا كان يبدأ بأيقونة بالفعل
+        if (!sheet.getName().match(/^[📊🎬👥📋⚙️🔐📁]/)) {
+          sheet.setName(config.newName);
+        }
+        sheet.setTabColor(config.color);
+        updatedCount++;
+      } catch (e) {
+        console.log('Could not update sheet: ' + config.oldName);
+      }
+    }
+  }
+
+  SpreadsheetApp.getUi().alert('✅ تم الترتيب',
+    'تم تحديث ' + updatedCount + ' شيت بأيقونات وألوان مميزة.',
+    SpreadsheetApp.getUi().ButtonSet.OK);
+}
