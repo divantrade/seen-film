@@ -139,7 +139,7 @@ function setupUsersSheet() {
  * @returns {string} كلمة المرور المشفرة
  */
 function hashPassword(password) {
-  const salt = 'SeenFilm2025!@#';
+  const salt = CONFIG.PASSWORD_SALT;
   const combined = password + salt;
   const hash = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
@@ -382,20 +382,6 @@ function toggleUserStatus(email, active) {
   }
 }
 
-/**
- * تحديث آخر تسجيل دخول
- * @param {string} email
- */
-function updateLastLogin(email) {
-  const user = getUserByEmail(email);
-  
-  if (user) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(USER_SHEET_NAME);
-    sheet.getRange(user.row, USER_COLS.LAST_LOGIN).setValue(new Date());
-  }
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // نظام تسجيل الدخول
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -607,7 +593,7 @@ function migrateOldUsers() {
           email: email,
           name: name || email.split('@')[0],
           role: userRole,
-          password: 'Seen2025', // كلمة مرور افتراضية
+          password: CONFIG.DEFAULT_PASSWORD,
           projects: (userRole === USER_ROLES.GENERAL_MANAGER) ? 'ALL' : projects
         });
         
