@@ -497,23 +497,50 @@ function resetSystem() {
 }
 
 /**
- * إصلاح شيت الحركة - حذف العمود الزائد وتحديث الهيدرات
+ * إصلاح شيت الحركة - إضافة عمود المدينة وتحديث الهيدرات
  */
 function fixMovementSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.MOVEMENT);
+  const sheet = getSheet(SHEETS.MOVEMENT);
 
   if (!sheet) {
     SpreadsheetApp.getUi().alert('شيت الحركة غير موجود!');
     return;
   }
 
+  const ui = SpreadsheetApp.getUi();
   const currentCols = sheet.getLastColumn();
+  const currentHeaders = sheet.getRange(1, 1, 1, Math.min(currentCols, 15)).getValues()[0];
 
-  // إذا كان عدد الأعمدة أكثر من المطلوب (13 بدلاً من 12)
-  if (currentCols > MOVEMENT_HEADERS.length) {
-    // حذف العمود 11 (عمود الـ checkbox القديم)
-    sheet.deleteColumn(11);
+  // التحقق من وجود عمود المدينة
+  const hasCityColumn = currentHeaders.includes('المدينة');
+
+  // إذا كان عدد الأعمدة 12 ولا يوجد عمود المدينة، نحتاج لإدراج عمود جديد
+  if (!hasCityColumn && currentCols >= 12) {
+    const result = ui.alert(
+      '⚠️ إضافة عمود المدينة',
+      'شيت الحركة لا يحتوي على عمود المدينة.\n\n' +
+      'سيتم إدراج عمود جديد في الموضع F وتحريك البيانات.\n\n' +
+      'هل تريد المتابعة؟',
+      ui.ButtonSet.YES_NO
+    );
+
+    if (result !== ui.Button.YES) {
+      return;
+    }
+
+    // إدراج عمود جديد في الموضع 6 (المدينة)
+    sheet.insertColumnAfter(5);
+    SpreadsheetApp.flush(); // تأكيد الإدراج
+  }
+
+  // إذا كان عدد الأعمدة أكثر من المطلوب
+  if (sheet.getLastColumn() > MOVEMENT_HEADERS.length) {
+    // حذف الأعمدة الزائدة من النهاية
+    const extraCols = sheet.getLastColumn() - MOVEMENT_HEADERS.length;
+    for (let i = 0; i < extraCols; i++) {
+      sheet.deleteColumn(sheet.getLastColumn());
+    }
   }
 
   // تحديث الهيدرات
@@ -532,7 +559,7 @@ function fixMovementSheet() {
   sheet.setColumnWidth(MOVEMENT_COLS.PROJECT, 150);
   sheet.setColumnWidth(MOVEMENT_COLS.STAGE, 100);
   sheet.setColumnWidth(MOVEMENT_COLS.SUBTYPE, 120);
-  sheet.setColumnWidth(MOVEMENT_COLS.CITY, 120);
+  sheet.setColumnWidth(MOVEMENT_COLS.CITY, 100);
   sheet.setColumnWidth(MOVEMENT_COLS.ELEMENT, 150);
   sheet.setColumnWidth(MOVEMENT_COLS.DETAILS, 200);
   sheet.setColumnWidth(MOVEMENT_COLS.ASSIGNED_TO, 120);
@@ -541,21 +568,37 @@ function fixMovementSheet() {
   sheet.setColumnWidth(MOVEMENT_COLS.NOTES, 200);
   sheet.setColumnWidth(MOVEMENT_COLS.FOLDER_LINK, 250);
 
-  // إضافة القوائم المنسدلة (من شيت الإعدادات)
-  const stagesForFix = getStagesFromSettings();
-  setDropdown(sheet, 2, MOVEMENT_COLS.STAGE, 500, stagesForFix);
+  // إضافة القوائم المنسدلة
+  const numRows = Math.max(sheet.getLastRow(), 2);
 
+  // المراحل
+  const stagesForFix = getStagesFromSettings();
+  setDropdown(sheet, 2, MOVEMENT_COLS.STAGE, numRows, stagesForFix);
+
+  // الأنواع الفرعية
   const allSubtypes = getAllSubtypes();
   if (allSubtypes.length > 0) {
-    setDropdown(sheet, 2, MOVEMENT_COLS.SUBTYPE, 500, allSubtypes);
+    setDropdown(sheet, 2, MOVEMENT_COLS.SUBTYPE, numRows, allSubtypes);
   }
 
-  setDropdown(sheet, 2, MOVEMENT_COLS.STATUS, 500, STATUS_WITH_ICONS);
+  // المدن
+  const cities = getCitiesFromSettings();
+  if (cities.length > 0) {
+    setDropdown(sheet, 2, MOVEMENT_COLS.CITY, numRows, cities);
+  }
+
+  // الحالات
+  setDropdown(sheet, 2, MOVEMENT_COLS.STATUS, numRows, STATUS_WITH_ICONS);
 
   // تحديث قائمة المشاريع والفريق
   updateMovementDropdowns();
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('تم إصلاح شيت الحركة بنجاح!', 'نجاح', 3);
+  ui.alert('✅ تم الإصلاح',
+    'تم إصلاح شيت الحركة بنجاح!\n\n' +
+    '• تم تحديث الهيدرات\n' +
+    '• تم إضافة عمود المدينة (إذا كان مفقوداً)\n' +
+    '• تم تحديث القوائم المنسدلة',
+    ui.ButtonSet.OK);
 }
 
 /**
