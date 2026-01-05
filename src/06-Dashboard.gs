@@ -390,7 +390,7 @@ function organizeAllSheetTabs() {
     { oldName: 'الحركة', newName: '📋 الحركة', color: '#ea4335' },
     { oldName: 'داشبورد', newName: '📊 داشبورد', color: '#1a73e8' },
     { oldName: 'الإعدادات', newName: '⚙️ الإعدادات', color: '#9e9e9e' },
-    { oldName: 'المستخدمين', newName: '🔐 المستخدمين', color: '#9c27b0' },
+    { oldName: 'المستخدمين', newName: '👤 المستخدمين', color: '#9c27b0' },
     { oldName: 'روابط الفولدرات', newName: '📁 روابط الفولدرات', color: '#ff9800' }
   ];
 
@@ -399,11 +399,20 @@ function organizeAllSheetTabs() {
   for (const config of sheetConfig) {
     // جرب الاسم القديم أو الاسم الجديد (إذا كان محدث مسبقاً)
     let sheet = ss.getSheetByName(config.oldName) || ss.getSheetByName(config.newName);
+    // خاص بشيت المستخدمين - جرب الاسم القديم بأيقونة القفل
+    if (!sheet && config.oldName === 'المستخدمين') {
+      sheet = ss.getSheetByName('🔐 المستخدمين');
+    }
 
     if (sheet) {
       try {
-        // لا نغير الاسم إذا كان يبدأ بأيقونة بالفعل
-        if (!sheet.getName().match(/^[📊🎬👥📋⚙️🔐📁]/)) {
+        const currentName = sheet.getName();
+        // إذا كان الاسم القديم بأيقونة القفل، غيره للأيقونة الجديدة
+        if (currentName === '🔐 المستخدمين') {
+          sheet.setName('👤 المستخدمين');
+        }
+        // لا نغير الاسم إذا كان يبدأ بأيقونة بالفعل (غير القفل)
+        else if (!currentName.match(/^[📊🎬👥📋⚙️👤📁]/)) {
           sheet.setName(config.newName);
         }
         sheet.setTabColor(config.color);
