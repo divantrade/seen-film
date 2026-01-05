@@ -427,3 +427,46 @@ function organizeAllSheetTabs() {
     'تم تحديث ' + updatedCount + ' شيت بأيقونات وألوان مميزة.',
     SpreadsheetApp.getUi().ButtonSet.OK);
 }
+
+/**
+ * إزالة جميع الحمايات الوهمية من الشيتات
+ * هذه الحمايات تظهر كقفل صغير بجانب اسم التاب لكنها لا تمنع أحداً من التعديل
+ */
+function removeAllSheetProtections() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+
+  const result = ui.alert(
+    '⚠️ إزالة الحمايات',
+    'سيتم إزالة جميع الحمايات (الأقفال) من كل الشيتات.\n\nهل تريد المتابعة؟',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (result !== ui.Button.YES) return;
+
+  let removedCount = 0;
+  const sheets = ss.getSheets();
+
+  for (const sheet of sheets) {
+    try {
+      const protections = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+      for (const protection of protections) {
+        protection.remove();
+        removedCount++;
+      }
+
+      // إزالة حمايات النطاقات أيضاً
+      const rangeProtections = sheet.getProtections(SpreadsheetApp.ProtectionType.RANGE);
+      for (const protection of rangeProtections) {
+        protection.remove();
+        removedCount++;
+      }
+    } catch (e) {
+      console.log('Could not remove protection from: ' + sheet.getName(), e);
+    }
+  }
+
+  ui.alert('✅ تم',
+    'تم إزالة ' + removedCount + ' حماية من الشيتات.\n\nالآن لن تظهر أيقونات القفل الوهمية.',
+    ui.ButtonSet.OK);
+}
