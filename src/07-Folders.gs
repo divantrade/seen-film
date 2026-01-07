@@ -459,7 +459,7 @@ function createShootingFolder(projectName, subtype, movementRow, elementName) {
     // تحديث رابط الفولدر في شيت الحركة
     if (movementRow) {
       const movementSheet = getSheet(SHEETS.MOVEMENT);
-      movementSheet.getRange(movementRow, MOVEMENT_COLS.LINK).setValue(folderUrl);
+      movementSheet.getRange(movementRow, MOVEMENT_COLS.FOLDER_LINK).setValue(folderUrl);
     }
 
     return folderUrl;
@@ -570,7 +570,7 @@ function createFolderForMovement() {
   const stage = sheet.getRange(row, MOVEMENT_COLS.STAGE).getValue();
   const subtype = sheet.getRange(row, MOVEMENT_COLS.SUBTYPE).getValue();
   const element = sheet.getRange(row, MOVEMENT_COLS.ELEMENT).getValue();
-  const existingLink = sheet.getRange(row, MOVEMENT_COLS.LINK).getValue();
+  const existingLink = sheet.getRange(row, MOVEMENT_COLS.FOLDER_LINK).getValue();
 
   if (existingLink) {
     showInfo('يوجد رابط فولدر بالفعل');
@@ -737,7 +737,7 @@ function createGenericFolder(projectName, stageName, elementName, movementRow) {
     // تحديث الرابط في شيت الحركة
     if (movementRow) {
       const movementSheet = getSheet(SHEETS.MOVEMENT);
-      movementSheet.getRange(movementRow, MOVEMENT_COLS.LINK).setValue(folderUrl);
+      movementSheet.getRange(movementRow, MOVEMENT_COLS.FOLDER_LINK).setValue(folderUrl);
     }
 
     return folderUrl;
